@@ -33,9 +33,8 @@ class DespesaRepository:
                 nova_data_pret = DespesaRepository._somar_meses(data_pretensao, i)
                 p_atual = parcela_inicial + i
                 
+                # A descrição agora fica pura! Sem (1/10) grudado.
                 descricao_final = dados.get('descricao')
-                if recorrente and total_parcelas > 1:
-                    descricao_final = f"{dados.get('descricao')} ({p_atual}/{total_parcelas})"
                 
                 comp_bin = comprovante_binario if i == 0 else None
                 comp_mime = mimetype if i == 0 else None
@@ -44,10 +43,14 @@ class DespesaRepository:
                 query = """
                     INSERT INTO despesas 
                     (descricao, valor, data_vencimento, data_pretensao, responsavel_pagamento, categoria, pago, 
-                     comprovante_dados, comprovante_mimetype, recorrente, parcela_atual, total_parcelas)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     comprovante_dados, comprovante_mimetype, recorrente, parcela_atual, total_parcelas, observacao, icone_svg)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                cur.execute(query, (descricao_final, dados.get('valor'), nova_data_venc, nova_data_pret, dados.get('responsavel_pagamento'), dados.get('categoria', 'Geral'), status_pago, comp_bin, comp_mime, recorrente, p_atual, total_parcelas))
+                cur.execute(query, (
+                    descricao_final, dados.get('valor'), nova_data_venc, nova_data_pret, dados.get('responsavel_pagamento'), 
+                    dados.get('categoria', 'Geral'), status_pago, comp_bin, comp_mime, recorrente, p_atual, total_parcelas,
+                    dados.get('observacao', ''), dados.get('icone_svg', 'geral')
+                ))
                 
             conn.commit()
             cur.close()
@@ -64,16 +67,14 @@ class DespesaRepository:
             query = """
                 SELECT id, descricao, valor, data_vencimento, data_pretensao, 
                        responsavel_pagamento, categoria, pago, recorrente, parcela_atual, total_parcelas,
-                       (comprovante_dados IS NOT NULL) as tem_comprovante 
+                       observacao, icone_svg, (comprovante_dados IS NOT NULL) as tem_comprovante 
                 FROM despesas 
                 WHERE EXTRACT(MONTH FROM data_vencimento) = %s AND EXTRACT(YEAR FROM data_vencimento) = %s
                 ORDER BY data_vencimento ASC
             """
             cur.execute(query, (mes, ano))
             colunas = [desc[0] for desc in cur.description]
-            resultados = [dict(zip(colunas, row)) for row in cur.fetchall()]
-            cur.close()
-            return resultados
+            return [dict(zip(colunas, row)) for row in cur.fetchall()]
         finally: conn.close()
 
     @staticmethod
@@ -82,7 +83,7 @@ class DespesaRepository:
         if not conn: return []
         try:
             cur = conn.cursor()
-            cur.execute("SELECT id, descricao, valor, data_vencimento, responsavel_pagamento, categoria, pago, (comprovante_dados IS NOT NULL) as tem_comprovante FROM despesas ORDER BY data_vencimento ASC")
+            cur.execute("SELECT id, descricao, valor, data_vencimento, responsavel_pagamento, categoria, pago, observacao, icone_svg, (comprovante_dados IS NOT NULL) as tem_comprovante FROM despesas ORDER BY data_vencimento ASC")
             colunas = [desc[0] for desc in cur.description]
             return [dict(zip(colunas, row)) for row in cur.fetchall()]
         finally: conn.close()
@@ -152,32 +153,18 @@ class DespesaRepository:
         except: return False
         finally: conn.close()
 
-    # --- NOVAS FUNÇÕES: ATUALIZAR E EXCLUIR ---
     @staticmethod
     def atualizar(despesa_id, dados):
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            query = """
-                UPDATE despesas 
-                SET descricao = %s, valor = %s, data_vencimento = %s, responsavel_pagamento = %s 
-                WHERE id = %s
-            """
-            cur.execute(query, (
-                dados.get('descricao'), 
-                dados.get('valor'), 
-                dados.get('data_vencimento'), 
-                dados.get('responsavel_pagamento'), 
-                despesa_id
-            ))
+            query = "UPDATE despesas SET descricao = %s, valor = %s, data_vencimento = %s, responsavel_pagamento = %s WHERE id = %s"
+            cur.execute(query, (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('responsavel_pagamento'), despesa_id))
             conn.commit()
             cur.close()
             return True
-        except Exception as e:
-            print(f"Erro ao atualizar: {e}")
-            return False
-        finally:
-            conn.close()
+        except: return False
+        finally: conn.close()
 
     @staticmethod
     def excluir(despesa_id):
@@ -188,9 +175,6 @@ class DespesaRepository:
             conn.commit()
             cur.close()
             return True
-        except Exception as e:
-            print(f"Erro ao excluir: {e}")
-            return False
-        finally:
-            conn.close()
+        except: return False
+        finally: conn.close()
 
