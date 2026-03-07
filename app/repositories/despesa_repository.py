@@ -32,8 +32,6 @@ class DespesaRepository:
                 nova_data_venc = DespesaRepository._somar_meses(data_vencimento, i)
                 nova_data_pret = DespesaRepository._somar_meses(data_pretensao, i)
                 p_atual = parcela_inicial + i
-                
-                # NOME PURO: Sem misturar as parcelas no nome da conta!
                 descricao_final = dados.get('descricao')
                 
                 comp_bin = comprovante_binario if i == 0 else None
@@ -74,7 +72,16 @@ class DespesaRepository:
             """
             cur.execute(query, (mes, ano))
             colunas = [desc[0] for desc in cur.description]
-            return [dict(zip(colunas, row)) for row in cur.fetchall()]
+            resultados = []
+            
+            # Fim do bug Undefined: formatando a data na marra para YYYY-MM-DD
+            for row in cur.fetchall():
+                d = dict(zip(colunas, row))
+                if d.get('data_vencimento'): d['data_vencimento'] = d['data_vencimento'].strftime('%Y-%m-%d')
+                if d.get('data_pretensao'): d['data_pretensao'] = d['data_pretensao'].strftime('%Y-%m-%d')
+                resultados.append(d)
+                
+            return resultados
         finally: conn.close()
 
     @staticmethod
@@ -92,9 +99,7 @@ class DespesaRepository:
             conn.commit()
             cur.close()
             return True
-        except Exception as e: 
-            print(f"Erro ao salvar renda: {e}")
-            return False
+        except Exception as e: return False
         finally: conn.close()
 
     @staticmethod
@@ -103,14 +108,11 @@ class DespesaRepository:
         if not conn: return {}
         try:
             cur = conn.cursor()
-            
-            # Puxa rendas agrupando por usuário E fonte (Shopee, Uber, Salário, etc)
             cur.execute("SELECT usuario, fonte, valor FROM rendas WHERE mes = %s AND ano = %s", (mes, ano))
             rendas_detalhadas = {'Igor': {}, 'Thaynara': {}}
             for row in cur.fetchall():
                 usr, fnt, val = row[0], row[1], float(row[2])
-                if usr in rendas_detalhadas:
-                    rendas_detalhadas[usr][fnt] = val
+                if usr in rendas_detalhadas: rendas_detalhadas[usr][fnt] = val
             
             renda_igor = sum(rendas_detalhadas['Igor'].values())
             renda_thaynara = sum(rendas_detalhadas['Thaynara'].values())
@@ -120,7 +122,6 @@ class DespesaRepository:
             pendente_igor = pendentes.get('Igor', 0.0)
             pendente_thaynara = pendentes.get('Thaynara', 0.0)
             
-            # Subtração das Caixinhas do Saldo Livre
             cur.execute("SELECT SUM(valor) FROM caixinhas")
             res_caixinha = cur.fetchone()
             total_caixinhas = float(res_caixinha[0]) if res_caixinha and res_caixinha[0] else 0.0
@@ -131,16 +132,11 @@ class DespesaRepository:
             
             cur.close()
             return { 
-                "renda_igor": renda_igor, 
-                "renda_thaynara": renda_thaynara, 
-                "detalhes_igor": rendas_detalhadas['Igor'],
-                "detalhes_thaynara": rendas_detalhadas['Thaynara'],
-                "pendente_igor": pendente_igor, 
-                "pendente_thaynara": pendente_thaynara, 
-                "total_renda": total_renda, 
-                "total_pendente": total_pendente, 
-                "saldo_final": saldo_final,
-                "total_caixinhas": total_caixinhas
+                "renda_igor": renda_igor, "renda_thaynara": renda_thaynara, 
+                "detalhes_igor": rendas_detalhadas['Igor'], "detalhes_thaynara": rendas_detalhadas['Thaynara'],
+                "pendente_igor": pendente_igor, "pendente_thaynara": pendente_thaynara, 
+                "total_renda": total_renda, "total_pendente": total_pendente, 
+                "saldo_final": saldo_final, "total_caixinhas": total_caixinhas
             }
         finally: conn.close()
 
@@ -199,18 +195,41 @@ class DespesaRepository:
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            cur.execute("SELECT id, nome, valor FROM caixinhas ORDER BY criado_em ASC")
+            cur.execute("SELECT id, nome, valor, icone_svg FROM caixinhas ORDER BY criado_em ASC")
             colunas = [desc[0] for desc in cur.description]
             return [dict(zip(colunas, row)) for row in cur.fetchall()]
         finally: conn.close()
 
     @staticmethod
-    def salvar_caixinha(nome, valor):
+    def salvar_caixinha(nome, valor, icone_svg='geral'):
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            query = "INSERT INTO caixinhas (nome, valor) VALUES (%s, %s) ON CONFLICT (nome) DO UPDATE SET valor = EXCLUDED.valor"
-            cur.execute(query, (nome, valor))
+            query = "INSERT INTO caixinhas (nome, valor, icone_svg) VALUES (%s, %s, %s) ON CONFLICT (nome) DO UPDATE SET valor = EXCLUDED.valor, icone_svg = EXCLUDED.icone_svg"
+            cur.execute(query, (nome, valor, icone_svg))
+            conn.commit()
+            return True
+        except: return False
+        finally: conn.close()
+        
+    @staticmethod
+    def atualizar_caixinha(caixinha_id, nome, valor, icone_svg):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            query = "UPDATE caixinhas SET nome = %s, valor = %s, icone_svg = %s WHERE id = %s"
+            cur.execute(query, (nome, valor, icone_svg, caixinha_id))
+            conn.commit()
+            return True
+        except: return False
+        finally: conn.close()
+
+    @staticmethod
+    def excluir_caixinha(caixinha_id):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM caixinhas WHERE id = %s", (caixinha_id,))
             conn.commit()
             return True
         except: return False

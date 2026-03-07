@@ -13,95 +13,171 @@
     </div>
     <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Potencial para Guardar</p>
     <p id="saldo_disponivel" class="text-4xl font-black text-slate-800 mt-2">R$ 0,00</p>
-    <p class="text-[10px] text-slate-400 font-medium mt-2">Esse é o seu saldo livre real já descontando outras caixinhas.</p>
+    <p class="text-[10px] text-slate-400 font-medium mt-2">Seu saldo livre real deste mês descontando as caixinhas já ativas.</p>
 </div>
 
 <div class="flex justify-between items-center mb-4 px-2">
-    <h3 class="font-black text-slate-800">Minhas Caixinhas</h3>
-    <button onclick="abrirModalCaixinha()" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-white shadow-sm">+ Nova</button>
+    <h3 class="font-black text-slate-800">Meus Cofres</h3>
+    <button onclick="abrirModalCaixinha()" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-white shadow-sm hover:bg-indigo-100 transition">+ Novo Cofre</button>
 </div>
 
-<div id="lista-caixinhas" class="space-y-4 pb-20">
-    <div class="text-center py-10"><p class="text-slate-500 font-bold animate-pulse">Carregando cofres...</p></div>
+<div id="lista-caixinhas" class="grid grid-cols-2 gap-4 pb-24">
+    <div class="col-span-2 text-center py-10"><p class="text-slate-500 font-bold animate-pulse">Carregando cofres...</p></div>
 </div>
 
-<div id="modalCaixinha" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4">
+<div id="modalCaixinha" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
-        <button onclick="fecharModalCaixinha()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <h3 class="text-lg font-black text-slate-800 mb-6">Criar Caixinha</h3>
+        <button onclick="fecharModalCaixinha()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="cx_titulo_modal" class="text-lg font-black text-slate-800 mb-6">Criar Caixinha</h3>
+        
+        <input type="hidden" id="cx_id_edit">
         
         <div class="space-y-4 mb-6">
             <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-2">Ícone do Cofre</label>
+                <div class="flex gap-2 justify-between">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="cx_icone" value="casa" class="peer hidden">
+                        <div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="cx_icone" value="carro" class="peer hidden">
+                        <div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h8a2 2 0 012 2v2m-1 4a2 2 0 11-4 0 2 2 0 014 0zM7 15a2 2 0 11-4 0 2 2 0 014 0zm10-6h1m-1 0H7m11 0a2 2 0 012 2v2a2 2 0 01-2 2h-1m-4 0H7m-4 0a2 2 0 01-2-2V9a2 2 0 012-2h1m11 0l-3-4H8L5 7"></path></svg></div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="cx_icone" value="carrinho" class="peer hidden">
+                        <div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63-.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="cx_icone" value="geral" class="peer hidden" checked>
+                        <div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                    </label>
+                </div>
+            </div>
+
+            <div>
                 <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Nome do Objetivo</label>
-                <input type="text" id="nome_cx" placeholder="Ex: Viagem, Fundo Emergência..." class="w-full p-4 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-indigo-400">
+                <input type="text" id="nome_cx" placeholder="Ex: Viagem..." class="w-full p-3 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-indigo-400">
             </div>
             <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor Inicial</label>
-                <input type="number" id="valor_cx" step="0.01" placeholder="0.00" class="w-full p-4 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-indigo-600 outline-none focus:border-indigo-400 text-center">
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor Guardado</label>
+                <input type="number" id="valor_cx" step="0.01" placeholder="0.00" class="w-full p-3 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-indigo-600 outline-none focus:border-indigo-400 text-center">
             </div>
         </div>
-        <button onclick="salvarCaixinha()" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Guardar Dinheiro</button>
+        <div class="flex gap-2">
+            <button id="btnExcluirCaixinha" onclick="deletarCaixinha()" class="hidden w-14 bg-red-50 text-red-500 items-center justify-center rounded-2xl hover:bg-red-100"><svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+            <button onclick="salvarCaixinha()" class="flex-1 py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Cofre</button>
+        </div>
     </div>
 </div>
 
 <script>
     let saldoLivreTotal = 0;
+    let caixinhasAtuais = [];
+    
+    const iconesSVG = {
+        'casa': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>',
+        'carro': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h8a2 2 0 012 2v2m-1 4a2 2 0 11-4 0 2 2 0 014 0zM7 15a2 2 0 11-4 0 2 2 0 014 0zm10-6h1m-1 0H7m11 0a2 2 0 012 2v2a2 2 0 01-2 2h-1m-4 0H7m-4 0a2 2 0 01-2-2V9a2 2 0 012-2h1m11 0l-3-4H8L5 7"></path></svg>',
+        'carrinho': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63-.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
+        'geral': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+    };
 
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
     const carregarTudo = async () => {
         const d = new Date();
-        const mes = d.getMonth() + 1;
-        const ano = d.getFullYear();
-
-        // Puxa o saldo livre geral e a lista de caixinhas
-        const resR = await fetch(`/api/resumo?mes=${mes}&ano=${ano}`);
+        const resR = await fetch(`/api/resumo?mes=${d.getMonth() + 1}&ano=${d.getFullYear()}`);
         const resumo = await resR.json();
-        saldoLivreTotal = resumo.saldo_final; // Já vem descontado o total das caixinhas pelo backend!
-        
+        saldoLivreTotal = resumo.saldo_final; // O backend já diminui as caixinhas
         document.getElementById('saldo_disponivel').innerText = formatarMoeda(saldoLivreTotal);
 
         const resC = await fetch('/api/caixinhas');
-        const caixinhas = await resC.json();
+        caixinhasAtuais = await resC.json();
         const container = document.getElementById('lista-caixinhas');
         container.innerHTML = '';
 
-        if(caixinhas.length === 0) {
-            container.innerHTML = `<div class="p-8 ultra-glass rounded-[28px] text-center border border-white"><p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Nenhum objetivo criado.</p></div>`;
+        if(caixinhasAtuais.length === 0) {
+            container.innerHTML = `<div class="col-span-2 p-8 ultra-glass rounded-[28px] text-center border border-white"><p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Nenhum cofre criado.</p></div>`;
             return;
         }
 
-        caixinhas.forEach(cx => {
+        caixinhasAtuais.forEach(cx => {
+            const svg = iconesSVG[cx.icone_svg] || iconesSVG['geral'];
+            const nomeSafe = cx.nome.replace(/'/g, "\\'");
+            
             container.innerHTML += `
-                <div class="p-5 ultra-glass rounded-[28px] border border-white flex justify-between items-center transition">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 border border-white">💰</div>
-                        <p class="font-bold text-slate-800 text-sm">${cx.nome}</p>
+                <div onclick="abrirModalEditarCaixinha(${cx.id}, '${nomeSafe}', ${cx.valor}, '${cx.icone_svg}')" 
+                     class="p-5 ultra-glass rounded-[28px] border border-white/60 flex flex-col items-center justify-center text-center transition cursor-pointer active:scale-95 shadow-sm">
+                    <div class="w-12 h-12 rounded-2xl bg-white/70 flex items-center justify-center text-indigo-600 shadow-inner mb-3">
+                        ${svg}
                     </div>
-                    <p class="font-black text-indigo-600 text-lg">${formatarMoeda(cx.valor)}</p>
+                    <p class="font-bold text-slate-700 text-sm leading-tight line-clamp-1 w-full">${cx.nome}</p>
+                    <p class="font-black text-indigo-600 text-base mt-0.5">${formatarMoeda(cx.valor)}</p>
                 </div>`;
         });
     };
 
-    const abrirModalCaixinha = () => document.getElementById('modalCaixinha').classList.remove('hidden');
     const fecharModalCaixinha = () => document.getElementById('modalCaixinha').classList.add('hidden');
 
+    const abrirModalCaixinha = () => {
+        document.getElementById('cx_titulo_modal').innerText = "Criar Caixinha";
+        document.getElementById('cx_id_edit').value = '';
+        document.getElementById('nome_cx').value = '';
+        document.getElementById('valor_cx').value = '';
+        document.getElementById('btnExcluirCaixinha').classList.add('hidden');
+        document.querySelector('input[name="cx_icone"][value="geral"]').checked = true;
+        document.getElementById('modalCaixinha').classList.remove('hidden');
+    };
+
+    const abrirModalEditarCaixinha = (id, nome, valor, icone) => {
+        document.getElementById('cx_titulo_modal').innerText = "Editar Cofre";
+        document.getElementById('cx_id_edit').value = id;
+        document.getElementById('nome_cx').value = nome;
+        document.getElementById('valor_cx').value = valor;
+        document.getElementById('btnExcluirCaixinha').classList.remove('hidden');
+        document.getElementById('btnExcluirCaixinha').classList.add('flex');
+        
+        const radio = document.querySelector(`input[name="cx_icone"][value="${icone}"]`);
+        if(radio) radio.checked = true;
+        else document.querySelector('input[name="cx_icone"][value="geral"]').checked = true;
+
+        document.getElementById('modalCaixinha').classList.remove('hidden');
+    };
+
     const salvarCaixinha = async () => {
+        const id = document.getElementById('cx_id_edit').value;
         const nome = document.getElementById('nome_cx').value;
         const valor = parseFloat(document.getElementById('valor_cx').value);
+        const icone = document.querySelector('input[name="cx_icone"]:checked').value;
         
         if(!nome || isNaN(valor) || valor <= 0) return alert("Preencha corretamente!");
-        if(valor > saldoLivreTotal) return alert(`Você só tem ${formatarMoeda(saldoLivreTotal)} livre para guardar!`);
+        
+        // Regra de bloqueio do Saldo Livre (permite se tiver editando a caixinha e usando o mesmo valor)
+        let cxAntiga = caixinhasAtuais.find(c => c.id == id);
+        let valorAntigo = cxAntiga ? parseFloat(cxAntiga.valor) : 0;
+        let diferencaGuardada = valor - valorAntigo;
+        
+        if(diferencaGuardada > saldoLivreTotal) return alert(`Você só tem ${formatarMoeda(saldoLivreTotal)} de sobra para guardar a mais!`);
 
-        await fetch('/api/caixinhas', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({nome: nome, valor: valor})
+        const endpoint = id ? `/api/caixinhas/${id}` : '/api/caixinhas';
+        const method = id ? 'PUT' : 'POST';
+
+        await fetch(endpoint, {
+            method: method, headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({nome: nome, valor: valor, icone_svg: icone})
         });
         
         fecharModalCaixinha();
-        document.getElementById('nome_cx').value = '';
-        document.getElementById('valor_cx').value = '';
         carregarTudo();
+    };
+
+    const deletarCaixinha = async () => {
+        const id = document.getElementById('cx_id_edit').value;
+        if(confirm("Quebrar este cofre? O dinheiro voltará para o Saldo Livre.")) {
+            await fetch(`/api/caixinhas/${id}`, { method: 'DELETE' });
+            fecharModalCaixinha();
+            carregarTudo();
+        }
     };
 
     document.addEventListener("DOMContentLoaded", carregarTudo);

@@ -12,8 +12,7 @@
         <p class="text-[9px] font-black text-orange-500 uppercase tracking-widest">PAGAMENTOS MAIS PRÓXIMOS</p>
         <span id="prox_data_badge" class="px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-[10px] font-bold">--/--</span>
     </div>
-    <div id="lista_proximas_contas" class="space-y-2">
-        </div>
+    <div id="lista_proximas_contas" class="space-y-2"></div>
 </div>
 
 <div class="ultra-glass p-6 rounded-[32px] mb-4 flex justify-between items-center">
@@ -26,7 +25,7 @@
 <div class="w-full p-6 rounded-[32px] ultra-glass border border-white/60 shadow-sm mb-4">
     <h2 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex justify-between">
         Saldo Livre Previsto
-        <span id="info_caixinha" class="text-indigo-400 hidden">(Já descontado Caixinhas)</span>
+        <span id="info_caixinha" class="text-indigo-400 hidden font-medium">(Caixinhas descontadas)</span>
     </h2>
     <div id="saldo_final" class="text-4xl font-black text-slate-800 mt-1">R$ 0,00</div>
 </div>
@@ -44,61 +43,56 @@
     </div>
 </div>
 
-<div class="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide" id="filtros-semana">
-    </div>
+<div class="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide" id="filtros-semana"></div>
 
 <div id="lista-despesas" class="space-y-4"></div>
 
-<div id="modalRendaIgor" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4">
+<div id="modalDetalhes" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
-        <button onclick="fecharModais()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Renda Detalhada</h3>
-        <p class="text-xl font-black text-indigo-600 mb-6">Igor</p>
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="det_nome" class="text-xl font-black text-slate-800 mb-1 pr-8">--</h3>
+        <p id="det_parcela" class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-6">--</p>
         
         <div class="space-y-4 mb-6">
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Valor</span><span id="det_valor" class="text-sm font-black text-slate-800">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Vencimento</span><span id="det_vence" class="text-sm font-bold text-orange-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Data Prevista</span><span id="det_prev" class="text-sm font-bold text-indigo-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Responsável</span><span id="det_resp" class="text-sm font-bold text-slate-800">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Pago Com:</span><span id="det_fonte" class="text-sm font-bold text-emerald-600">--</span></div>
             <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Shopee</label>
-                <input type="number" id="igor_shopee" step="0.01" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-indigo-400">
-            </div>
-            <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Uber</label>
-                <input type="number" id="igor_uber" step="0.01" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-indigo-400">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Observações</span>
+                <p id="det_obs" class="text-xs font-medium text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed min-h-[50px]"></p>
             </div>
         </div>
-        <button onclick="salvarRendas('Igor')" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Renda</button>
+        <div class="flex gap-2">
+            <button id="btnEditarAbrir" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200">Editar</button>
+            <button id="btnExcluirAtivo" class="w-14 bg-red-50 text-red-500 flex items-center justify-center rounded-2xl hover:bg-red-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        </div>
     </div>
 </div>
 
-<div id="modalRendaThay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4">
-    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
-        <button onclick="fecharModais()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Renda Detalhada</h3>
-        <p class="text-xl font-black text-indigo-600 mb-6">Thaynara</p>
-        
-        <div class="space-y-4 mb-6">
-            <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Salário</label>
-                <input type="number" id="thay_salario" step="0.01" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-indigo-400">
-            </div>
-            <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Vale Refeição (VR)</label>
-                <input type="number" id="thay_vr" step="0.01" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-indigo-400">
-            </div>
-            <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Vale Combustível</label>
-                <input type="number" id="thay_combustivel" step="0.01" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-indigo-400">
-            </div>
+<div id="modalPagamento" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl text-center relative">
+        <button onclick="fecharModais()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-500 flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+        <h3 class="text-xl font-black text-slate-800 mb-2">Pagar Conta</h3>
+        <p class="text-xs font-medium text-slate-500 mb-6">Deseja anexar o comprovante agora ou apenas marcar como paga?</p>
+        <div class="space-y-3">
+            <button id="btnAnexarRecibo" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 active:scale-95 transition flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> Anexar Recibo</button>
+            <button id="btnApenasBaixa" class="w-full py-4 bg-slate-100 text-slate-700 rounded-2xl font-bold hover:bg-slate-200 active:scale-95 transition">Apenas Dar Baixa</button>
         </div>
-        <button onclick="salvarRendas('Thaynara')" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Renda</button>
     </div>
 </div>
 
 {% include 'modais_dashboard.html' ignore missing %}
+<input type="file" id="fileComprovante" class="hidden" accept=".pdf, image/*">
+
 <script>
-    let currentData = new Date();
+    let currentData = new Date(); 
     let despesasPendentesGlobais = [];
     let dadosRendaGlobais = {};
     let semanasDoMes = [];
+    let contaEmFocoId = null;
 
     const iconesSVG = {
         'casa': '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>',
@@ -109,12 +103,16 @@
     };
 
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const formatarData = (ds) => { if (!ds) return '--/--'; const [y,m,d] = ds.split('-'); return `${d}/${m}`; };
     
-    // Motor da Data de Pagamento (Pega Pretensão se existir, senão Vencimento)
+    // CORREÇÃO DEFINITIVA DO UNDEFINED (Cortando texto cego)
+    const formatarData = (ds) => { 
+        if (!ds || !ds.includes('-')) return '--/--'; 
+        const [y, m, d] = ds.split('-'); 
+        return `${d}/${m}`; 
+    };
+    
     const getDataBase = (x) => x.data_pretensao ? x.data_pretensao : x.data_vencimento;
 
-    // Cálculo exato das semanas (Domingo a Sábado)
     const calcularSemanas = (ano, mes) => {
         let semanas = [];
         let primeiroDia = new Date(ano, mes, 1);
@@ -124,13 +122,11 @@
         while (diaAtual <= ultimoDia) {
             let inicio = new Date(diaAtual);
             let fim = new Date(diaAtual);
-            fim.setDate(diaAtual.getDate() + (6 - diaAtual.getDay())); // Vai pro próximo sábado
-            
-            if (fim > ultimoDia) fim = new Date(ultimoDia); // Corta se passar do mês
-            
+            fim.setDate(diaAtual.getDate() + (6 - diaAtual.getDay())); 
+            if (fim > ultimoDia) fim = new Date(ultimoDia); 
             semanas.push({ inicio: inicio.toISOString().split('T')[0], fim: fim.toISOString().split('T')[0] });
             diaAtual = new Date(fim);
-            diaAtual.setDate(diaAtual.getDate() + 1); // Vai pro próximo domingo
+            diaAtual.setDate(diaAtual.getDate() + 1); 
         }
         return semanas;
     };
@@ -146,7 +142,8 @@
         div.innerHTML = `<button onclick="filtrarSemana(-1)" id="btn-sem--1" class="filtro-btn px-4 py-2 rounded-2xl bg-white text-slate-800 text-[11px] font-bold shadow-sm transition-all border-none">Todas</button>`;
         
         semanasDoMes.forEach((sem, index) => {
-            const lbl = `Sem ${index + 1} (${formatarData(sem.inicio)} a ${formatarData(sem.fim)})`;
+            // Removido o "Sem X", deixado apenas "01/03 a 07/03"
+            const lbl = `${formatarData(sem.inicio)} a ${formatarData(sem.fim)}`;
             div.innerHTML += `<button onclick="filtrarSemana(${index})" id="btn-sem-${index}" class="filtro-btn px-4 py-2 rounded-2xl ultra-glass text-slate-500 text-[11px] font-bold transition-all border-none whitespace-nowrap">${lbl}</button>`;
         });
     };
@@ -160,21 +157,18 @@
         try {
             const res = await fetch(`/api/resumo?mes=${mes}&ano=${ano}`);
             const d = await res.json();
-            dadosRendaGlobais = d; // Guarda para os modais
+            dadosRendaGlobais = d; 
             
             document.getElementById('saldo_final').innerText = formatarMoeda(d.saldo_final);
             document.getElementById('total_pendente').innerText = formatarMoeda(d.total_pendente);
             document.getElementById('renda_igor').innerText = formatarMoeda(d.renda_igor);
             document.getElementById('renda_thaynara').innerText = formatarMoeda(d.renda_thaynara);
-            
             if(d.total_caixinhas > 0) document.getElementById('info_caixinha').classList.remove('hidden');
-            else document.getElementById('info_caixinha').classList.add('hidden');
 
             const resD = await fetch(`/api/despesas?mes=${mes}&ano=${ano}`);
-            despesasPendentesGlobais = (await resD.json()).filter(x => !x.pago);
-            
+            despesasPendentesGlobais = await resD.json();
             atualizarProximaConta();
-            filtrarSemana(-1); // -1 = Todas
+            filtrarSemana(-1); 
         } catch(e) { console.error(e); }
     };
 
@@ -182,28 +176,18 @@
         const card = document.getElementById('card_proxima');
         const container = document.getElementById('lista_proximas_contas');
         container.innerHTML = '';
-
         const hojeStr = new Date().toISOString().split('T')[0];
         
-        // Filtra só o que vence hoje ou no futuro
         const futuras = despesasPendentesGlobais.filter(x => getDataBase(x) >= hojeStr);
         if(futuras.length === 0) { card.classList.add('hidden'); return; }
         
-        // Ordena para achar a data mais próxima
         futuras.sort((a,b) => getDataBase(a).localeCompare(getDataBase(b)));
         const dataAlvo = getDataBase(futuras[0]);
-        
-        // Pega TODAS que caem nesse mesmo dia alvo
         const doMesmoDia = futuras.filter(x => getDataBase(x) === dataAlvo);
         
         document.getElementById('prox_data_badge').innerText = formatarData(dataAlvo);
-        
         doMesmoDia.forEach(conta => {
-            container.innerHTML += `
-                <div class="flex justify-between items-center bg-white/50 p-2 rounded-xl border border-white/60">
-                    <p class="text-sm font-bold text-slate-800 leading-tight">${conta.descricao}</p>
-                    <p class="text-sm font-black text-slate-800">${formatarMoeda(conta.valor)}</p>
-                </div>`;
+            container.innerHTML += `<div class="flex justify-between items-center bg-white/50 p-2 rounded-xl border border-white/60"><p class="text-sm font-bold text-slate-800 leading-tight">${conta.descricao}</p><p class="text-sm font-black text-slate-800">${formatarMoeda(conta.valor)}</p></div>`;
         });
         card.classList.remove('hidden');
     };
@@ -233,67 +217,77 @@
             return;
         }
 
-        // --- Renderização dos cards (Mesma de antes, mas usando a data de pagamento prevista) ---
+        // NOVO CARD SUPER DETALHADO
         filtradas.forEach(x => {
+            const descSafe = x.descricao.replace(/'/g, "\\'");
+            const obsSafe = (x.observacao || "").replace(/'/g, "\\'").replace(/\n/g, " ");
+            const fonteSafe = (x.fonte_pagamento || "Geral");
             const svgIcon = iconesSVG[x.icone_svg] || iconesSVG['geral'];
-            const dateStr = x.data_pretensao ? `<span class="text-orange-500">Previsto ${formatarData(x.data_pretensao)}</span>` : `Vence ${formatarData(x.data_vencimento)}`;
-            const fonteBadge = x.fonte_pagamento ? `• De: ${x.fonte_pagamento}` : '';
             
+            const badgeParcela = x.total_parcelas > 1 ? `<p class="text-[10px] text-indigo-600 font-black tracking-widest uppercase mb-1">Parcela ${x.parcela_atual}/${x.total_parcelas}</p>` : '';
+            const txtPrevisto = x.data_pretensao ? `<span class="text-orange-500">⚡ Prev: ${formatarData(x.data_pretensao)}</span>` : '';
+
             container.innerHTML += `
-                <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition">
-                    <div class="flex items-center gap-3 w-[65%]">
-                        <div class="min-w-[42px] h-[42px] rounded-2xl bg-white/70 flex items-center justify-center text-indigo-600 shadow-sm border border-white">${svgIcon}</div>
-                        <div class="truncate">
-                            <p class="font-bold text-slate-800 text-sm leading-tight truncate pr-2">${x.descricao}</p>
-                            <p class="text-[9px] text-slate-500 font-bold uppercase mt-0.5">${dateStr} ${fonteBadge}</p>
+                <div class="p-4 rounded-[28px] ultra-glass flex justify-between items-center transition active:scale-[0.98] cursor-pointer relative shadow-sm border border-white/50" 
+                     onclick="abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas})">
+                    
+                    <div class="flex items-start gap-3 w-[70%]">
+                        <div class="min-w-[42px] h-[42px] rounded-2xl bg-white/70 flex items-center justify-center text-indigo-600 shadow-sm border border-white mt-1">
+                            ${svgIcon}
+                        </div>
+                        <div class="truncate flex-1">
+                            <p class="font-bold text-slate-800 text-sm truncate leading-tight">${x.descricao}</p>
+                            ${badgeParcela}
+                            <div class="flex flex-col gap-[2px] mt-1.5">
+                                <span class="text-[9px] font-bold text-slate-500">📅 Venc: ${formatarData(x.data_vencimento)}</span>
+                                ${txtPrevisto ? `<span class="text-[9px] font-bold">${txtPrevisto}</span>` : ''}
+                                <span class="text-[9px] font-black text-emerald-600 uppercase mt-0.5">👤 ${x.responsavel_pagamento}</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="flex flex-col items-end gap-2 w-[35%]">
+                    
+                    <div class="flex flex-col items-end justify-center h-full gap-3 w-[30%]">
                         <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
+                        <button id="btn-pagar-${x.id}" onclick="event.stopPropagation(); abrirModalPagamento(${x.id})" class="w-full h-8 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 text-[10px] font-black uppercase transition shadow-md">PAGO</button>
                     </div>
                 </div>`;
         });
     };
 
     const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarDashboard(); };
+    const fecharModais = () => { document.querySelectorAll('[id^="modal"]').forEach(m => m.classList.add('hidden')); };
 
-    // --- LÓGICA DE SALVAMENTO DE RENDA DIVIDIDA ---
-    const fecharModais = () => {
-        document.getElementById('modalRendaIgor').classList.add('hidden');
-        document.getElementById('modalRendaThay').classList.add('hidden');
+    // --- RAIO-X: Modal de Detalhes Completo ---
+    const abrirModalDetalhes = (id, desc, valor, dataV, dataP, resp, fonte, obs, p_atual, t_parc) => {
+        document.getElementById('det_nome').innerText = desc;
+        document.getElementById('det_parcela').innerText = t_parc > 1 ? `Parcela ${p_atual} de ${t_parc}` : 'Conta Fixa / Única';
+        document.getElementById('det_valor').innerText = formatarMoeda(valor);
+        document.getElementById('det_vence').innerText = formatarData(dataV);
+        document.getElementById('det_prev').innerText = dataP ? formatarData(dataP) : 'Não definida';
+        document.getElementById('det_resp').innerText = resp;
+        document.getElementById('det_fonte').innerText = fonte;
+        document.getElementById('det_obs').innerText = obs || "Sem observações adicionais.";
+        
+        document.getElementById('modalDetalhes').classList.remove('hidden');
     };
 
-    const abrirModalRendaIgor = () => {
-        document.getElementById('igor_shopee').value = dadosRendaGlobais.detalhes_igor['Shopee'] || '';
-        document.getElementById('igor_uber').value = dadosRendaGlobais.detalhes_igor['Uber'] || '';
-        document.getElementById('modalRendaIgor').classList.remove('hidden');
-    };
+    const abrirModalPagamento = (id) => { contaEmFocoId = id; document.getElementById('modalPagamento').classList.remove('hidden'); };
 
-    const abrirModalRendaThay = () => {
-        document.getElementById('thay_salario').value = dadosRendaGlobais.detalhes_thaynara['Salário'] || '';
-        document.getElementById('thay_vr').value = dadosRendaGlobais.detalhes_thaynara['VR'] || '';
-        document.getElementById('thay_combustivel').value = dadosRendaGlobais.detalhes_thaynara['Vale Combustível'] || '';
-        document.getElementById('modalRendaThay').classList.remove('hidden');
+    document.getElementById('btnAnexarRecibo').onclick = () => {
+        const input = document.getElementById('fileComprovante');
+        input.value = ''; 
+        input.onchange = async () => { fecharModais(); await dispararPagamentoAPI(contaEmFocoId, input.files.length > 0 ? input.files[0] : null); };
+        input.click();
     };
+    document.getElementById('btnApenasBaixa').onclick = async () => { fecharModais(); await dispararPagamentoAPI(contaEmFocoId, null); };
 
-    const enviarRendaAPI = async (usuario, fonte, valor) => {
-        await fetch('/api/rendas', {
-            method:'POST', headers:{'Content-Type':'application/json'}, 
-            body:JSON.stringify({usuario: usuario, fonte: fonte, mes: currentData.getMonth()+1, ano: currentData.getFullYear(), valor: parseFloat(valor || 0)})
-        });
-    };
-
-    const salvarRendas = async (usuario) => {
-        fecharModais();
-        if(usuario === 'Igor') {
-            await enviarRendaAPI('Igor', 'Shopee', document.getElementById('igor_shopee').value);
-            await enviarRendaAPI('Igor', 'Uber', document.getElementById('igor_uber').value);
-        } else {
-            await enviarRendaAPI('Thaynara', 'Salário', document.getElementById('thay_salario').value);
-            await enviarRendaAPI('Thaynara', 'VR', document.getElementById('thay_vr').value);
-            await enviarRendaAPI('Thaynara', 'Vale Combustível', document.getElementById('thay_combustivel').value);
-        }
-        carregarDashboard();
+    const dispararPagamentoAPI = async (id, file) => {
+        const btnNode = document.getElementById(`btn-pagar-${id}`);
+        if(btnNode) btnNode.innerText = "⏳";
+        const formData = new FormData();
+        if (file) formData.append('comprovante', file);
+        try { await fetch(`/api/despesas/${id}/pagar`, { method: 'POST', body: formData }); carregarDashboard(); } 
+        catch (error) { alert("Erro de rede."); carregarDashboard(); }
     };
 
     document.addEventListener("DOMContentLoaded", carregarDashboard);

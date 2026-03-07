@@ -6,7 +6,6 @@ from app.services.compressao_service import comprimir_arquivo
 
 despesas_bp = Blueprint('despesas', __name__)
 
-# Inteligência de Fuso Horário de Brasília (UTC-3)
 def hoje_br():
     return (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).date()
 
@@ -71,9 +70,22 @@ def gerenciar_caixinhas():
         return jsonify(DespesaRepository.listar_caixinhas()), 200
     else:
         dados = request.json
-        sucesso = DespesaRepository.salvar_caixinha(dados.get('nome'), dados.get('valor'))
+        sucesso = DespesaRepository.salvar_caixinha(dados.get('nome'), dados.get('valor'), dados.get('icone_svg', 'geral'))
         if sucesso: return jsonify({"status": "sucesso"}), 200
         return jsonify({"status": "erro"}), 500
+
+# Rotas Edição/Exclusão Caixinhas
+@despesas_bp.route('/api/caixinhas/<int:caixinha_id>', methods=['DELETE'])
+def deletar_caixinha(caixinha_id):
+    if DespesaRepository.excluir_caixinha(caixinha_id): return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+@despesas_bp.route('/api/caixinhas/<int:caixinha_id>', methods=['PUT'])
+def editar_caixinha(caixinha_id):
+    dados = request.json
+    if DespesaRepository.atualizar_caixinha(caixinha_id, dados.get('nome'), dados.get('valor'), dados.get('icone_svg')): 
+        return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/despesas/<int:despesa_id>/pagar', methods=['POST'])
 def pagar_despesa(despesa_id):

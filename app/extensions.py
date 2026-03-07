@@ -51,8 +51,6 @@ def init_db():
     """
     query_rendas = "CREATE TABLE IF NOT EXISTS rendas (id SERIAL PRIMARY KEY, usuario VARCHAR(50) NOT NULL, valor DECIMAL(10, 2) DEFAULT 0.00, mes INT NOT NULL, ano INT NOT NULL);"
     query_push = "CREATE TABLE IF NOT EXISTS inscricoes_push (id SERIAL PRIMARY KEY, usuario VARCHAR(50) NOT NULL, subscription_info JSONB NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
-    
-    # Nova tabela para imitar as Caixinhas do Nubank!
     query_caixinhas = "CREATE TABLE IF NOT EXISTS caixinhas (id SERIAL PRIMARY KEY, nome VARCHAR(100) UNIQUE NOT NULL, valor DECIMAL(10, 2) DEFAULT 0.00, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
 
     try:
@@ -69,14 +67,14 @@ def init_db():
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS total_parcelas INT DEFAULT 1;")
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS observacao TEXT;")
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS icone_svg VARCHAR(50) DEFAULT 'geral';")
-        
-        # Nova coluna: De onde saiu o dinheiro?
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS fonte_pagamento VARCHAR(50);")
         
-        # Ajuste na tabela de rendas para aceitar múltiplas fontes (Shopee, Uber, VR...)
         cur.execute("ALTER TABLE rendas ADD COLUMN IF NOT EXISTS fonte VARCHAR(50) DEFAULT 'Geral';")
+        
+        # O pulo do gato: Ícones para as caixinhas!
+        cur.execute("ALTER TABLE caixinhas ADD COLUMN IF NOT EXISTS icone_svg VARCHAR(50) DEFAULT 'geral';")
+        
         try:
-            # Substitui a trava antiga por uma mais inteligente
             cur.execute("ALTER TABLE rendas DROP CONSTRAINT IF EXISTS rendas_usuario_mes_ano_key;")
             cur.execute("ALTER TABLE rendas ADD CONSTRAINT rendas_usuario_fonte_mes_ano_key UNIQUE (usuario, fonte, mes, ano);")
         except Exception as e:
