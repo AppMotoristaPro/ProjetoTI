@@ -1,109 +1,34 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<div class="mb-6 flex items-center gap-3">
-    <a href="/" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-sm transition active:scale-90">
-        <span class="text-xl">←</span>
-    </a>
-    <h2 class="text-xl font-black text-slate-800">Contas Pagas</h2>
+<div class="mb-8 flex items-center gap-4">
+    <a href="/" class="w-12 h-12 rounded-2xl soft-glass flex items-center justify-center text-slate-400 transition active:scale-90">←</a>
+    <h2 class="text-xl font-black text-slate-800">Concluídos</h2>
 </div>
 
-<div class="flex justify-between items-center mb-6 bg-white p-2 rounded-full shadow-sm border border-slate-200">
-    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-90 transition">◀</button>
-    <h2 id="mesDisplayHist" class="text-sm font-bold uppercase tracking-widest text-indigo-900">Carregando...</h2>
-    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-90 transition">▶</button>
-</div>
-
-<div id="lista-historico" class="space-y-3 pb-10">
-    <div class="text-center text-slate-400 py-10 animate-pulse font-medium">Buscando arquivo... ⏳</div>
-</div>
+<div id="lista-historico" class="space-y-4"></div>
 
 <script>
-    let dataHist = new Date();
-
-    const formatarMoeda = (valor) => Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const formatarData = (dataString) => {
-        if (!dataString) return '--/--/----';
-        const [ano, mes, dia] = dataString.split('-');
-        return `${dia}/${mes}/${ano}`;
-    };
-
-    const atualizarDisplayMes = () => {
-        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-        document.getElementById('mesDisplayHist').innerText = `${meses[dataHist.getMonth()]} ${dataHist.getFullYear()}`;
-    };
-
-    const mudarMes = (direcao) => {
-        dataHist.setMonth(dataHist.getMonth() + direcao);
-        carregarHistorico();
-    };
-
-    const carregarHistorico = async () => {
-        atualizarDisplayMes();
-        const container = document.getElementById('lista-historico');
-        const mes = dataHist.getMonth() + 1;
-        const ano = dataHist.getFullYear();
-
-        try {
-            const response = await fetch(`/api/despesas?mes=${mes}&ano=${ano}`);
-            const todasDespesas = await response.json();
-
-            // Filtra SOMENTE as que estão pagas
-            const despesasPagas = todasDespesas.filter(d => d.pago);
-
-            container.innerHTML = ''; 
-
-            if (despesasPagas.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12 bg-white rounded-3xl border border-slate-100 shadow-sm">
-                        <span class="text-4xl block mb-3">🍃</span>
-                        <p class="text-slate-400 font-medium">Nenhuma conta paga neste mês.</p>
-                    </div>`;
-                return;
-            }
-
-            despesasPagas.forEach(despesa => {
-                const icone = despesa.categoria === 'Carro/Manutenção' || despesa.categoria === 'Combustível' ? '🚗' : 
-                              despesa.categoria === 'Moradia' ? '🏠' : 
-                              despesa.categoria === 'Alimentação' ? '🛒' : '💸';
-
-                const btnComprovante = despesa.tem_comprovante 
-                    ? `<a href="/comprovante/${despesa.id}" target="_blank" class="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition flex items-center gap-1 border border-indigo-200">📄 Ver Recibo</a>`
-                    : `<span class="px-3 py-1.5 rounded-lg bg-slate-50 text-xs text-slate-400 border border-slate-100 font-medium">Sem Recibo</span>`;
-
-                container.innerHTML += `
-                    <div class="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm relative overflow-hidden">
-                        <div class="absolute left-0 top-0 bottom-0 w-1 ${despesa.responsavel_pagamento === 'Igor' ? 'bg-cyan-500' : 'bg-pink-500'}"></div>
-                        
-                        <div class="flex justify-between items-start mb-2 pl-2">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-lg border border-slate-100">${icone}</div>
-                                <div>
-                                    <h3 class="font-bold text-sm text-slate-800">${despesa.descricao}</h3>
-                                    <p class="text-[10px] text-slate-400 font-semibold uppercase mt-0.5">Resp: ${despesa.responsavel_pagamento}</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <p class="font-black text-slate-800 text-sm">${formatarMoeda(despesa.valor)}</p>
-                                <span class="inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-100 text-emerald-700 mt-1">
-                                    Pago ✔️
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-between items-center pl-2 pt-3 border-t border-slate-100 mt-2">
-                            <span class="text-[10px] text-slate-400 font-medium">Data ref: ${formatarData(despesa.data_vencimento)}</span>
-                            ${btnComprovante}
+    const carregarH = async () => {
+        const c = document.getElementById('lista-historico');
+        const r = await fetch(`/api/despesas?mes=${new Date().getMonth()+1}&ano=${new Date().getFullYear()}`);
+        const d = (await r.json()).filter(x => x.pago);
+        
+        c.innerHTML = d.length ? '' : '<p class="text-center text-slate-400 font-bold mt-10">Nada por aqui 🍃</p>';
+        d.forEach(x => {
+            c.innerHTML += `
+                <div class="p-5 rounded-[28px] soft-glass flex justify-between items-center opacity-70">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center">✔️</div>
+                        <div>
+                            <p class="font-bold text-slate-700 text-sm">${x.descricao}</p>
+                            <p class="text-[9px] font-black text-orange-500 uppercase tracking-wider">PAGO</p>
                         </div>
                     </div>
-                `;
-            });
-        } catch (error) {
-            container.innerHTML = `<p class="text-red-500 text-center py-4 font-bold">Erro ao carregar o arquivo.</p>`;
-        }
+                    <p class="font-black text-slate-800">${Number(x.valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
+                </div>`;
+        });
     };
-
-    document.addEventListener("DOMContentLoaded", carregarHistorico);
+    carregarH();
 </script>
 {% endblock %}
 

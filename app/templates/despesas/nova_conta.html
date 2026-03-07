@@ -1,151 +1,61 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<div class="mb-6 flex items-center gap-3">
-    <a href="/" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-sm transition active:scale-90">
-        <span class="text-xl">←</span>
-    </a>
-    <h2 class="text-xl font-black text-slate-800">Lançar Despesa</h2>
+<div class="mb-8 flex items-center gap-4">
+    <a href="/" class="w-12 h-12 rounded-2xl soft-glass flex items-center justify-center text-slate-400 transition active:scale-90">←</a>
+    <h2 class="text-xl font-black text-slate-800">Novo Plano</h2>
 </div>
 
-<div class="w-full p-6 rounded-3xl bg-white border border-slate-100 shadow-lg">
-    <form id="formDespesa" class="space-y-5">
-        
+<div class="soft-glass p-8 rounded-[35px] shadow-sm">
+    <form id="formDespesa" class="space-y-6">
         <div>
-            <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">O que é?</label>
-            <input type="text" name="descricao" placeholder="Ex: Gasolina, Conta de Luz..." required
-                class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none text-slate-800 transition-all font-medium">
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
+            <input type="text" name="descricao" required class="w-full mt-2 p-4 rounded-2xl bg-white border-none outline-none text-slate-700 font-medium">
         </div>
 
-        <div class="flex gap-3">
+        <div class="flex gap-4">
             <div class="w-1/2">
-                <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Valor (R$)</label>
-                <input type="number" name="valor" step="0.01" placeholder="0.00" required
-                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none text-slate-800 transition-all font-bold">
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Valor</label>
+                <input type="number" name="valor" step="0.01" required class="w-full mt-2 p-4 rounded-2xl bg-white border-none outline-none font-bold">
             </div>
             <div class="w-1/2">
-                <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Quem paga?</label>
-                <select name="responsavel_pagamento"
-                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 transition-all font-medium">
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Vencimento</label>
+                <input type="date" name="data_vencimento" required class="w-full mt-2 p-4 rounded-2xl bg-white border-none outline-none">
+            </div>
+        </div>
+
+        <div>
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Categoria (Escolha ou Digite)</label>
+            <input list="categorias" name="categoria" placeholder="Ex: Mercado, Carro..." class="w-full mt-2 p-4 rounded-2xl bg-white border-none outline-none font-medium">
+            <datalist id="categorias">
+                <option value="Alimentação">
+                <option value="Combustível">
+                <option value="Lazer">
+                <option value="Manutenção">
+                <option value="Contas Fixas">
+            </datalist>
+        </div>
+
+        <div class="flex gap-4">
+            <div class="w-full">
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Quem Paga?</label>
+                <select name="responsavel_pagamento" class="w-full mt-2 p-4 rounded-2xl bg-white border-none outline-none font-medium">
                     <option value="Igor">Igor</option>
                     <option value="Thaynara">Thaynara</option>
                 </select>
             </div>
         </div>
 
-        <div class="flex gap-3">
-            <div class="w-1/2">
-                <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Vencimento</label>
-                <input type="date" name="data_vencimento" required
-                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 transition-all">
-            </div>
-            <div class="w-1/2">
-                <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Pretensão (Opc.)</label>
-                <input type="date" name="data_pretensao"
-                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 transition-all">
-            </div>
-        </div>
-
-        <div>
-            <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Categoria</label>
-            <select name="categoria"
-                class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 transition-all font-medium">
-                <option value="Carro/Manutenção">Carro/Manutenção</option>
-                <option value="Combustível">Combustível</option>
-                <option value="Moradia">Moradia</option>
-                <option value="Alimentação">Alimentação</option>
-                <option value="Lazer">Lazer</option>
-                <option value="Outros">Outros</option>
-            </select>
-        </div>
-
-        <div class="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex flex-col gap-3">
-            <div class="flex items-center gap-3">
-                <input type="checkbox" id="recorrente" name="recorrente" value="true" onchange="toggleParcelas()"
-                    class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 accent-indigo-600 cursor-pointer">
-                <label for="recorrente" class="text-sm font-bold text-indigo-900 cursor-pointer select-none">
-                    Conta Parcelada ou Fixa?
-                </label>
-            </div>
-            
-            <div id="box-parcelas" class="hidden flex gap-3 mt-2 pt-3 border-t border-indigo-200/50">
-                <div class="w-1/2">
-                    <label class="text-[9px] uppercase text-indigo-400 font-bold">Parcela Atual</label>
-                    <input type="number" name="parcela_atual" value="1" min="1"
-                        class="w-full mt-1 p-2 rounded-xl bg-white border border-indigo-200 text-center text-slate-800 font-bold">
-                </div>
-                <div class="w-1/2">
-                    <label class="text-[9px] uppercase text-indigo-400 font-bold">Total de Meses</label>
-                    <input type="number" name="total_parcelas" value="1" min="1"
-                        class="w-full mt-1 p-2 rounded-xl bg-white border border-indigo-200 text-center text-slate-800 font-bold">
-                </div>
-            </div>
-        </div>
-
-        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3">
-            <input type="checkbox" id="pago" name="pago" value="true"
-                class="w-5 h-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 accent-emerald-600 cursor-pointer">
-            <label for="pago" class="text-sm font-bold text-emerald-900 cursor-pointer select-none">
-                Já está paga? (Adicionar recibo)
-            </label>
-        </div>
-
-        <div>
-            <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Comprovante (PDF/Foto)</label>
-            <input type="file" name="comprovante" accept=".pdf, image/*"
-                class="w-full mt-1 text-sm text-slate-500 
-                file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 
-                file:text-sm file:font-bold file:bg-indigo-100 file:text-indigo-700 
-                hover:file:bg-indigo-200 transition-all cursor-pointer">
-        </div>
-
-        <button type="submit" id="btnSalvar"
-            class="w-full py-4 mt-6 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all rounded-2xl font-black shadow-lg shadow-indigo-600/30 text-white text-lg tracking-wide">
-            Salvar Despesa
-        </button>
+        <button type="submit" id="btnSalvar" class="btn-active w-full py-5 rounded-2xl text-white font-black text-lg tracking-widest transition active:scale-95">SALVAR</button>
     </form>
 </div>
 
 <script>
-    // Mostra/Esconde os campos de parcela
-    function toggleParcelas() {
-        const check = document.getElementById('recorrente');
-        const box = document.getElementById('box-parcelas');
-        if(check.checked) box.classList.remove('hidden');
-        else box.classList.add('hidden');
-    }
-
-    document.getElementById('formDespesa').addEventListener('submit', async function(e) {
+    document.getElementById('formDespesa').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const btn = document.getElementById('btnSalvar');
-        const formData = new FormData(e.target);
-        
-        btn.innerHTML = 'Salvando... ⏳';
-        btn.classList.add('opacity-70', 'cursor-not-allowed');
-        btn.disabled = true;
-
-        try {
-            const response = await fetch('/api/despesas/nova', { method: 'POST', body: formData });
-            const result = await response.json();
-            
-            if (response.ok) {
-                btn.classList.replace('bg-indigo-600', 'bg-emerald-500');
-                btn.classList.replace('hover:bg-indigo-700', 'hover:bg-emerald-600');
-                btn.classList.replace('shadow-indigo-600/30', 'shadow-emerald-500/30');
-                btn.innerHTML = 'Sucesso! ✔️';
-                setTimeout(() => window.location.href = '/', 1000);
-            } else {
-                alert('Erro: ' + (result.mensagem || 'Falha ao salvar.'));
-                btn.innerHTML = 'Tentar Novamente';
-                btn.disabled = false;
-                btn.classList.remove('opacity-70', 'cursor-not-allowed');
-            }
-        } catch (error) {
-            alert('Erro de conexão! Verifique sua internet.');
-            btn.innerHTML = 'Salvar Despesa';
-            btn.disabled = false;
-            btn.classList.remove('opacity-70', 'cursor-not-allowed');
-        }
+        const b = document.getElementById('btnSalvar');
+        b.innerText = '⏳';
+        await fetch('/api/despesas/nova', { method: 'POST', body: new FormData(e.target) });
+        window.location.href = '/';
     });
 </script>
 {% endblock %}

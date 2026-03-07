@@ -1,296 +1,126 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6 glass-card p-2 rounded-full shadow-sm">
-    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 active:scale-90 transition font-bold">◀</button>
-    <h2 id="mesDisplay" class="text-sm font-bold uppercase tracking-widest text-indigo-900">Carregando...</h2>
-    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 active:scale-90 transition font-bold">▶</button>
+<div class="flex justify-between items-center mb-6 soft-glass p-2 rounded-full">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:text-orange-500 transition">◀</button>
+    <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-600">Carregando...</h2>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:text-orange-500 transition">▶</button>
 </div>
 
-<div class="w-full p-6 rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-cyan-600 shadow-xl shadow-indigo-500/30 mb-4 relative overflow-hidden text-white">
-    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
-    <h2 class="text-xs font-semibold text-indigo-100 uppercase tracking-wider relative z-10">Saldo Livre Previsto</h2>
-    <div id="saldo_final" class="text-4xl font-black mt-1 relative z-10">R$ 0,00</div>
+<div class="soft-glass p-6 rounded-[32px] mb-4 flex justify-between items-center">
+    <div>
+        <p class="text-[10px] uppercase font-bold text-slate-400 tracking-tighter">Total de Despesas</p>
+        <p id="total_pendente" class="text-3xl font-black text-slate-800">R$ 0,00</p>
+    </div>
+    <div class="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600 font-bold">
+        %
+    </div>
+</div>
+
+<div class="w-full p-6 rounded-[32px] bg-white border border-slate-100 shadow-sm mb-4">
+    <h2 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Saldo Livre Previsto</h2>
+    <div id="saldo_final" class="text-4xl font-black text-slate-800 mt-1">R$ 0,00</div>
 </div>
 
 <div class="flex gap-3 mb-6">
-    <div onclick="editarRenda('Igor')" class="w-1/2 p-4 rounded-3xl glass-card relative cursor-pointer active:scale-95 transition">
-        <div class="absolute top-3 right-3 text-slate-400 text-xs">✏️</div>
-        <p class="text-[10px] uppercase font-bold text-slate-500">Renda Igor</p>
-        <p id="renda_igor" class="text-lg font-black text-slate-800 mt-1">R$ 0,00</p>
+    <div onclick="editarRenda('Igor')" class="w-1/2 p-4 rounded-[28px] soft-glass relative cursor-pointer active:scale-95 transition">
+        <p class="text-[9px] uppercase font-bold text-slate-400">Renda Igor</p>
+        <p id="renda_igor" class="text-lg font-black text-slate-800">R$ 0,00</p>
     </div>
-    <div onclick="editarRenda('Thaynara')" class="w-1/2 p-4 rounded-3xl glass-card relative cursor-pointer active:scale-95 transition">
-        <div class="absolute top-3 right-3 text-slate-400 text-xs">✏️</div>
-        <p class="text-[10px] uppercase font-bold text-slate-500">Renda Thaynara</p>
-        <p id="renda_thaynara" class="text-lg font-black text-slate-800 mt-1">R$ 0,00</p>
+    <div onclick="editarRenda('Thaynara')" class="w-1/2 p-4 rounded-[28px] soft-glass relative cursor-pointer active:scale-95 transition">
+        <p class="text-[9px] uppercase font-bold text-slate-400">Renda Thay</p>
+        <p id="renda_thaynara" class="text-lg font-black text-slate-800">R$ 0,00</p>
     </div>
 </div>
 
-<div class="flex justify-between items-center mb-4 px-1">
-    <h3 class="font-bold text-lg text-slate-800">Contas Pendentes</h3>
-    <div class="text-right">
-        <p class="text-[10px] font-bold text-slate-500 uppercase">Igor: <span id="pendente_igor" class="text-orange-500 font-black">R$ 0,00</span></p>
-        <p class="text-[10px] font-bold text-slate-500 uppercase">Thay: <span id="pendente_thaynara" class="text-orange-500 font-black">R$ 0,00</span></p>
-    </div>
+<div class="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide" id="filtros-semana">
+    <button onclick="filtrarSemana('todas')" class="filtro-btn px-5 py-2.5 rounded-2xl bg-white text-slate-800 text-xs font-bold shadow-sm transition-all border border-transparent">Todas</button>
+    <button onclick="filtrarSemana(1)" class="filtro-btn px-5 py-2.5 rounded-2xl bg-transparent text-slate-400 text-xs font-bold transition-all border border-transparent">Sem. 1</button>
+    <button onclick="filtrarSemana(2)" class="filtro-btn px-5 py-2.5 rounded-2xl bg-transparent text-slate-400 text-xs font-bold transition-all border border-transparent">Sem. 2</button>
+    <button onclick="filtrarSemana(3)" class="filtro-btn px-5 py-2.5 rounded-2xl bg-transparent text-slate-400 text-xs font-bold transition-all border border-transparent">Sem. 3</button>
 </div>
 
-<div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide" id="filtros-semana">
-    <button onclick="filtrarSemana('todas')" class="filtro-btn px-4 py-2 rounded-full bg-indigo-600 text-white text-xs font-bold whitespace-nowrap shadow-md">Todas</button>
-    <button onclick="filtrarSemana(1)" class="filtro-btn px-4 py-2 rounded-full glass-card text-slate-600 text-xs font-bold whitespace-nowrap">Semana 1</button>
-    <button onclick="filtrarSemana(2)" class="filtro-btn px-4 py-2 rounded-full glass-card text-slate-600 text-xs font-bold whitespace-nowrap">Semana 2</button>
-    <button onclick="filtrarSemana(3)" class="filtro-btn px-4 py-2 rounded-full glass-card text-slate-600 text-xs font-bold whitespace-nowrap">Semana 3</button>
-    <button onclick="filtrarSemana(4)" class="filtro-btn px-4 py-2 rounded-full glass-card text-slate-600 text-xs font-bold whitespace-nowrap">Semana 4+</button>
-</div>
-
-<div id="lista-despesas" class="space-y-3 pb-10">
-    <div class="text-center text-slate-400 py-10 animate-pulse font-medium">Calculando... ⏳</div>
-</div>
-
-<div id="modalEditar" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-    <div class="w-full max-w-sm glass-card rounded-3xl p-6 shadow-2xl relative">
-        <button onclick="fecharModalEditar()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">✖</button>
-        <h3 class="text-lg font-black text-slate-800 mb-4">Editar Conta</h3>
-        
-        <form id="formEditar" class="space-y-3">
-            <input type="hidden" id="edit_id">
-            <div>
-                <label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Descrição</label>
-                <input type="text" id="edit_descricao" class="w-full mt-1 p-2.5 rounded-xl bg-white/50 border border-white text-slate-800 outline-none focus:border-indigo-400" required>
-            </div>
-            <div class="flex gap-2">
-                <div class="w-1/2">
-                    <label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Valor</label>
-                    <input type="number" step="0.01" id="edit_valor" class="w-full mt-1 p-2.5 rounded-xl bg-white/50 border border-white text-slate-800 outline-none focus:border-indigo-400" required>
-                </div>
-                <div class="w-1/2">
-                    <label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Vencimento</label>
-                    <input type="date" id="edit_data" class="w-full mt-1 p-2.5 rounded-xl bg-white/50 border border-white text-slate-800 outline-none focus:border-indigo-400" required>
-                </div>
-            </div>
-            <div>
-                <label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Responsável</label>
-                <select id="edit_responsavel" class="w-full mt-1 p-2.5 rounded-xl bg-white/50 border border-white text-slate-800 outline-none focus:border-indigo-400">
-                    <option value="Igor">Igor</option>
-                    <option value="Thaynara">Thaynara</option>
-                </select>
-            </div>
-            <button type="submit" class="w-full py-3 mt-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 active:scale-95 transition">Salvar Alterações</button>
-        </form>
-    </div>
-</div>
-
-<input type="file" id="fileComprovante" class="hidden" accept=".pdf, image/*">
+<div id="lista-despesas" class="space-y-4"></div>
 
 <script>
     let currentData = new Date();
     let despesasPendentesGlobais = [];
 
-    const formatarMoeda = (valor) => Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const formatarData = (dataString) => {
-        if (!dataString) return '--/--/----';
-        const [ano, mes, dia] = dataString.split('-');
-        return `${dia}/${mes}`;
-    };
-
-    const atualizarDisplayMes = () => {
-        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-        document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} ${currentData.getFullYear()}`;
-    };
-
-    const mudarMes = (direcao) => {
-        currentData.setMonth(currentData.getMonth() + direcao);
-        carregarDashboard();
-    };
-
-    const editarRenda = async (usuario) => {
-        let valorAtual = prompt(`Salário de ${usuario} neste mês (Use ponto, ex: 1500.50):`);
-        if(!valorAtual || isNaN(parseFloat(valorAtual))) return;
-        
-        try {
-            await fetch('/api/rendas', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ usuario: usuario, mes: currentData.getMonth() + 1, ano: currentData.getFullYear(), valor: parseFloat(valorAtual) })
-            });
-            carregarDashboard();
-        } catch(e) { alert("Erro ao salvar renda"); }
+    const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    
+    // CORREÇÃO DO BUG UNDEFINED: Agora usa o objeto Date real
+    const formatarData = (ds) => {
+        if (!ds) return '--/--';
+        const d = new Date(ds);
+        return `${d.getUTCDate()}/${d.getUTCMonth() + 1}`;
     };
 
     const carregarDashboard = async () => {
-        atualizarDisplayMes();
         const mes = currentData.getMonth() + 1;
         const ano = currentData.getFullYear();
+        document.getElementById('mesDisplay').innerText = `${mes}/${ano}`;
 
         try {
-            const resResumo = await fetch(`/api/resumo?mes=${mes}&ano=${ano}`);
-            const resumo = await resResumo.json();
-            
-            document.getElementById('saldo_final').innerText = formatarMoeda(resumo.saldo_final);
-            document.getElementById('renda_igor').innerText = formatarMoeda(resumo.renda_igor);
-            document.getElementById('renda_thaynara').innerText = formatarMoeda(resumo.renda_thaynara);
-            document.getElementById('pendente_igor').innerText = formatarMoeda(resumo.pendente_igor);
-            document.getElementById('pendente_thaynara').innerText = formatarMoeda(resumo.pendente_thaynara);
+            const res = await fetch(`/api/resumo?mes=${mes}&ano=${ano}`);
+            const d = await res.json();
+            document.getElementById('saldo_final').innerText = formatarMoeda(d.saldo_final);
+            document.getElementById('total_pendente').innerText = formatarMoeda(d.total_pendente);
+            document.getElementById('renda_igor').innerText = formatarMoeda(d.renda_igor);
+            document.getElementById('renda_thaynara').innerText = formatarMoeda(d.renda_thaynara);
 
-            const resDespesas = await fetch(`/api/despesas?mes=${mes}&ano=${ano}`);
-            const todasDespesas = await resDespesas.json();
-            
-            despesasPendentesGlobais = todasDespesas.filter(d => !d.pago);
+            const resD = await fetch(`/api/despesas?mes=${mes}&ano=${ano}`);
+            despesasPendentesGlobais = (await resD.json()).filter(x => !x.pago);
             filtrarSemana('todas');
-            
-        } catch (error) {
-            document.getElementById('lista-despesas').innerHTML = `<p class="text-red-500 text-center py-4">Erro de conexão.</p>`;
-        }
+        } catch(e) { console.error(e); }
     };
 
-    const filtrarSemana = (semana) => {
-        document.querySelectorAll('.filtro-btn').forEach(btn => {
-            btn.classList.replace('bg-indigo-600', 'glass-card');
-            btn.classList.replace('text-white', 'text-slate-600');
-            btn.classList.remove('shadow-md');
+    const filtrarSemana = (s) => {
+        // Estética do botão ativo
+        document.querySelectorAll('.filtro-btn').forEach(b => {
+            b.classList.remove('bg-white', 'text-slate-800', 'shadow-sm');
+            b.classList.add('text-slate-400');
         });
-        const activeBtn = event ? event.target : document.querySelector('.filtro-btn');
-        activeBtn.classList.replace('glass-card', 'bg-indigo-600');
-        activeBtn.classList.replace('text-slate-600', 'text-white');
-        activeBtn.classList.add('shadow-md');
+        const btn = event ? event.target : document.querySelector('.filtro-btn');
+        btn.classList.add('bg-white', 'text-slate-800', 'shadow-sm');
+        btn.classList.remove('text-slate-400');
 
         const container = document.getElementById('lista-despesas');
         container.innerHTML = '';
 
-        let despesasFiltradas = despesasPendentesGlobais;
-
-        if(semana !== 'todas') {
-            despesasFiltradas = despesasPendentesGlobais.filter(d => {
-                const dia = parseInt(d.data_vencimento.split('-')[2]);
-                if(semana === 1) return dia >= 1 && dia <= 7;
-                if(semana === 2) return dia >= 8 && dia <= 14;
-                if(semana === 3) return dia >= 15 && dia <= 21;
-                if(semana === 4) return dia >= 22;
+        let filtradas = despesasPendentesGlobais;
+        if(s !== 'todas') {
+            filtradas = despesasPendentesGlobais.filter(x => {
+                const dia = new Date(x.data_vencimento).getUTCDate();
+                return s === 1 ? (dia <= 7) : s === 2 ? (dia > 7 && dia <= 14) : (dia > 14 && dia <= 21);
             });
         }
 
-        if (despesasFiltradas.length === 0) {
-            container.innerHTML = `<div class="text-center py-10 glass-card rounded-3xl"><span class="text-3xl block mb-2">🎉</span><p class="text-slate-500 text-sm font-bold">Tudo pago ou vazio!</p></div>`;
-            return;
-        }
-
-        despesasFiltradas.forEach(despesa => {
-            const icone = despesa.categoria === 'Carro/Manutenção' || despesa.categoria === 'Combustível' ? '🚗' : 
-                          despesa.categoria === 'Moradia' ? '🏠' : 
-                          despesa.categoria === 'Alimentação' ? '🛒' : '💸';
-
-            // Tratando strings com aspas simples para não quebrar a função JS
-            const descSegura = despesa.descricao.replace(/'/g, "\\'");
-
+        filtradas.forEach(x => {
             container.innerHTML += `
-                <div class="p-4 rounded-3xl glass-card flex justify-between items-center active:scale-[0.99] transition-transform">
-                    <div class="flex items-center gap-3 w-1/2">
-                        <div class="min-w-[40px] h-[40px] rounded-full bg-white/60 flex items-center justify-center text-xl border border-white shadow-sm">
-                            ${icone}
-                        </div>
+                <div class="p-5 rounded-[28px] bg-white border border-slate-50 shadow-sm flex justify-between items-center transition active:scale-95">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-xl">💸</div>
                         <div>
-                            <p class="font-bold text-slate-800 text-sm leading-tight">${despesa.descricao}</p>
-                            <p class="text-[10px] text-slate-500 font-bold mt-0.5">Vence: <span class="text-orange-500">${formatarData(despesa.data_vencimento)}</span></p>
-                            <span class="inline-block px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider mt-1 ${despesa.responsavel_pagamento === 'Igor' ? 'bg-cyan-100 text-cyan-700' : 'bg-pink-100 text-pink-700'}">${despesa.responsavel_pagamento}</span>
+                            <p class="font-bold text-slate-800 text-sm">${x.descricao}</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase">Dia ${formatarData(x.data_vencimento)} • ${x.responsavel_pagamento}</p>
                         </div>
                     </div>
-                    
-                    <div class="flex flex-col items-end gap-2 w-1/2">
-                        <p class="font-black text-slate-800 text-[15px]">${formatarMoeda(despesa.valor)}</p>
-                        
-                        <div class="flex items-center gap-1 w-full justify-end">
-                            <button onclick="abrirModalEditar(${despesa.id}, '${descSegura}', ${despesa.valor}, '${despesa.data_vencimento}', '${despesa.responsavel_pagamento}')" class="w-8 h-8 rounded-lg bg-indigo-50/50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition shadow-sm border border-white">✏️</button>
-                            
-                            <button onclick="excluirDespesa(${despesa.id})" class="w-8 h-8 rounded-lg bg-red-50/50 text-red-500 flex items-center justify-center hover:bg-red-100 transition shadow-sm border border-white">🗑️</button>
-                            
-                            <button id="btn-pagar-${despesa.id}" onclick="pagarRapido(${despesa.id})" class="flex-1 h-8 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-[11px] font-bold transition shadow-sm border border-white whitespace-nowrap px-2">Baixa</button>
-                        </div>
+                    <div class="text-right">
+                        <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
+                        <button onclick="pagarRapido(${x.id})" class="text-[10px] font-black text-orange-500 uppercase mt-1 tracking-tighter">Pagar</button>
                     </div>
-                </div>
-            `;
+                </div>`;
         });
     };
 
-    /* --- FUNÇÕES DO MODAL DE EDIÇÃO --- */
-    const abrirModalEditar = (id, desc, valor, data, resp) => {
-        document.getElementById('edit_id').value = id;
-        document.getElementById('edit_descricao').value = desc;
-        document.getElementById('edit_valor').value = valor;
-        document.getElementById('edit_data').value = data;
-        document.getElementById('edit_responsavel').value = resp;
-        document.getElementById('modalEditar').classList.remove('hidden');
-    };
-
-    const fecharModalEditar = () => {
-        document.getElementById('modalEditar').classList.add('hidden');
-    };
-
-    document.getElementById('formEditar').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('edit_id').value;
-        const dados = {
-            descricao: document.getElementById('edit_descricao').value,
-            valor: parseFloat(document.getElementById('edit_valor').value),
-            data_vencimento: document.getElementById('edit_data').value,
-            responsavel_pagamento: document.getElementById('edit_responsavel').value
-        };
-
-        try {
-            await fetch(`/api/despesas/${id}/editar`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dados)
-            });
-            fecharModalEditar();
-            carregarDashboard();
-        } catch(e) { alert("Erro ao editar."); }
-    });
-
-    /* --- FUNÇÃO DE EXCLUIR --- */
-    const excluirDespesa = async (id) => {
-        if(confirm("Tem certeza que deseja EXCLUIR essa conta definitivamente?")) {
-            try {
-                await fetch(`/api/despesas/${id}`, { method: 'DELETE' });
-                carregarDashboard();
-            } catch(e) { alert("Erro ao excluir."); }
-        }
-    };
-
-    // Fluxo Mágico do Pagamento
-    const pagarRapido = async (id) => {
-        const confirmarPagamento = confirm("Confirmar que esta conta foi paga? \n\nClique em OK para adicionar um Recibo agora.\nClique em Cancelar se quiser dar baixa sem recibo.");
-        const btnNode = document.getElementById(`btn-pagar-${id}`);
-        btnNode.innerText = "Enviando...⏳";
-        btnNode.disabled = true;
-
-        if (confirmarPagamento) {
-            const input = document.getElementById('fileComprovante');
-            input.value = ''; 
-            input.onchange = async () => {
-                await dispararPagamentoAPI(id, input.files.length > 0 ? input.files[0] : null);
-            };
-            input.click(); 
-        } else {
-            const apenasDarBaixa = confirm("A conta será marcada como paga SEM comprovante. Deseja prosseguir?");
-            if (apenasDarBaixa) {
-                await dispararPagamentoAPI(id, null);
-            } else {
-                btnNode.innerText = "Baixa";
-                btnNode.disabled = false;
-            }
-        }
-    };
-
-    const dispararPagamentoAPI = async (id, file) => {
-        const formData = new FormData();
-        if (file) formData.append('comprovante', file);
-
-        try {
-            await fetch(`/api/despesas/${id}/pagar`, { method: 'POST', body: formData });
+    const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarDashboard(); };
+    const pagarRapido = async (id) => { if(confirm("Pagar?")) { await fetch(`/api/despesas/${id}/pagar`, {method:'POST'}); carregarDashboard(); } };
+    const editarRenda = async (u) => { 
+        let v = prompt(`Renda ${u}:`); 
+        if(v) { 
+            await fetch('/api/rendas', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({usuario:u, mes:currentData.getMonth()+1, ano:currentData.getFullYear(), valor:parseFloat(v)})}); 
             carregarDashboard(); 
-        } catch (error) {
-            alert("Erro de conexão.");
-            carregarDashboard();
-        }
+        } 
     };
 
     document.addEventListener("DOMContentLoaded", carregarDashboard);
