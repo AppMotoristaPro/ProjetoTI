@@ -1,5 +1,6 @@
 import pg8000.dbapi
 import urllib.parse
+import ssl
 from config import Config
 
 def get_db_connection():
@@ -9,12 +10,16 @@ def get_db_connection():
     
     parsed = urllib.parse.urlparse(Config.DATABASE_URL)
     try:
+        # O Neon EXIGE uma conexão segura. Isso cria o contexto SSL padrão.
+        context = ssl.create_default_context()
+        
         conn = pg8000.dbapi.connect(
             user=parsed.username,
             password=parsed.password,
             host=parsed.hostname,
-            port=parsed.port,
-            database=parsed.path.lstrip('/')
+            port=parsed.port or 5432, # Coloquei o 5432 como fallback de segurança
+            database=parsed.path.lstrip('/'),
+            ssl_context=context # <-- A mágica da segurança do Neon acontece aqui
         )
         return conn
     except Exception as e:
@@ -26,7 +31,7 @@ def init_db():
     if not conn:
         return
 
-    # Tabela de Usuários (Igor e Thaynara)
+    # Tabela de Usuários
     query_usuarios = """
     CREATE TABLE IF NOT EXISTS usuarios (
         id SERIAL PRIMARY KEY,
@@ -36,7 +41,7 @@ def init_db():
     );
     """
 
-    # Tabela de Despesas (Agora salva o arquivo dentro do banco em BYTEA)
+    # Tabela de Despesas (Adaptada para Neon)
     query_despesas = """
     CREATE TABLE IF NOT EXISTS despesas (
         id SERIAL PRIMARY KEY,
@@ -53,7 +58,7 @@ def init_db():
     );
     """
 
-    # Tabela de Notificações Push
+    # Tabela de Push
     query_push = """
     CREATE TABLE IF NOT EXISTS inscricoes_push (
         id SERIAL PRIMARY KEY,
@@ -70,7 +75,7 @@ def init_db():
         cur.execute(query_push)
         conn.commit()
         cur.close()
-        print("✅ Tabelas do banco de dados verificadas/criadas com sucesso!")
+        print("✅ Tabelas do banco de dados verificadas/criadas com sucesso no Neon!")
     except Exception as e:
         print(f"❌ Erro ao inicializar o banco: {e}")
     finally:
