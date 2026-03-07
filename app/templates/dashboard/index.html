@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6 bg-white p-2 rounded-full shadow-sm border border-slate-200">
-    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-90 transition">◀</button>
+<div class="flex justify-between items-center mb-6 glass-card p-2 rounded-full shadow-sm">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 active:scale-90 transition font-bold">◀</button>
     <h2 id="mesDisplay" class="text-sm font-bold uppercase tracking-widest text-indigo-900">Carregando...</h2>
-    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-90 transition">▶</button>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 active:scale-90 transition font-bold">▶</button>
 </div>
 
 <div class="w-full p-6 rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-cyan-600 shadow-xl shadow-indigo-500/30 mb-4 relative overflow-hidden text-white">
@@ -14,14 +14,14 @@
 </div>
 
 <div class="flex gap-3 mb-6">
-    <div onclick="editarRenda('Igor')" class="w-1/2 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm relative cursor-pointer active:scale-95 transition">
-        <div class="absolute top-3 right-3 text-slate-300 text-xs">✏️</div>
-        <p class="text-[10px] uppercase font-bold text-slate-400">Renda Igor</p>
+    <div onclick="editarRenda('Igor')" class="w-1/2 p-4 rounded-3xl glass-card relative cursor-pointer active:scale-95 transition">
+        <div class="absolute top-3 right-3 text-slate-400 text-xs">✏️</div>
+        <p class="text-[10px] uppercase font-bold text-slate-500">Renda Igor</p>
         <p id="renda_igor" class="text-lg font-black text-slate-800 mt-1">R$ 0,00</p>
     </div>
-    <div onclick="editarRenda('Thaynara')" class="w-1/2 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm relative cursor-pointer active:scale-95 transition">
-        <div class="absolute top-3 right-3 text-slate-300 text-xs">✏️</div>
-        <p class="text-[10px] uppercase font-bold text-slate-400">Renda Thaynara</p>
+    <div onclick="editarRenda('Thaynara')" class="w-1/2 p-4 rounded-3xl glass-card relative cursor-pointer active:scale-95 transition">
+        <div class="absolute top-3 right-3 text-slate-400 text-xs">✏️</div>
+        <p class="text-[10px] uppercase font-bold text-slate-500">Renda Thaynara</p>
         <p id="renda_thaynara" class="text-lg font-black text-slate-800 mt-1">R$ 0,00</p>
     </div>
 </div>
@@ -29,21 +29,54 @@
 <div class="flex justify-between items-center mb-4 px-1">
     <h3 class="font-bold text-lg text-slate-800">Contas Pendentes</h3>
     <div class="text-right">
-        <p class="text-[10px] font-bold text-slate-400 uppercase">Igor: <span id="pendente_igor" class="text-orange-500">R$ 0,00</span></p>
-        <p class="text-[10px] font-bold text-slate-400 uppercase">Thay: <span id="pendente_thaynara" class="text-orange-500">R$ 0,00</span></p>
+        <p class="text-[10px] font-bold text-slate-500 uppercase">Igor: <span id="pendente_igor" class="text-orange-500 font-black">R$ 0,00</span></p>
+        <p class="text-[10px] font-bold text-slate-500 uppercase">Thay: <span id="pendente_thaynara" class="text-orange-500 font-black">R$ 0,00</span></p>
     </div>
 </div>
 
 <div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide" id="filtros-semana">
     <button onclick="filtrarSemana('todas')" class="filtro-btn px-4 py-2 rounded-full bg-indigo-600 text-white text-xs font-bold whitespace-nowrap shadow-md">Todas</button>
-    <button onclick="filtrarSemana(1)" class="filtro-btn px-4 py-2 rounded-full bg-white text-slate-500 border border-slate-200 text-xs font-bold whitespace-nowrap">Semana 1</button>
-    <button onclick="filtrarSemana(2)" class="filtro-btn px-4 py-2 rounded-full bg-white text-slate-500 border border-slate-200 text-xs font-bold whitespace-nowrap">Semana 2</button>
-    <button onclick="filtrarSemana(3)" class="filtro-btn px-4 py-2 rounded-full bg-white text-slate-500 border border-slate-200 text-xs font-bold whitespace-nowrap">Semana 3</button>
-    <button onclick="filtrarSemana(4)" class="filtro-btn px-4 py-2 rounded-full bg-white text-slate-500 border border-slate-200 text-xs font-bold whitespace-nowrap">Semana 4+</button>
+    <button onclick="filtrarSemana(1)" class="filtro-btn px-4 py-2 rounded-full glass-card text-slate-600 text-xs font-bold whitespace-nowrap">Semana 1</button>
+    <button onclick="filtrarSemana(2)" class="filtro-btn px-4 py-2 rounded-full glass-card text-slate-600 text-xs font-bold whitespace-nowrap">Semana 2</button>
+    <button onclick="filtrarSemana(3)" class="filtro-btn px-4 py-2 rounded-full glass-card text-slate-600 text-xs font-bold whitespace-nowrap">Semana 3</button>
+    <button onclick="filtrarSemana(4)" class="filtro-btn px-4 py-2 rounded-full glass-card text-slate-600 text-xs font-bold whitespace-nowrap">Semana 4+</button>
 </div>
 
 <div id="lista-despesas" class="space-y-3 pb-10">
     <div class="text-center text-slate-400 py-10 animate-pulse font-medium">Calculando... ⏳</div>
+</div>
+
+<div id="modalEditar" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="w-full max-w-sm glass-card rounded-3xl p-6 shadow-2xl relative">
+        <button onclick="fecharModalEditar()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">✖</button>
+        <h3 class="text-lg font-black text-slate-800 mb-4">Editar Conta</h3>
+        
+        <form id="formEditar" class="space-y-3">
+            <input type="hidden" id="edit_id">
+            <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Descrição</label>
+                <input type="text" id="edit_descricao" class="w-full mt-1 p-2.5 rounded-xl bg-white/50 border border-white text-slate-800 outline-none focus:border-indigo-400" required>
+            </div>
+            <div class="flex gap-2">
+                <div class="w-1/2">
+                    <label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Valor</label>
+                    <input type="number" step="0.01" id="edit_valor" class="w-full mt-1 p-2.5 rounded-xl bg-white/50 border border-white text-slate-800 outline-none focus:border-indigo-400" required>
+                </div>
+                <div class="w-1/2">
+                    <label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Vencimento</label>
+                    <input type="date" id="edit_data" class="w-full mt-1 p-2.5 rounded-xl bg-white/50 border border-white text-slate-800 outline-none focus:border-indigo-400" required>
+                </div>
+            </div>
+            <div>
+                <label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Responsável</label>
+                <select id="edit_responsavel" class="w-full mt-1 p-2.5 rounded-xl bg-white/50 border border-white text-slate-800 outline-none focus:border-indigo-400">
+                    <option value="Igor">Igor</option>
+                    <option value="Thaynara">Thaynara</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full py-3 mt-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 active:scale-95 transition">Salvar Alterações</button>
+        </form>
+    </div>
 </div>
 
 <input type="file" id="fileComprovante" class="hidden" accept=".pdf, image/*">
@@ -77,12 +110,7 @@
             await fetch('/api/rendas', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    usuario: usuario,
-                    mes: currentData.getMonth() + 1,
-                    ano: currentData.getFullYear(),
-                    valor: parseFloat(valorAtual)
-                })
+                body: JSON.stringify({ usuario: usuario, mes: currentData.getMonth() + 1, ano: currentData.getFullYear(), valor: parseFloat(valorAtual) })
             });
             carregarDashboard();
         } catch(e) { alert("Erro ao salvar renda"); }
@@ -116,15 +144,13 @@
 
     const filtrarSemana = (semana) => {
         document.querySelectorAll('.filtro-btn').forEach(btn => {
-            btn.classList.replace('bg-indigo-600', 'bg-white');
-            btn.classList.replace('text-white', 'text-slate-500');
-            btn.classList.add('border', 'border-slate-200');
+            btn.classList.replace('bg-indigo-600', 'glass-card');
+            btn.classList.replace('text-white', 'text-slate-600');
             btn.classList.remove('shadow-md');
         });
         const activeBtn = event ? event.target : document.querySelector('.filtro-btn');
-        activeBtn.classList.replace('bg-white', 'bg-indigo-600');
-        activeBtn.classList.replace('text-slate-500', 'text-white');
-        activeBtn.classList.remove('border', 'border-slate-200');
+        activeBtn.classList.replace('glass-card', 'bg-indigo-600');
+        activeBtn.classList.replace('text-slate-600', 'text-white');
         activeBtn.classList.add('shadow-md');
 
         const container = document.getElementById('lista-despesas');
@@ -143,7 +169,7 @@
         }
 
         if (despesasFiltradas.length === 0) {
-            container.innerHTML = `<div class="text-center py-10 bg-white rounded-3xl border border-slate-100 shadow-sm"><span class="text-3xl block mb-2">🎉</span><p class="text-slate-400 text-sm font-medium">Tudo pago ou vazio!</p></div>`;
+            container.innerHTML = `<div class="text-center py-10 glass-card rounded-3xl"><span class="text-3xl block mb-2">🎉</span><p class="text-slate-500 text-sm font-bold">Tudo pago ou vazio!</p></div>`;
             return;
         }
 
@@ -152,85 +178,117 @@
                           despesa.categoria === 'Moradia' ? '🏠' : 
                           despesa.categoria === 'Alimentação' ? '🛒' : '💸';
 
+            // Tratando strings com aspas simples para não quebrar a função JS
+            const descSegura = despesa.descricao.replace(/'/g, "\\'");
+
             container.innerHTML += `
-                <div class="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm flex justify-between items-center active:scale-[0.98] transition-transform">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-xl border border-slate-100 shadow-inner">
+                <div class="p-4 rounded-3xl glass-card flex justify-between items-center active:scale-[0.99] transition-transform">
+                    <div class="flex items-center gap-3 w-1/2">
+                        <div class="min-w-[40px] h-[40px] rounded-full bg-white/60 flex items-center justify-center text-xl border border-white shadow-sm">
                             ${icone}
                         </div>
                         <div>
-                            <p class="font-bold text-slate-800 text-sm">${despesa.descricao}</p>
-                            <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Vence: <span class="text-orange-500">${formatarData(despesa.data_vencimento)}</span> • Resp: ${despesa.responsavel_pagamento}</p>
+                            <p class="font-bold text-slate-800 text-sm leading-tight">${despesa.descricao}</p>
+                            <p class="text-[10px] text-slate-500 font-bold mt-0.5">Vence: <span class="text-orange-500">${formatarData(despesa.data_vencimento)}</span></p>
+                            <span class="inline-block px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider mt-1 ${despesa.responsavel_pagamento === 'Igor' ? 'bg-cyan-100 text-cyan-700' : 'bg-pink-100 text-pink-700'}">${despesa.responsavel_pagamento}</span>
                         </div>
                     </div>
-                    <div class="text-right flex flex-col items-end gap-2">
-                        <p class="font-black text-slate-800 text-sm">${formatarMoeda(despesa.valor)}</p>
-                        <button id="btn-pagar-${despesa.id}" onclick="pagarRapido(${despesa.id})" class="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-bold transition">Dar Baixa</button>
+                    
+                    <div class="flex flex-col items-end gap-2 w-1/2">
+                        <p class="font-black text-slate-800 text-[15px]">${formatarMoeda(despesa.valor)}</p>
+                        
+                        <div class="flex items-center gap-1 w-full justify-end">
+                            <button onclick="abrirModalEditar(${despesa.id}, '${descSegura}', ${despesa.valor}, '${despesa.data_vencimento}', '${despesa.responsavel_pagamento}')" class="w-8 h-8 rounded-lg bg-indigo-50/50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition shadow-sm border border-white">✏️</button>
+                            
+                            <button onclick="excluirDespesa(${despesa.id})" class="w-8 h-8 rounded-lg bg-red-50/50 text-red-500 flex items-center justify-center hover:bg-red-100 transition shadow-sm border border-white">🗑️</button>
+                            
+                            <button id="btn-pagar-${despesa.id}" onclick="pagarRapido(${despesa.id})" class="flex-1 h-8 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-[11px] font-bold transition shadow-sm border border-white whitespace-nowrap px-2">Baixa</button>
+                        </div>
                     </div>
                 </div>
             `;
         });
     };
 
-    // Fluxo Mágico do Pagamento Expresso
+    /* --- FUNÇÕES DO MODAL DE EDIÇÃO --- */
+    const abrirModalEditar = (id, desc, valor, data, resp) => {
+        document.getElementById('edit_id').value = id;
+        document.getElementById('edit_descricao').value = desc;
+        document.getElementById('edit_valor').value = valor;
+        document.getElementById('edit_data').value = data;
+        document.getElementById('edit_responsavel').value = resp;
+        document.getElementById('modalEditar').classList.remove('hidden');
+    };
+
+    const fecharModalEditar = () => {
+        document.getElementById('modalEditar').classList.add('hidden');
+    };
+
+    document.getElementById('formEditar').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit_id').value;
+        const dados = {
+            descricao: document.getElementById('edit_descricao').value,
+            valor: parseFloat(document.getElementById('edit_valor').value),
+            data_vencimento: document.getElementById('edit_data').value,
+            responsavel_pagamento: document.getElementById('edit_responsavel').value
+        };
+
+        try {
+            await fetch(`/api/despesas/${id}/editar`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dados)
+            });
+            fecharModalEditar();
+            carregarDashboard();
+        } catch(e) { alert("Erro ao editar."); }
+    });
+
+    /* --- FUNÇÃO DE EXCLUIR --- */
+    const excluirDespesa = async (id) => {
+        if(confirm("Tem certeza que deseja EXCLUIR essa conta definitivamente?")) {
+            try {
+                await fetch(`/api/despesas/${id}`, { method: 'DELETE' });
+                carregarDashboard();
+            } catch(e) { alert("Erro ao excluir."); }
+        }
+    };
+
+    // Fluxo Mágico do Pagamento
     const pagarRapido = async (id) => {
-        const confirmarPagamento = confirm("Confirmar que esta conta foi paga? \n\nClique em OK para adicionar um Recibo agora.\nClique em Cancelar se quiser apenas dar baixa sem recibo.");
-        
+        const confirmarPagamento = confirm("Confirmar que esta conta foi paga? \n\nClique em OK para adicionar um Recibo agora.\nClique em Cancelar se quiser dar baixa sem recibo.");
         const btnNode = document.getElementById(`btn-pagar-${id}`);
         btnNode.innerText = "Enviando...⏳";
-        btnNode.classList.replace('bg-emerald-100', 'bg-slate-200');
         btnNode.disabled = true;
 
         if (confirmarPagamento) {
-            // Abre a galeria/câmera
             const input = document.getElementById('fileComprovante');
-            input.value = ''; // Limpa seleções anteriores
-            
-            // Quando a pessoa escolher a foto:
+            input.value = ''; 
             input.onchange = async () => {
-                if (input.files.length > 0) {
-                    await dispararPagamentoAPI(id, input.files[0]);
-                } else {
-                    await dispararPagamentoAPI(id, null);
-                }
+                await dispararPagamentoAPI(id, input.files.length > 0 ? input.files[0] : null);
             };
-            
-            input.click(); // Força o clique no input invisível
+            input.click(); 
         } else {
-            // A pessoa clicou em cancelar o recibo, então só dá baixa
             const apenasDarBaixa = confirm("A conta será marcada como paga SEM comprovante. Deseja prosseguir?");
             if (apenasDarBaixa) {
                 await dispararPagamentoAPI(id, null);
             } else {
-                // Voltou atrás e não quer mais pagar
-                btnNode.innerText = "Dar Baixa";
-                btnNode.classList.replace('bg-slate-200', 'bg-emerald-100');
+                btnNode.innerText = "Baixa";
                 btnNode.disabled = false;
             }
         }
     };
 
-    // Função que embala a foto (se tiver) e envia pro servidor
     const dispararPagamentoAPI = async (id, file) => {
         const formData = new FormData();
-        if (file) {
-            formData.append('comprovante', file);
-        }
+        if (file) formData.append('comprovante', file);
 
         try {
-            const res = await fetch(`/api/despesas/${id}/pagar`, {
-                method: 'POST',
-                body: formData // Formato nativo para envio de arquivos
-            });
-            
-            if (res.ok) {
-                carregarDashboard(); // Sucesso! A conta evapora do dashboard e o saldo se atualiza.
-            } else {
-                alert("Erro ao marcar como pago no banco de dados.");
-                carregarDashboard(); // Recarrega para voltar o botão ao normal
-            }
+            await fetch(`/api/despesas/${id}/pagar`, { method: 'POST', body: formData });
+            carregarDashboard(); 
         } catch (error) {
-            alert("Erro de conexão de rede.");
+            alert("Erro de conexão.");
             carregarDashboard();
         }
     };
