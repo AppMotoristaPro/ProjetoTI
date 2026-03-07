@@ -251,7 +251,6 @@
             return;
         }
 
-        // SWIPE TO PAY (Removido o botão de pagar, substituído por um container arrastável)
         filtradas.forEach(x => {
             const descSafe = x.descricao.replace(/'/g, "\\'");
             const obsSafe = (x.observacao || "").replace(/'/g, "\\'").replace(/\n/g, " ");
@@ -261,8 +260,8 @@
             const txtPrevisto = x.data_pretensao ? `<span class="text-orange-500">⚡ Prev: ${formatarData(x.data_pretensao)}</span>` : '';
 
             container.innerHTML += `
-                <div class="relative rounded-[28px] shadow-sm bg-emerald-500 overflow-hidden">
-                    <div class="absolute inset-y-0 left-0 flex items-center pl-6 text-white font-black text-lg z-0">
+                <div class="relative rounded-[28px] shadow-sm overflow-hidden mb-3 swipe-container bg-transparent">
+                    <div class="swipe-bg absolute inset-0 bg-emerald-500 flex items-center pl-6 text-white font-black text-lg z-0" style="opacity: 0; transition: opacity 0.1s;">
                         <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> PAGO
                     </div>
                     
@@ -270,7 +269,7 @@
                          data-id="${x.id}" 
                          onclick="if(!isSwiping) abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas})">
                         
-                        <div class="flex items-start gap-3 w-[70%]">
+                        <div class="flex items-start gap-3 w-[70%] pointer-events-none">
                             <div class="min-w-[42px] h-[42px] rounded-2xl bg-white/70 flex items-center justify-center text-indigo-600 shadow-sm border border-white mt-1">${svgIcon}</div>
                             <div class="truncate flex-1">
                                 <p class="font-bold text-slate-800 text-sm truncate leading-tight">${x.descricao}</p>
@@ -281,7 +280,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex flex-col items-end justify-center h-full gap-2 w-[30%]">
+                        <div class="flex flex-col items-end justify-center h-full gap-2 w-[30%] pointer-events-none">
                             <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
                             <span class="text-[8px] font-black text-emerald-600 uppercase mt-0.5">👤 ${x.responsavel_pagamento}</span>
                         </div>
@@ -293,15 +292,17 @@
     const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarDashboard(); };
     const fecharModais = () => { document.querySelectorAll('[id^="modal"]').forEach(m => m.classList.add('hidden')); };
 
-    // --- MECÂNICA DE ARRASTAR (SWIPE TO PAY) ---
-    let isSwiping = false, startX = 0, currentX = 0, swipeTarget = null;
+    // --- MECÂNICA DE ARRASTAR COM OPACIDADE INTELIGENTE ---
+    let isSwiping = false, startX = 0, currentX = 0, swipeTarget = null, swipeBg = null;
     
     const startSwipe = (e) => {
         const card = e.target.closest('.swipe-card');
         if(!card) return;
         swipeTarget = card;
+        swipeBg = card.previousElementSibling;
         startX = e.touches[0].clientX;
         card.style.transition = 'none';
+        if (swipeBg) swipeBg.style.transition = 'none';
         isSwiping = false;
     };
     
@@ -309,27 +310,36 @@
         if(!swipeTarget) return;
         currentX = e.touches[0].clientX - startX;
         if(currentX > 10) isSwiping = true;
-        if(currentX > 0) swipeTarget.style.transform = `translateX(${currentX}px)`;
+        if(currentX > 0) {
+            swipeTarget.style.transform = `translateX(${currentX}px)`;
+            if (swipeBg) {
+                let op = Math.min(currentX / 100, 1);
+                swipeBg.style.opacity = op;
+            }
+        }
     };
     
     const endSwipe = (e) => {
         if(!swipeTarget) return;
         swipeTarget.style.transition = 'transform 0.3s ease';
+        if (swipeBg) swipeBg.style.transition = 'opacity 0.3s ease';
+        
         if(currentX > 100) {
-            swipeTarget.style.transform = `translateX(150%)`; // Joga pra fora da tela
+            swipeTarget.style.transform = `translateX(150%)`; 
+            if(swipeBg) swipeBg.style.opacity = '1';
             const id = swipeTarget.getAttribute('data-id');
             setTimeout(() => { abrirModalPagamento(id); }, 250);
         } else {
-            swipeTarget.style.transform = `translateX(0px)`; // Volta pro lugar
+            swipeTarget.style.transform = `translateX(0px)`;
+            if(swipeBg) swipeBg.style.opacity = '0';
         }
-        setTimeout(() => { swipeTarget = null; currentX = 0; isSwiping = false; }, 50);
+        setTimeout(() => { swipeTarget = null; swipeBg = null; currentX = 0; isSwiping = false; }, 300);
     };
 
     document.addEventListener('touchstart', startSwipe, {passive: true});
     document.addEventListener('touchmove', moveSwipe, {passive: true});
     document.addEventListener('touchend', endSwipe);
 
-    // --- RAIO-X: Modal de Detalhes ---
     const abrirModalDetalhes = (id, desc, valor, dataV, dataP, resp, fonte, obs, p_atual, t_parc) => {
         document.getElementById('det_nome').innerText = desc;
         document.getElementById('det_parcela').innerText = t_parc > 1 ? `Parcela ${p_atual} de ${t_parc}` : 'Conta Fixa / Única';
@@ -349,7 +359,6 @@
             document.getElementById('modalEditar').classList.remove('hidden');
         };
 
-        // EXCLUSÃO INTELIGENTE DE PARCELAS
         document.getElementById('btnExcluirAtivo').onclick = async () => {
             let params = '';
             if (t_parc > 1) {
@@ -382,7 +391,6 @@
         catch (error) { alert("Erro de rede."); carregarDashboard(); }
     };
 
-    // --- RENDAS FIXAS ---
     const abrirModalRendaIgor = () => {
         document.getElementById('igor_shopee').value = dadosRendaGlobais.detalhes_igor['Shopee'] || '';
         document.getElementById('igor_uber').value = dadosRendaGlobais.detalhes_igor['Uber'] || '';

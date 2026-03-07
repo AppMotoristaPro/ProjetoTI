@@ -139,8 +139,17 @@
 
         const endpoint = id ? `/api/caixinhas/${id}` : '/api/caixinhas';
         const method = id ? 'PUT' : 'POST';
-        await fetch(endpoint, { method: method, headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome: nome, valor: valor, icone_svg: icone})});
-        fecharModalCaixinha(); carregarTudo();
+        
+        // Validação Inteligente: O modal não fecha mais se o banco recusar!
+        const res = await fetch(endpoint, { method: method, headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome: nome, valor: valor, icone_svg: icone})});
+        
+        if (!res.ok) {
+            alert("Erro ao conectar com o banco de dados. Veja o log no terminal do Render.");
+            return;
+        }
+        
+        fecharModalCaixinha(); 
+        carregarTudo();
     };
 
     const deletarCaixinha = async () => {

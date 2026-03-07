@@ -53,7 +53,9 @@ class DespesaRepository:
             conn.commit()
             cur.close()
             return True
-        except Exception as e: return False
+        except Exception as e: 
+            print(f"Erro ao criar despesa: {e}")
+            return False
         finally: conn.close()
 
     @staticmethod
@@ -86,7 +88,6 @@ class DespesaRepository:
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            # Vacina anti-bug de conflito nas rendas
             cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s", (usuario, fonte, mes, ano))
             linha = cur.fetchone()
             if linha:
@@ -96,7 +97,9 @@ class DespesaRepository:
             conn.commit()
             cur.close()
             return True
-        except Exception as e: return False
+        except Exception as e: 
+            print(f"Erro ao salvar renda: {e}")
+            return False
         finally: conn.close()
 
     @staticmethod
@@ -160,19 +163,22 @@ class DespesaRepository:
                 cur.execute("UPDATE despesas SET pago = TRUE WHERE id = %s", (despesa_id,))
             conn.commit()
             return True
-        except: return False
+        except Exception as e: 
+            print(f"Erro ao marcar paga: {e}")
+            return False
         finally: conn.close()
 
     @staticmethod
     def desfazer_pagamento(despesa_id):
-        """Retira a conta do histórico e devolve para o dashboard"""
         conn = get_db_connection()
         try:
             cur = conn.cursor()
             cur.execute("UPDATE despesas SET pago = FALSE, comprovante_dados = NULL, comprovante_mimetype = NULL WHERE id = %s", (despesa_id,))
             conn.commit()
             return True
-        except: return False
+        except Exception as e: 
+            print(f"Erro ao desfazer pagamento: {e}")
+            return False
         finally: conn.close()
 
     @staticmethod
@@ -184,7 +190,9 @@ class DespesaRepository:
             cur.execute(query, (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('responsavel_pagamento'), dados.get('fonte_pagamento'), despesa_id))
             conn.commit()
             return True
-        except: return False
+        except Exception as e: 
+            print(f"Erro ao atualizar: {e}")
+            return False
         finally: conn.close()
 
     @staticmethod
@@ -193,7 +201,6 @@ class DespesaRepository:
         try:
             cur = conn.cursor()
             if excluir_todas:
-                # Apaga a sequência de parcelas baseada no nome e valor iguais
                 cur.execute("SELECT descricao, valor FROM despesas WHERE id = %s", (despesa_id,))
                 ref = cur.fetchone()
                 if ref:
@@ -202,10 +209,12 @@ class DespesaRepository:
                 cur.execute("DELETE FROM despesas WHERE id = %s", (despesa_id,))
             conn.commit()
             return True
-        except: return False
+        except Exception as e: 
+            print(f"Erro ao excluir: {e}")
+            return False
         finally: conn.close()
 
-    # --- CRUD CAIXINHAS ---
+    # --- CRUD CAIXINHAS AUDITADO ---
     @staticmethod
     def listar_caixinhas():
         conn = get_db_connection()
@@ -229,7 +238,9 @@ class DespesaRepository:
                 cur.execute("INSERT INTO caixinhas (nome, valor, icone_svg) VALUES (%s, %s, %s)", (nome, valor, icone_svg))
             conn.commit()
             return True
-        except: return False
+        except Exception as e: 
+            print(f"Erro ao criar caixinha: {e}")
+            return False
         finally: conn.close()
         
     @staticmethod
@@ -241,7 +252,9 @@ class DespesaRepository:
             cur.execute(query, (nome, valor, icone_svg, caixinha_id))
             conn.commit()
             return True
-        except: return False
+        except Exception as e: 
+            print(f"Erro ao atualizar caixinha: {e}")
+            return False
         finally: conn.close()
 
     @staticmethod
@@ -252,6 +265,8 @@ class DespesaRepository:
             cur.execute("DELETE FROM caixinhas WHERE id = %s", (caixinha_id,))
             conn.commit()
             return True
-        except: return False
+        except Exception as e: 
+            print(f"Erro ao excluir caixinha: {e}")
+            return False
         finally: conn.close()
 
