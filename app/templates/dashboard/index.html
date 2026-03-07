@@ -45,7 +45,8 @@
 
 <div class="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide" id="filtros-semana"></div>
 
-<div id="lista-despesas" class="space-y-4"></div>
+<p class="text-[10px] text-slate-400 uppercase tracking-widest text-center mb-2 animate-pulse">Deslize a conta para a direita para pagar ➡</p>
+<div id="lista-despesas" class="space-y-4 pb-10"></div>
 
 <div id="modalDetalhes" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
@@ -85,6 +86,48 @@
 </div>
 
 {% include 'modais_dashboard.html' ignore missing %}
+<div id="modalEditar" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-4">Corrigir Conta</h3>
+        <form id="formEditar" class="space-y-3">
+            <input type="hidden" id="edit_id">
+            <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Descrição</label><input type="text" id="edit_descricao" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium" required></div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Valor</label><input type="number" step="0.01" id="edit_valor" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-bold" required></div>
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Vencimento</label><input type="date" id="edit_data" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 text-sm" required></div>
+            </div>
+            <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Responsável</label><select id="edit_responsavel" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            <button type="submit" class="w-full py-4 mt-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
+
+<div id="modalRendaIgor" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Renda Detalhada</h3><p class="text-xl font-black text-indigo-600 mb-6">Igor</p>
+        <div class="space-y-4 mb-6">
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Shopee</label><input type="number" id="igor_shopee" step="0.01" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Uber</label><input type="number" id="igor_uber" step="0.01" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"></div>
+        </div>
+        <button onclick="salvarRendas('Igor')" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Renda</button>
+    </div>
+</div>
+
+<div id="modalRendaThay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Renda Detalhada</h3><p class="text-xl font-black text-indigo-600 mb-6">Thaynara</p>
+        <div class="space-y-4 mb-6">
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Salário</label><input type="number" id="thay_salario" step="0.01" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Vale Refeição (VR)</label><input type="number" id="thay_vr" step="0.01" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Vale Combustível</label><input type="number" id="thay_combustivel" step="0.01" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"></div>
+        </div>
+        <button onclick="salvarRendas('Thaynara')" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Renda</button>
+    </div>
+</div>
+
 <input type="file" id="fileComprovante" class="hidden" accept=".pdf, image/*">
 
 <script>
@@ -103,14 +146,7 @@
     };
 
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    
-    // CORREÇÃO DEFINITIVA DO UNDEFINED (Cortando texto cego)
-    const formatarData = (ds) => { 
-        if (!ds || !ds.includes('-')) return '--/--'; 
-        const [y, m, d] = ds.split('-'); 
-        return `${d}/${m}`; 
-    };
-    
+    const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
     const getDataBase = (x) => x.data_pretensao ? x.data_pretensao : x.data_vencimento;
 
     const calcularSemanas = (ano, mes) => {
@@ -140,9 +176,7 @@
         semanasDoMes = calcularSemanas(currentData.getFullYear(), currentData.getMonth());
         const div = document.getElementById('filtros-semana');
         div.innerHTML = `<button onclick="filtrarSemana(-1)" id="btn-sem--1" class="filtro-btn px-4 py-2 rounded-2xl bg-white text-slate-800 text-[11px] font-bold shadow-sm transition-all border-none">Todas</button>`;
-        
         semanasDoMes.forEach((sem, index) => {
-            // Removido o "Sem X", deixado apenas "01/03 a 07/03"
             const lbl = `${formatarData(sem.inicio)} a ${formatarData(sem.fim)}`;
             div.innerHTML += `<button onclick="filtrarSemana(${index})" id="btn-sem-${index}" class="filtro-btn px-4 py-2 rounded-2xl ultra-glass text-slate-500 text-[11px] font-bold transition-all border-none whitespace-nowrap">${lbl}</button>`;
         });
@@ -217,38 +251,40 @@
             return;
         }
 
-        // NOVO CARD SUPER DETALHADO
+        // SWIPE TO PAY (Removido o botão de pagar, substituído por um container arrastável)
         filtradas.forEach(x => {
             const descSafe = x.descricao.replace(/'/g, "\\'");
             const obsSafe = (x.observacao || "").replace(/'/g, "\\'").replace(/\n/g, " ");
             const fonteSafe = (x.fonte_pagamento || "Geral");
             const svgIcon = iconesSVG[x.icone_svg] || iconesSVG['geral'];
-            
             const badgeParcela = x.total_parcelas > 1 ? `<p class="text-[10px] text-indigo-600 font-black tracking-widest uppercase mb-1">Parcela ${x.parcela_atual}/${x.total_parcelas}</p>` : '';
             const txtPrevisto = x.data_pretensao ? `<span class="text-orange-500">⚡ Prev: ${formatarData(x.data_pretensao)}</span>` : '';
 
             container.innerHTML += `
-                <div class="p-4 rounded-[28px] ultra-glass flex justify-between items-center transition active:scale-[0.98] cursor-pointer relative shadow-sm border border-white/50" 
-                     onclick="abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas})">
-                    
-                    <div class="flex items-start gap-3 w-[70%]">
-                        <div class="min-w-[42px] h-[42px] rounded-2xl bg-white/70 flex items-center justify-center text-indigo-600 shadow-sm border border-white mt-1">
-                            ${svgIcon}
-                        </div>
-                        <div class="truncate flex-1">
-                            <p class="font-bold text-slate-800 text-sm truncate leading-tight">${x.descricao}</p>
-                            ${badgeParcela}
-                            <div class="flex flex-col gap-[2px] mt-1.5">
-                                <span class="text-[9px] font-bold text-slate-500">📅 Venc: ${formatarData(x.data_vencimento)}</span>
-                                ${txtPrevisto ? `<span class="text-[9px] font-bold">${txtPrevisto}</span>` : ''}
-                                <span class="text-[9px] font-black text-emerald-600 uppercase mt-0.5">👤 ${x.responsavel_pagamento}</span>
-                            </div>
-                        </div>
+                <div class="relative rounded-[28px] shadow-sm bg-emerald-500 overflow-hidden">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-6 text-white font-black text-lg z-0">
+                        <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> PAGO
                     </div>
                     
-                    <div class="flex flex-col items-end justify-center h-full gap-3 w-[30%]">
-                        <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
-                        <button id="btn-pagar-${x.id}" onclick="event.stopPropagation(); abrirModalPagamento(${x.id})" class="w-full h-8 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 text-[10px] font-black uppercase transition shadow-md">PAGO</button>
+                    <div class="swipe-card relative z-10 ultra-glass p-4 rounded-[28px] flex justify-between items-center cursor-pointer border border-white" 
+                         data-id="${x.id}" 
+                         onclick="if(!isSwiping) abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas})">
+                        
+                        <div class="flex items-start gap-3 w-[70%]">
+                            <div class="min-w-[42px] h-[42px] rounded-2xl bg-white/70 flex items-center justify-center text-indigo-600 shadow-sm border border-white mt-1">${svgIcon}</div>
+                            <div class="truncate flex-1">
+                                <p class="font-bold text-slate-800 text-sm truncate leading-tight">${x.descricao}</p>
+                                ${badgeParcela}
+                                <div class="flex flex-col gap-[2px] mt-1.5">
+                                    <span class="text-[9px] font-bold text-slate-500">📅 Venc: ${formatarData(x.data_vencimento)}</span>
+                                    ${txtPrevisto ? `<span class="text-[9px] font-bold">${txtPrevisto}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end justify-center h-full gap-2 w-[30%]">
+                            <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
+                            <span class="text-[8px] font-black text-emerald-600 uppercase mt-0.5">👤 ${x.responsavel_pagamento}</span>
+                        </div>
                     </div>
                 </div>`;
         });
@@ -257,7 +293,43 @@
     const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarDashboard(); };
     const fecharModais = () => { document.querySelectorAll('[id^="modal"]').forEach(m => m.classList.add('hidden')); };
 
-    // --- RAIO-X: Modal de Detalhes Completo ---
+    // --- MECÂNICA DE ARRASTAR (SWIPE TO PAY) ---
+    let isSwiping = false, startX = 0, currentX = 0, swipeTarget = null;
+    
+    const startSwipe = (e) => {
+        const card = e.target.closest('.swipe-card');
+        if(!card) return;
+        swipeTarget = card;
+        startX = e.touches[0].clientX;
+        card.style.transition = 'none';
+        isSwiping = false;
+    };
+    
+    const moveSwipe = (e) => {
+        if(!swipeTarget) return;
+        currentX = e.touches[0].clientX - startX;
+        if(currentX > 10) isSwiping = true;
+        if(currentX > 0) swipeTarget.style.transform = `translateX(${currentX}px)`;
+    };
+    
+    const endSwipe = (e) => {
+        if(!swipeTarget) return;
+        swipeTarget.style.transition = 'transform 0.3s ease';
+        if(currentX > 100) {
+            swipeTarget.style.transform = `translateX(150%)`; // Joga pra fora da tela
+            const id = swipeTarget.getAttribute('data-id');
+            setTimeout(() => { abrirModalPagamento(id); }, 250);
+        } else {
+            swipeTarget.style.transform = `translateX(0px)`; // Volta pro lugar
+        }
+        setTimeout(() => { swipeTarget = null; currentX = 0; isSwiping = false; }, 50);
+    };
+
+    document.addEventListener('touchstart', startSwipe, {passive: true});
+    document.addEventListener('touchmove', moveSwipe, {passive: true});
+    document.addEventListener('touchend', endSwipe);
+
+    // --- RAIO-X: Modal de Detalhes ---
     const abrirModalDetalhes = (id, desc, valor, dataV, dataP, resp, fonte, obs, p_atual, t_parc) => {
         document.getElementById('det_nome').innerText = desc;
         document.getElementById('det_parcela').innerText = t_parc > 1 ? `Parcela ${p_atual} de ${t_parc}` : 'Conta Fixa / Única';
@@ -268,6 +340,28 @@
         document.getElementById('det_fonte').innerText = fonte;
         document.getElementById('det_obs').innerText = obs || "Sem observações adicionais.";
         
+        document.getElementById('btnEditarAbrir').onclick = () => {
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_descricao').value = desc;
+            document.getElementById('edit_valor').value = valor;
+            document.getElementById('edit_data').value = dataV;
+            document.getElementById('edit_responsavel').value = resp;
+            document.getElementById('modalEditar').classList.remove('hidden');
+        };
+
+        // EXCLUSÃO INTELIGENTE DE PARCELAS
+        document.getElementById('btnExcluirAtivo').onclick = async () => {
+            let params = '';
+            if (t_parc > 1) {
+                const excTodas = confirm("Esta é uma conta parcelada. Deseja excluir TODAS as parcelas do banco de dados?\n\n[OK] = Excluir TODAS\n[Cancelar] = Excluir SÓ ESTA");
+                if (excTodas) params = '?todas=true';
+            } else {
+                if(!confirm("Confirmar exclusão desta conta?")) return;
+            }
+            await fetch(`/api/despesas/${id}${params}`, { method: 'DELETE' });
+            fecharModais(); carregarDashboard();
+        };
+
         document.getElementById('modalDetalhes').classList.remove('hidden');
     };
 
@@ -282,13 +376,56 @@
     document.getElementById('btnApenasBaixa').onclick = async () => { fecharModais(); await dispararPagamentoAPI(contaEmFocoId, null); };
 
     const dispararPagamentoAPI = async (id, file) => {
-        const btnNode = document.getElementById(`btn-pagar-${id}`);
-        if(btnNode) btnNode.innerText = "⏳";
         const formData = new FormData();
         if (file) formData.append('comprovante', file);
         try { await fetch(`/api/despesas/${id}/pagar`, { method: 'POST', body: formData }); carregarDashboard(); } 
         catch (error) { alert("Erro de rede."); carregarDashboard(); }
     };
+
+    // --- RENDAS FIXAS ---
+    const abrirModalRendaIgor = () => {
+        document.getElementById('igor_shopee').value = dadosRendaGlobais.detalhes_igor['Shopee'] || '';
+        document.getElementById('igor_uber').value = dadosRendaGlobais.detalhes_igor['Uber'] || '';
+        document.getElementById('modalRendaIgor').classList.remove('hidden');
+    };
+
+    const abrirModalRendaThay = () => {
+        document.getElementById('thay_salario').value = dadosRendaGlobais.detalhes_thaynara['Salário'] || '';
+        document.getElementById('thay_vr').value = dadosRendaGlobais.detalhes_thaynara['VR'] || '';
+        document.getElementById('thay_combustivel').value = dadosRendaGlobais.detalhes_thaynara['Vale Combustível'] || '';
+        document.getElementById('modalRendaThay').classList.remove('hidden');
+    };
+
+    const enviarRendaAPI = async (usuario, fonte, valor) => {
+        return fetch('/api/rendas', {
+            method:'POST', headers:{'Content-Type':'application/json'}, 
+            body:JSON.stringify({usuario: usuario, fonte: fonte, mes: currentData.getMonth()+1, ano: currentData.getFullYear(), valor: parseFloat(valor || 0)})
+        });
+    };
+
+    const salvarRendas = async (usuario) => {
+        fecharModais();
+        if(usuario === 'Igor') {
+            await Promise.all([
+                enviarRendaAPI('Igor', 'Shopee', document.getElementById('igor_shopee').value),
+                enviarRendaAPI('Igor', 'Uber', document.getElementById('igor_uber').value)
+            ]);
+        } else {
+            await Promise.all([
+                enviarRendaAPI('Thaynara', 'Salário', document.getElementById('thay_salario').value),
+                enviarRendaAPI('Thaynara', 'VR', document.getElementById('thay_vr').value),
+                enviarRendaAPI('Thaynara', 'Vale Combustível', document.getElementById('thay_combustivel').value)
+            ]);
+        }
+        carregarDashboard();
+    };
+
+    document.getElementById('formEditar').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dados = { descricao: document.getElementById('edit_descricao').value, valor: parseFloat(document.getElementById('edit_valor').value), data_vencimento: document.getElementById('edit_data').value, responsavel_pagamento: document.getElementById('edit_responsavel').value };
+        await fetch(`/api/despesas/${document.getElementById('edit_id').value}/editar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+        fecharModais(); carregarDashboard();
+    });
 
     document.addEventListener("DOMContentLoaded", carregarDashboard);
 </script>

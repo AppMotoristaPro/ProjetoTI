@@ -27,13 +27,11 @@ def nova_despesa():
     arquivo = request.files.get('comprovante')
     comprovante_binario = None
     mimetype = None
-    
     if arquivo and arquivo.filename:
         comprovante_binario, mimetype = comprimir_arquivo(arquivo)
         
     dados['pago'] = True if request.form.get('pago') == 'true' else False
     sucesso = DespesaRepository.criar(dados, comprovante_binario, mimetype)
-    
     if sucesso: return jsonify({"status": "sucesso", "mensagem": "Salvo com sucesso!"}), 201
     return jsonify({"status": "erro"}), 500
 
@@ -55,11 +53,7 @@ def resumo():
 def atualizar_renda():
     dados = request.json
     sucesso = DespesaRepository.salvar_renda(
-        dados.get('usuario'), 
-        dados.get('fonte', 'Geral'), 
-        dados.get('mes'), 
-        dados.get('ano'), 
-        dados.get('valor')
+        dados.get('usuario'), dados.get('fonte', 'Geral'), dados.get('mes'), dados.get('ano'), dados.get('valor')
     )
     if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
@@ -74,7 +68,6 @@ def gerenciar_caixinhas():
         if sucesso: return jsonify({"status": "sucesso"}), 200
         return jsonify({"status": "erro"}), 500
 
-# Rotas Edição/Exclusão Caixinhas
 @despesas_bp.route('/api/caixinhas/<int:caixinha_id>', methods=['DELETE'])
 def deletar_caixinha(caixinha_id):
     if DespesaRepository.excluir_caixinha(caixinha_id): return jsonify({"status": "sucesso"}), 200
@@ -99,6 +92,11 @@ def pagar_despesa(despesa_id):
     if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
+@despesas_bp.route('/api/despesas/<int:despesa_id>/desfazer', methods=['POST'])
+def desfazer_pagamento(despesa_id):
+    if DespesaRepository.desfazer_pagamento(despesa_id): return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
 @despesas_bp.route('/comprovante/<int:despesa_id>', methods=['GET'])
 def ver_comprovante(despesa_id):
     bytes_dados, mimetype = DespesaRepository.obter_comprovante(despesa_id)
@@ -107,7 +105,8 @@ def ver_comprovante(despesa_id):
 
 @despesas_bp.route('/api/despesas/<int:despesa_id>', methods=['DELETE'])
 def deletar_despesa(despesa_id):
-    sucesso = DespesaRepository.excluir(despesa_id)
+    lote = request.args.get('todas') == 'true'
+    sucesso = DespesaRepository.excluir(despesa_id, excluir_todas=lote)
     if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 

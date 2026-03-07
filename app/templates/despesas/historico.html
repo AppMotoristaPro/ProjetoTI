@@ -30,7 +30,7 @@
     let dataHist = new Date();
     let idParaExcluir = null;
 
-    const formatarData = (ds) => { if (!ds) return '--/--'; const [y,m,d] = ds.split('-'); return `${d}/${m}`; };
+    const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y,m,d] = ds.split('-'); return `${d}/${m}`; };
 
     const atualizarDisplayMes = () => {
         const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -55,21 +55,25 @@
 
             c.innerHTML += `
                 <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition active:scale-95">
-                    <div ${onClickAttr} class="flex items-center gap-4 w-[80%] ${cursorClass}">
+                    <div ${onClickAttr} class="flex items-center gap-4 w-[65%] ${cursorClass}">
                         <div class="min-w-[42px] h-[42px] rounded-2xl bg-white/70 flex items-center justify-center shadow-sm border border-white">
                             ${iconBadge}
                         </div>
-                        <div>
-                            <p class="font-bold text-slate-700 text-sm leading-tight">${x.descricao}</p>
-                            <p class="text-[9px] font-bold text-slate-500 mt-0.5">Vencimento original: ${formatarData(x.data_vencimento)}</p>
-                            <p class="text-[9px] font-black text-emerald-600 uppercase tracking-wider mt-1">PAGO POR: ${x.responsavel_pagamento}</p>
+                        <div class="truncate">
+                            <p class="font-bold text-slate-700 text-sm leading-tight truncate pr-2">${x.descricao}</p>
+                            <p class="text-[9px] font-bold text-slate-500 mt-0.5">Pago dia: ${formatarData(x.data_vencimento)}</p>
                         </div>
                     </div>
                     
-                    <div class="w-[20%] flex flex-col items-end gap-3 border-l border-white/40 pl-2">
-                        <button onclick="abrirModalExcluir(${x.id})" class="text-slate-300 hover:text-red-500 transition p-1">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </button>
+                    <div class="w-[35%] flex flex-col items-end gap-3 border-l border-white/40 pl-2">
+                        <div class="flex gap-2">
+                            <button onclick="desfazerPagamento(${x.id})" class="text-orange-400 hover:text-orange-500 transition p-1" title="Desfazer Pagamento">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                            </button>
+                            <button onclick="abrirModalExcluir(${x.id})" class="text-slate-300 hover:text-red-500 transition p-1" title="Apagar">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
                         <p class="font-black text-slate-800 text-xs">${Number(x.valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
                     </div>
                 </div>`;
@@ -83,6 +87,13 @@
         fecharModalHist();
         await fetch(`/api/despesas/${idParaExcluir}`, { method: 'DELETE' }); 
         carregarH();
+    };
+
+    const desfazerPagamento = async (id) => {
+        if(confirm("Marcar como PENDENTE e devolver esta conta para o Dashboard?")) {
+            await fetch(`/api/despesas/${id}/desfazer`, { method: 'POST' });
+            carregarH();
+        }
     };
 
     document.addEventListener("DOMContentLoaded", carregarH);

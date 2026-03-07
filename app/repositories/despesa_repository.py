@@ -73,14 +73,11 @@ class DespesaRepository:
             cur.execute(query, (mes, ano))
             colunas = [desc[0] for desc in cur.description]
             resultados = []
-            
-            # Fim do bug Undefined: formatando a data na marra para YYYY-MM-DD
             for row in cur.fetchall():
                 d = dict(zip(colunas, row))
                 if d.get('data_vencimento'): d['data_vencimento'] = d['data_vencimento'].strftime('%Y-%m-%d')
                 if d.get('data_pretensao'): d['data_pretensao'] = d['data_pretensao'].strftime('%Y-%m-%d')
                 resultados.append(d)
-                
             return resultados
         finally: conn.close()
 
@@ -89,13 +86,13 @@ class DespesaRepository:
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            query = """
-                INSERT INTO rendas (usuario, fonte, mes, ano, valor) 
-                VALUES (%s, %s, %s, %s, %s) 
-                ON CONFLICT (usuario, fonte, mes, ano) 
-                DO UPDATE SET valor = EXCLUDED.valor
-            """
-            cur.execute(query, (usuario, fonte, mes, ano, valor))
+            # Vacina anti-bug de conflito nas rendas
+            cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s", (usuario, fonte, mes, ano))
+            linha = cur.fetchone()
+            if linha:
+                cur.execute("UPDATE rendas SET valor=%s WHERE id=%s", (valor, linha[0]))
+            else:
+                cur.execute("INSERT INTO rendas (usuario, fonte, mes, ano, valor) VALUES (%s, %s, %s, %s, %s)", (usuario, fonte, mes, ano, valor))
             conn.commit()
             cur.close()
             return True
@@ -167,6 +164,18 @@ class DespesaRepository:
         finally: conn.close()
 
     @staticmethod
+    def desfazer_pagamento(despesa_id):
+        """Retira a conta do histórico e devolve para o dashboard"""
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("UPDATE despesas SET pago = FALSE, comprovante_dados = NULL, comprovante_mimetype = NULL WHERE id = %s", (despesa_id,))
+            conn.commit()
+            return True
+        except: return False
+        finally: conn.close()
+
+    @staticmethod
     def atualizar(despesa_id, dados):
         conn = get_db_connection()
         try:
@@ -179,11 +188,18 @@ class DespesaRepository:
         finally: conn.close()
 
     @staticmethod
-    def excluir(despesa_id):
+    def excluir(despesa_id, excluir_todas=False):
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            cur.execute("DELETE FROM despesas WHERE id = %s", (despesa_id,))
+            if excluir_todas:
+                # Apaga a sequência de parcelas baseada no nome e valor iguais
+                cur.execute("SELECT descricao, valor FROM despesas WHERE id = %s", (despesa_id,))
+                ref = cur.fetchone()
+                if ref:
+                    cur.execute("DELETE FROM despesas WHERE descricao = %s AND valor = %s AND total_parcelas > 1 AND pago = FALSE", (ref[0], ref[1]))
+            else:
+                cur.execute("DELETE FROM despesas WHERE id = %s", (despesa_id,))
             conn.commit()
             return True
         except: return False
@@ -205,8 +221,12 @@ class DespesaRepository:
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            query = "INSERT INTO caixinhas (nome, valor, icone_svg) VALUES (%s, %s, %s) ON CONFLICT (nome) DO UPDATE SET valor = EXCLUDED.valor, icone_svg = EXCLUDED.icone_svg"
-            cur.execute(query, (nome, valor, icone_svg))
+            cur.execute("SELECT id FROM caixinhas WHERE nome=%s", (nome,))
+            linha = cur.fetchone()
+            if linha:
+                cur.execute("UPDATE caixinhas SET valor=%s, icone_svg=%s WHERE id=%s", (valor, icone_svg, linha[0]))
+            else:
+                cur.execute("INSERT INTO caixinhas (nome, valor, icone_svg) VALUES (%s, %s, %s)", (nome, valor, icone_svg))
             conn.commit()
             return True
         except: return False
