@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="w-full p-6 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl mb-8 relative overflow-hidden">
+    <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
+    <div class="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/20 rounded-full blur-2xl -ml-10 -mb-10"></div>
+    
+    <h2 class="text-sm text-gray-300 relative z-10">Contas Pendentes do Mês</h2>
+    
+    <div class="text-4xl font-black mt-2 mb-4 relative z-10">R$ 0,00</div>
+    
+    <div class="flex justify-between items-center text-xs text-gray-400 relative z-10 border-t border-white/10 pt-4 mt-2">
+        <div>
+            <span class="block">Igor: R$ 0,00</span>
+        </div>
+        <div class="text-right">
+            <span class="block">Thaynara: R$ 0,00</span>
+        </div>
+    </div>
+</div>
+
+<h3 class="font-semibold text-lg mb-3 flex items-center gap-2">
+    <span>⚠️</span> Próximos Vencimentos
+</h3>
+
+<div class="space-y-3">
+    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center active:scale-95 transition-transform">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 border border-orange-500/30">
+                ⚡
+            </div>
+            <div>
+                <p class="font-medium text-sm">Conta de Luz</p>
+                <p class="text-[10px] text-gray-400">Vence em 10/03 • Igor</p>
+            </div>
+        </div>
+        <div class="text-right">
+            <p class="font-bold text-sm">R$ 150,00</p>
+            <span class="text-[9px] bg-white/10 px-2 py-0.5 rounded-full text-gray-300 mt-1 inline-block">Pendente</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

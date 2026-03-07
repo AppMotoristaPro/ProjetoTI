@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-6 flex items-center gap-3">
+    <a href="/" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:bg-white/10 transition active:scale-90">
+        <span class="text-xl">←</span>
+    </a>
+    <h2 class="text-xl font-bold">Lançar Despesa</h2>
+</div>
+
+<div class="w-full p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl">
+    <form id="formDespesa" class="space-y-5">
+        
+        <div>
+            <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">O que é?</label>
+            <input type="text" name="descricao" placeholder="Ex: Gasolina, Conta de Luz..." required
+                class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 focus:bg-slate-800/80 outline-none text-white transition-all placeholder-gray-600">
+        </div>
+
+        <div class="flex gap-3">
+            <div class="w-1/2">
+                <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Valor (R$)</label>
+                <input type="number" name="valor" step="0.01" placeholder="0,00" required
+                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 outline-none text-white transition-all">
+            </div>
+            <div class="w-1/2">
+                <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Quem paga?</label>
+                <select name="responsavel_pagamento"
+                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 outline-none text-white transition-all appearance-none">
+                    <option value="Igor">Igor</option>
+                    <option value="Thaynara">Thaynara</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <div class="w-1/2">
+                <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Vencimento</label>
+                <input type="date" name="data_vencimento" required
+                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 outline-none text-white transition-all [color-scheme:dark]">
+            </div>
+            <div class="w-1/2">
+                <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Pretensão (Opcional)</label>
+                <input type="date" name="data_pretensao"
+                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 outline-none text-white transition-all [color-scheme:dark]">
+            </div>
+        </div>
+
+        <div>
+            <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Categoria</label>
+            <select name="categoria"
+                class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 outline-none text-white transition-all appearance-none">
+                <option value="Carro/Manutenção">Carro/Manutenção</option>
+                <option value="Combustível">Combustível</option>
+                <option value="Moradia">Moradia</option>
+                <option value="Alimentação">Alimentação</option>
+                <option value="Lazer">Lazer</option>
+                <option value="Outros">Outros</option>
+            </select>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center gap-3">
+            <input type="checkbox" id="pago" name="pago" value="true"
+                class="w-6 h-6 rounded border-gray-600 text-indigo-500 focus:ring-indigo-500 bg-slate-800 accent-indigo-500 cursor-pointer">
+            <label for="pago" class="text-sm font-medium text-indigo-200 cursor-pointer select-none">
+                Conta já está paga?
+            </label>
+        </div>
+
+        <div>
+            <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Comprovante de Pagamento (PDF/Foto)</label>
+            <input type="file" name="comprovante" accept=".pdf, image/*"
+                class="w-full mt-1 text-sm text-gray-400 
+                file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 
+                file:text-sm file:font-semibold file:bg-indigo-500/20 file:text-indigo-300 
+                hover:file:bg-indigo-500/30 transition-all cursor-pointer">
+        </div>
+
+        <button type="submit" id="btnSalvar"
+            class="w-full py-4 mt-4 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 active:scale-95 transition-all rounded-2xl font-bold shadow-lg shadow-indigo-500/25 text-lg">
+            Salvar Despesa
+        </button>
+    </form>
+</div>
+
+<script>
+    document.getElementById('formDespesa').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('btnSalvar');
+        const form = e.target;
+        const formData = new FormData(form);
+        
+        // Efeito visual de carregamento
+        btn.innerHTML = 'Salvando... ⏳';
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/despesas/nova', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Troca a cor do botão para verde para dar um feedback visual legal
+                btn.classList.replace('from-indigo-600', 'from-emerald-500');
+                btn.classList.replace('to-cyan-600', 'to-emerald-400');
+                btn.innerHTML = 'Sucesso! ✔️';
+                
+                // Redireciona para o início depois de 1 segundo
+                setTimeout(() => window.location.href = '/', 1000);
+            } else {
+                alert('Erro: ' + (result.mensagem || 'Falha ao salvar.'));
+                btn.innerHTML = 'Tentar Novamente';
+                btn.disabled = false;
+                btn.classList.remove('opacity-70', 'cursor-not-allowed');
+            }
+        } catch (error) {
+            alert('Erro de conexão! Verifique sua internet.');
+            btn.innerHTML = 'Salvar Despesa';
+            btn.disabled = false;
+            btn.classList.remove('opacity-70', 'cursor-not-allowed');
+        }
+    });
+</script>
+{% endblock %}
+

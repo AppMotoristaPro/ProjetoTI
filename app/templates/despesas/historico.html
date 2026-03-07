@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+        <a href="/" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:bg-white/10 transition active:scale-90">
+            <span class="text-xl">←</span>
+        </a>
+        <h2 class="text-xl font-bold">Histórico de Contas</h2>
+    </div>
+</div>
+
+<div class="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+    <button class="px-4 py-2 rounded-full bg-indigo-600 text-white text-xs font-bold whitespace-nowrap">Todas</button>
+    <button class="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-gray-300 text-xs font-bold whitespace-nowrap">Pendentes</button>
+    <button class="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-gray-300 text-xs font-bold whitespace-nowrap">Pagas</button>
+</div>
+
+<div id="lista-despesas" class="space-y-4">
+    <div class="text-center text-gray-400 py-10 animate-pulse">
+        Buscando suas contas... ⏳
+    </div>
+</div>
+
+<script>
+    // Função para formatar dinheiro no padrão BR
+    const formatarMoeda = (valor) => {
+        return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    // Função para formatar data (YYYY-MM-DD para DD/MM/YYYY)
+    const formatarData = (dataString) => {
+        if (!dataString) return '--/--/----';
+        const [ano, mes, dia] = dataString.split('-');
+        return `${dia}/${mes}/${ano}`;
+    };
+
+    // Função para carregar a lista
+    const carregarDespesas = async () => {
+        const container = document.getElementById('lista-despesas');
+        try {
+            const response = await fetch('/api/despesas');
+            const despesas = await response.json();
+
+            container.innerHTML = ''; // Limpa o carregando
+
+            if (despesas.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 bg-white/5 rounded-3xl border border-white/10">
+                        <span class="text-4xl block mb-3">🍃</span>
+                        <p class="text-gray-400">Nenhuma conta cadastrada ainda.</p>
+                    </div>`;
+                return;
+            }
+
+            despesas.forEach(despesa => {
+                // Define as cores e textos baseado no status de pagamento
+                const statusCor = despesa.pago ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+                const statusTexto = despesa.pago ? 'Pago ✔️' : 'Pendente ⏳';
+                const icone = despesa.categoria === 'Carro/Manutenção' || despesa.categoria === 'Combustível' ? '🚗' : 
+                              despesa.categoria === 'Moradia' ? '🏠' : 
+                              despesa.categoria === 'Alimentação' ? '🛒' : '💸';
+
+                // Botão de ver comprovante
+                const btnComprovante = despesa.tem_comprovante 
+                    ? `<a href="/comprovante/${despesa.id}" target="_blank" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition-all flex items-center gap-1 border border-white/10">📄 Recibo</a>`
+                    : `<span class="px-3 py-1.5 rounded-lg bg-black/20 text-xs text-gray-500 border border-transparent">Sem Recibo</span>`;
+
+                // Botão de pagar (só aparece se estiver pendente)
+                const btnPagar = !despesa.pago 
+                    ? `<button onclick="pagarConta(${despesa.id})" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition-all shadow-lg shadow-indigo-500/30">Pagar Hoje</button>`
+                    : ``;
+
+                const cardHTML = `
+                    <div class="p-5 rounded-3xl bg-white/5 backdrop-blur-md border border-white/10 shadow-lg relative overflow-hidden">
+                        <div class="absolute left-0 top-0 bottom-0 w-1 ${despesa.responsavel_pagamento === 'Igor' ? 'bg-cyan-500' : 'bg-pink-500'}"></div>
+                        
+                        <div class="flex justify-between items-start mb-3 pl-2">
+                            <div class="flex items-center gap-3">
+                                <div class="text-2xl">${icone}</div>
+                                <div>
+                                    <h3 class="font-bold text-lg leading-tight text-white">${despesa.descricao}</h3>
+                                    <p class="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mt-0.5">Resp: ${despesa.responsavel_pagamento}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-black text-lg">${formatarMoeda(despesa.valor)}</p>
+                                <span class="inline-block mt-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase border ${statusCor}">
+                                    ${statusTexto}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center pl-2 pt-3 border-t border-white/5 mt-2">
+                            <div class="text-xs text-gray-400">
+                                <span class="block">Vence: <strong class="text-gray-200">${formatarData(despesa.data_vencimento)}</strong></span>
+                            </div>
+                            <div class="flex gap-2">
+                                ${btnComprovante}
+                                ${btnPagar}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+        } catch (error) {
+            container.innerHTML = `<p class="text-red-400 text-center py-4">Erro ao carregar o histórico.</p>`;
+        }
+    };
+
+    // Função para dar baixa na conta direto da tela
+    const pagarConta = async (id) => {
+        if (!confirm("Confirmar o pagamento desta conta?")) return;
+        
+        try {
+            const res = await fetch(`/api/despesas/${id}/pagar`, { method: 'POST' });
+            if (res.ok) {
+                carregarDespesas(); // Recarrega a lista para atualizar a cor
+            } else {
+                alert("Erro ao marcar como pago.");
+            }
+        } catch (error) {
+            alert("Erro de conexão.");
+        }
+    };
+
+    // Inicializa a tela
+    document.addEventListener("DOMContentLoaded", carregarDespesas);
+</script>
+{% endblock %}
+
