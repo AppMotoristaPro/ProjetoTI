@@ -1,44 +1,241 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="w-full p-6 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl mb-8 relative overflow-hidden">
-    <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
-    <div class="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/20 rounded-full blur-2xl -ml-10 -mb-10"></div>
-    
-    <h2 class="text-sm text-gray-300 relative z-10">Contas Pendentes do Mês</h2>
-    
-    <div class="text-4xl font-black mt-2 mb-4 relative z-10">R$ 0,00</div>
-    
-    <div class="flex justify-between items-center text-xs text-gray-400 relative z-10 border-t border-white/10 pt-4 mt-2">
-        <div>
-            <span class="block">Igor: R$ 0,00</span>
-        </div>
-        <div class="text-right">
-            <span class="block">Thaynara: R$ 0,00</span>
-        </div>
+<div class="flex justify-between items-center mb-6 bg-white p-2 rounded-full shadow-sm border border-slate-200">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-90 transition">◀</button>
+    <h2 id="mesDisplay" class="text-sm font-bold uppercase tracking-widest text-indigo-900">Carregando...</h2>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-90 transition">▶</button>
+</div>
+
+<div class="w-full p-6 rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-cyan-600 shadow-xl shadow-indigo-500/30 mb-4 relative overflow-hidden text-white">
+    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
+    <h2 class="text-xs font-semibold text-indigo-100 uppercase tracking-wider relative z-10">Saldo Livre Previsto</h2>
+    <div id="saldo_final" class="text-4xl font-black mt-1 relative z-10">R$ 0,00</div>
+</div>
+
+<div class="flex gap-3 mb-6">
+    <div onclick="editarRenda('Igor')" class="w-1/2 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm relative cursor-pointer active:scale-95 transition">
+        <div class="absolute top-3 right-3 text-slate-300 text-xs">✏️</div>
+        <p class="text-[10px] uppercase font-bold text-slate-400">Renda Igor</p>
+        <p id="renda_igor" class="text-lg font-black text-slate-800 mt-1">R$ 0,00</p>
+    </div>
+    <div onclick="editarRenda('Thaynara')" class="w-1/2 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm relative cursor-pointer active:scale-95 transition">
+        <div class="absolute top-3 right-3 text-slate-300 text-xs">✏️</div>
+        <p class="text-[10px] uppercase font-bold text-slate-400">Renda Thaynara</p>
+        <p id="renda_thaynara" class="text-lg font-black text-slate-800 mt-1">R$ 0,00</p>
     </div>
 </div>
 
-<h3 class="font-semibold text-lg mb-3 flex items-center gap-2">
-    <span>⚠️</span> Próximos Vencimentos
-</h3>
-
-<div class="space-y-3">
-    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-between items-center active:scale-95 transition-transform">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 border border-orange-500/30">
-                ⚡
-            </div>
-            <div>
-                <p class="font-medium text-sm">Conta de Luz</p>
-                <p class="text-[10px] text-gray-400">Vence em 10/03 • Igor</p>
-            </div>
-        </div>
-        <div class="text-right">
-            <p class="font-bold text-sm">R$ 150,00</p>
-            <span class="text-[9px] bg-white/10 px-2 py-0.5 rounded-full text-gray-300 mt-1 inline-block">Pendente</span>
-        </div>
+<div class="flex justify-between items-center mb-4 px-1">
+    <h3 class="font-bold text-lg text-slate-800">Contas Pendentes</h3>
+    <div class="text-right">
+        <p class="text-[10px] font-bold text-slate-400 uppercase">Igor: <span id="pendente_igor" class="text-orange-500">R$ 0,00</span></p>
+        <p class="text-[10px] font-bold text-slate-400 uppercase">Thay: <span id="pendente_thaynara" class="text-orange-500">R$ 0,00</span></p>
     </div>
 </div>
+
+<div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide" id="filtros-semana">
+    <button onclick="filtrarSemana('todas')" class="filtro-btn px-4 py-2 rounded-full bg-indigo-600 text-white text-xs font-bold whitespace-nowrap shadow-md">Todas</button>
+    <button onclick="filtrarSemana(1)" class="filtro-btn px-4 py-2 rounded-full bg-white text-slate-500 border border-slate-200 text-xs font-bold whitespace-nowrap">Semana 1</button>
+    <button onclick="filtrarSemana(2)" class="filtro-btn px-4 py-2 rounded-full bg-white text-slate-500 border border-slate-200 text-xs font-bold whitespace-nowrap">Semana 2</button>
+    <button onclick="filtrarSemana(3)" class="filtro-btn px-4 py-2 rounded-full bg-white text-slate-500 border border-slate-200 text-xs font-bold whitespace-nowrap">Semana 3</button>
+    <button onclick="filtrarSemana(4)" class="filtro-btn px-4 py-2 rounded-full bg-white text-slate-500 border border-slate-200 text-xs font-bold whitespace-nowrap">Semana 4+</button>
+</div>
+
+<div id="lista-despesas" class="space-y-3 pb-10">
+    <div class="text-center text-slate-400 py-10 animate-pulse font-medium">Calculando... ⏳</div>
+</div>
+
+<input type="file" id="fileComprovante" class="hidden" accept=".pdf, image/*">
+
+<script>
+    let currentData = new Date();
+    let despesasPendentesGlobais = [];
+
+    const formatarMoeda = (valor) => Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const formatarData = (dataString) => {
+        if (!dataString) return '--/--/----';
+        const [ano, mes, dia] = dataString.split('-');
+        return `${dia}/${mes}`;
+    };
+
+    const atualizarDisplayMes = () => {
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} ${currentData.getFullYear()}`;
+    };
+
+    const mudarMes = (direcao) => {
+        currentData.setMonth(currentData.getMonth() + direcao);
+        carregarDashboard();
+    };
+
+    const editarRenda = async (usuario) => {
+        let valorAtual = prompt(`Salário de ${usuario} neste mês (Use ponto, ex: 1500.50):`);
+        if(!valorAtual || isNaN(parseFloat(valorAtual))) return;
+        
+        try {
+            await fetch('/api/rendas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    usuario: usuario,
+                    mes: currentData.getMonth() + 1,
+                    ano: currentData.getFullYear(),
+                    valor: parseFloat(valorAtual)
+                })
+            });
+            carregarDashboard();
+        } catch(e) { alert("Erro ao salvar renda"); }
+    };
+
+    const carregarDashboard = async () => {
+        atualizarDisplayMes();
+        const mes = currentData.getMonth() + 1;
+        const ano = currentData.getFullYear();
+
+        try {
+            const resResumo = await fetch(`/api/resumo?mes=${mes}&ano=${ano}`);
+            const resumo = await resResumo.json();
+            
+            document.getElementById('saldo_final').innerText = formatarMoeda(resumo.saldo_final);
+            document.getElementById('renda_igor').innerText = formatarMoeda(resumo.renda_igor);
+            document.getElementById('renda_thaynara').innerText = formatarMoeda(resumo.renda_thaynara);
+            document.getElementById('pendente_igor').innerText = formatarMoeda(resumo.pendente_igor);
+            document.getElementById('pendente_thaynara').innerText = formatarMoeda(resumo.pendente_thaynara);
+
+            const resDespesas = await fetch(`/api/despesas?mes=${mes}&ano=${ano}`);
+            const todasDespesas = await resDespesas.json();
+            
+            despesasPendentesGlobais = todasDespesas.filter(d => !d.pago);
+            filtrarSemana('todas');
+            
+        } catch (error) {
+            document.getElementById('lista-despesas').innerHTML = `<p class="text-red-500 text-center py-4">Erro de conexão.</p>`;
+        }
+    };
+
+    const filtrarSemana = (semana) => {
+        document.querySelectorAll('.filtro-btn').forEach(btn => {
+            btn.classList.replace('bg-indigo-600', 'bg-white');
+            btn.classList.replace('text-white', 'text-slate-500');
+            btn.classList.add('border', 'border-slate-200');
+            btn.classList.remove('shadow-md');
+        });
+        const activeBtn = event ? event.target : document.querySelector('.filtro-btn');
+        activeBtn.classList.replace('bg-white', 'bg-indigo-600');
+        activeBtn.classList.replace('text-slate-500', 'text-white');
+        activeBtn.classList.remove('border', 'border-slate-200');
+        activeBtn.classList.add('shadow-md');
+
+        const container = document.getElementById('lista-despesas');
+        container.innerHTML = '';
+
+        let despesasFiltradas = despesasPendentesGlobais;
+
+        if(semana !== 'todas') {
+            despesasFiltradas = despesasPendentesGlobais.filter(d => {
+                const dia = parseInt(d.data_vencimento.split('-')[2]);
+                if(semana === 1) return dia >= 1 && dia <= 7;
+                if(semana === 2) return dia >= 8 && dia <= 14;
+                if(semana === 3) return dia >= 15 && dia <= 21;
+                if(semana === 4) return dia >= 22;
+            });
+        }
+
+        if (despesasFiltradas.length === 0) {
+            container.innerHTML = `<div class="text-center py-10 bg-white rounded-3xl border border-slate-100 shadow-sm"><span class="text-3xl block mb-2">🎉</span><p class="text-slate-400 text-sm font-medium">Tudo pago ou vazio!</p></div>`;
+            return;
+        }
+
+        despesasFiltradas.forEach(despesa => {
+            const icone = despesa.categoria === 'Carro/Manutenção' || despesa.categoria === 'Combustível' ? '🚗' : 
+                          despesa.categoria === 'Moradia' ? '🏠' : 
+                          despesa.categoria === 'Alimentação' ? '🛒' : '💸';
+
+            container.innerHTML += `
+                <div class="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm flex justify-between items-center active:scale-[0.98] transition-transform">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-xl border border-slate-100 shadow-inner">
+                            ${icone}
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-800 text-sm">${despesa.descricao}</p>
+                            <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Vence: <span class="text-orange-500">${formatarData(despesa.data_vencimento)}</span> • Resp: ${despesa.responsavel_pagamento}</p>
+                        </div>
+                    </div>
+                    <div class="text-right flex flex-col items-end gap-2">
+                        <p class="font-black text-slate-800 text-sm">${formatarMoeda(despesa.valor)}</p>
+                        <button id="btn-pagar-${despesa.id}" onclick="pagarRapido(${despesa.id})" class="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs font-bold transition">Dar Baixa</button>
+                    </div>
+                </div>
+            `;
+        });
+    };
+
+    // Fluxo Mágico do Pagamento Expresso
+    const pagarRapido = async (id) => {
+        const confirmarPagamento = confirm("Confirmar que esta conta foi paga? \n\nClique em OK para adicionar um Recibo agora.\nClique em Cancelar se quiser apenas dar baixa sem recibo.");
+        
+        const btnNode = document.getElementById(`btn-pagar-${id}`);
+        btnNode.innerText = "Enviando...⏳";
+        btnNode.classList.replace('bg-emerald-100', 'bg-slate-200');
+        btnNode.disabled = true;
+
+        if (confirmarPagamento) {
+            // Abre a galeria/câmera
+            const input = document.getElementById('fileComprovante');
+            input.value = ''; // Limpa seleções anteriores
+            
+            // Quando a pessoa escolher a foto:
+            input.onchange = async () => {
+                if (input.files.length > 0) {
+                    await dispararPagamentoAPI(id, input.files[0]);
+                } else {
+                    await dispararPagamentoAPI(id, null);
+                }
+            };
+            
+            input.click(); // Força o clique no input invisível
+        } else {
+            // A pessoa clicou em cancelar o recibo, então só dá baixa
+            const apenasDarBaixa = confirm("A conta será marcada como paga SEM comprovante. Deseja prosseguir?");
+            if (apenasDarBaixa) {
+                await dispararPagamentoAPI(id, null);
+            } else {
+                // Voltou atrás e não quer mais pagar
+                btnNode.innerText = "Dar Baixa";
+                btnNode.classList.replace('bg-slate-200', 'bg-emerald-100');
+                btnNode.disabled = false;
+            }
+        }
+    };
+
+    // Função que embala a foto (se tiver) e envia pro servidor
+    const dispararPagamentoAPI = async (id, file) => {
+        const formData = new FormData();
+        if (file) {
+            formData.append('comprovante', file);
+        }
+
+        try {
+            const res = await fetch(`/api/despesas/${id}/pagar`, {
+                method: 'POST',
+                body: formData // Formato nativo para envio de arquivos
+            });
+            
+            if (res.ok) {
+                carregarDashboard(); // Sucesso! A conta evapora do dashboard e o saldo se atualiza.
+            } else {
+                alert("Erro ao marcar como pago no banco de dados.");
+                carregarDashboard(); // Recarrega para voltar o botão ao normal
+            }
+        } catch (error) {
+            alert("Erro de conexão de rede.");
+            carregarDashboard();
+        }
+    };
+
+    document.addEventListener("DOMContentLoaded", carregarDashboard);
+</script>
 {% endblock %}
 

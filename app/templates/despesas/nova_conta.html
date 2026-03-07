@@ -2,31 +2,31 @@
 
 {% block content %}
 <div class="mb-6 flex items-center gap-3">
-    <a href="/" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:bg-white/10 transition active:scale-90">
+    <a href="/" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-sm transition active:scale-90">
         <span class="text-xl">←</span>
     </a>
-    <h2 class="text-xl font-bold">Lançar Despesa</h2>
+    <h2 class="text-xl font-black text-slate-800">Lançar Despesa</h2>
 </div>
 
-<div class="w-full p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl">
+<div class="w-full p-6 rounded-3xl bg-white border border-slate-100 shadow-lg">
     <form id="formDespesa" class="space-y-5">
         
         <div>
-            <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">O que é?</label>
+            <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">O que é?</label>
             <input type="text" name="descricao" placeholder="Ex: Gasolina, Conta de Luz..." required
-                class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 focus:bg-slate-800/80 outline-none text-white transition-all placeholder-gray-600">
+                class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none text-slate-800 transition-all font-medium">
         </div>
 
         <div class="flex gap-3">
             <div class="w-1/2">
-                <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Valor (R$)</label>
-                <input type="number" name="valor" step="0.01" placeholder="0,00" required
-                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 outline-none text-white transition-all">
+                <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Valor (R$)</label>
+                <input type="number" name="valor" step="0.01" placeholder="0.00" required
+                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white outline-none text-slate-800 transition-all font-bold">
             </div>
             <div class="w-1/2">
-                <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Quem paga?</label>
+                <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Quem paga?</label>
                 <select name="responsavel_pagamento"
-                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 outline-none text-white transition-all appearance-none">
+                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 transition-all font-medium">
                     <option value="Igor">Igor</option>
                     <option value="Thaynara">Thaynara</option>
                 </select>
@@ -35,21 +35,21 @@
 
         <div class="flex gap-3">
             <div class="w-1/2">
-                <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Vencimento</label>
+                <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Vencimento</label>
                 <input type="date" name="data_vencimento" required
-                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 outline-none text-white transition-all [color-scheme:dark]">
+                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 transition-all">
             </div>
             <div class="w-1/2">
-                <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Pretensão (Opcional)</label>
+                <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Pretensão (Opc.)</label>
                 <input type="date" name="data_pretensao"
-                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 outline-none text-white transition-all [color-scheme:dark]">
+                    class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 transition-all">
             </div>
         </div>
 
         <div>
-            <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Categoria</label>
+            <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Categoria</label>
             <select name="categoria"
-                class="w-full mt-1 p-3.5 rounded-2xl bg-slate-900/50 border border-white/5 focus:border-indigo-500 outline-none text-white transition-all appearance-none">
+                class="w-full mt-1 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-slate-800 transition-all font-medium">
                 <option value="Carro/Manutenção">Carro/Manutenção</option>
                 <option value="Combustível">Combustível</option>
                 <option value="Moradia">Moradia</option>
@@ -59,58 +59,80 @@
             </select>
         </div>
 
-        <div class="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center gap-3">
+        <div class="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex flex-col gap-3">
+            <div class="flex items-center gap-3">
+                <input type="checkbox" id="recorrente" name="recorrente" value="true" onchange="toggleParcelas()"
+                    class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 accent-indigo-600 cursor-pointer">
+                <label for="recorrente" class="text-sm font-bold text-indigo-900 cursor-pointer select-none">
+                    Conta Parcelada ou Fixa?
+                </label>
+            </div>
+            
+            <div id="box-parcelas" class="hidden flex gap-3 mt-2 pt-3 border-t border-indigo-200/50">
+                <div class="w-1/2">
+                    <label class="text-[9px] uppercase text-indigo-400 font-bold">Parcela Atual</label>
+                    <input type="number" name="parcela_atual" value="1" min="1"
+                        class="w-full mt-1 p-2 rounded-xl bg-white border border-indigo-200 text-center text-slate-800 font-bold">
+                </div>
+                <div class="w-1/2">
+                    <label class="text-[9px] uppercase text-indigo-400 font-bold">Total de Meses</label>
+                    <input type="number" name="total_parcelas" value="1" min="1"
+                        class="w-full mt-1 p-2 rounded-xl bg-white border border-indigo-200 text-center text-slate-800 font-bold">
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3">
             <input type="checkbox" id="pago" name="pago" value="true"
-                class="w-6 h-6 rounded border-gray-600 text-indigo-500 focus:ring-indigo-500 bg-slate-800 accent-indigo-500 cursor-pointer">
-            <label for="pago" class="text-sm font-medium text-indigo-200 cursor-pointer select-none">
-                Conta já está paga?
+                class="w-5 h-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 accent-emerald-600 cursor-pointer">
+            <label for="pago" class="text-sm font-bold text-emerald-900 cursor-pointer select-none">
+                Já está paga? (Adicionar recibo)
             </label>
         </div>
 
         <div>
-            <label class="text-[10px] uppercase text-gray-400 ml-1 font-semibold tracking-wider">Comprovante de Pagamento (PDF/Foto)</label>
+            <label class="text-[10px] uppercase text-slate-400 ml-1 font-bold tracking-wider">Comprovante (PDF/Foto)</label>
             <input type="file" name="comprovante" accept=".pdf, image/*"
-                class="w-full mt-1 text-sm text-gray-400 
+                class="w-full mt-1 text-sm text-slate-500 
                 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 
-                file:text-sm file:font-semibold file:bg-indigo-500/20 file:text-indigo-300 
-                hover:file:bg-indigo-500/30 transition-all cursor-pointer">
+                file:text-sm file:font-bold file:bg-indigo-100 file:text-indigo-700 
+                hover:file:bg-indigo-200 transition-all cursor-pointer">
         </div>
 
         <button type="submit" id="btnSalvar"
-            class="w-full py-4 mt-4 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 active:scale-95 transition-all rounded-2xl font-bold shadow-lg shadow-indigo-500/25 text-lg">
+            class="w-full py-4 mt-6 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all rounded-2xl font-black shadow-lg shadow-indigo-600/30 text-white text-lg tracking-wide">
             Salvar Despesa
         </button>
     </form>
 </div>
 
 <script>
+    // Mostra/Esconde os campos de parcela
+    function toggleParcelas() {
+        const check = document.getElementById('recorrente');
+        const box = document.getElementById('box-parcelas');
+        if(check.checked) box.classList.remove('hidden');
+        else box.classList.add('hidden');
+    }
+
     document.getElementById('formDespesa').addEventListener('submit', async function(e) {
         e.preventDefault();
-        
         const btn = document.getElementById('btnSalvar');
-        const form = e.target;
-        const formData = new FormData(form);
+        const formData = new FormData(e.target);
         
-        // Efeito visual de carregamento
         btn.innerHTML = 'Salvando... ⏳';
         btn.classList.add('opacity-70', 'cursor-not-allowed');
         btn.disabled = true;
 
         try {
-            const response = await fetch('/api/despesas/nova', {
-                method: 'POST',
-                body: formData
-            });
-            
+            const response = await fetch('/api/despesas/nova', { method: 'POST', body: formData });
             const result = await response.json();
             
             if (response.ok) {
-                // Troca a cor do botão para verde para dar um feedback visual legal
-                btn.classList.replace('from-indigo-600', 'from-emerald-500');
-                btn.classList.replace('to-cyan-600', 'to-emerald-400');
+                btn.classList.replace('bg-indigo-600', 'bg-emerald-500');
+                btn.classList.replace('hover:bg-indigo-700', 'hover:bg-emerald-600');
+                btn.classList.replace('shadow-indigo-600/30', 'shadow-emerald-500/30');
                 btn.innerHTML = 'Sucesso! ✔️';
-                
-                // Redireciona para o início depois de 1 segundo
                 setTimeout(() => window.location.href = '/', 1000);
             } else {
                 alert('Erro: ' + (result.mensagem || 'Falha ao salvar.'));

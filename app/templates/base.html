@@ -3,56 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#1e1b4b">
+    <meta name="theme-color" content="#f8fafc">
     <title>Gestão TI</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            /* Fundo gradiente escuro */
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            /* Fundo Light Claro e Limpo */
+            background-color: #f8fafc;
             min-height: 100vh;
-            color: white;
-            /* Dá espaço para o menu inferior não engolir o texto */
-            padding-bottom: 80px; 
+            color: #1e293b; /* Texto escuro padrão */
+            padding-bottom: 90px; 
         }
-        /* Esconde a barra de rolagem (scroll) para estética de app */
         ::-webkit-scrollbar { display: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body>
-    <header class="p-4 flex justify-between items-center backdrop-blur-md bg-white/5 border-b border-white/10 sticky top-0 z-50">
-        <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+    <header class="p-4 flex justify-between items-center backdrop-blur-xl bg-white/70 border-b border-slate-200 sticky top-0 z-50">
+        <h1 class="text-xl font-black bg-gradient-to-r from-indigo-600 to-cyan-500 bg-clip-text text-transparent">
             Gestão TI
         </h1>
-        <div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/50">
-            <span class="text-xs font-bold text-indigo-300">IT</span>
+        <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center border border-indigo-200 shadow-sm">
+            <span class="text-xs font-bold text-indigo-700">IT</span>
         </div>
     </header>
 
-    <main class="p-4">
+    <main class="p-4 max-w-lg mx-auto">
         {% block content %}{% endblock %}
     </main>
 
-    <nav class="fixed bottom-0 w-full backdrop-blur-xl bg-slate-900/80 border-t border-white/10 flex justify-around p-3 z-50">
-        <a href="/" class="flex flex-col items-center text-indigo-400">
+    <nav class="fixed bottom-0 w-full max-w-lg left-1/2 -translate-x-1/2 backdrop-blur-2xl bg-white/80 border-t border-slate-200 flex justify-around p-3 z-50 pb-safe">
+        <a href="/" class="flex flex-col items-center text-slate-400 hover:text-indigo-600 transition focus:text-indigo-600">
             <span class="text-xl">🏠</span>
-            <span class="text-[10px] mt-1">Início</span>
+            <span class="text-[10px] mt-1 font-semibold">Início</span>
         </a>
         
-        <a href="/nova-conta" class="flex flex-col items-center text-gray-400 hover:text-indigo-400 transition">
-            <div class="bg-indigo-600 w-12 h-12 rounded-full flex items-center justify-center -mt-6 shadow-lg shadow-indigo-500/30 text-white border-4 border-slate-900">
-                <span class="text-2xl font-bold">+</span>
+        <a href="/nova-conta" class="flex flex-col items-center group">
+            <div class="bg-indigo-600 w-14 h-14 rounded-full flex items-center justify-center -mt-8 shadow-lg shadow-indigo-500/40 text-white border-4 border-[#f8fafc] group-active:scale-95 transition-transform">
+                <span class="text-3xl font-light">+</span>
             </div>
         </a>
         
-        <a href="/historico" class="flex flex-col items-center text-gray-400 hover:text-indigo-400 transition">
+        <a href="/historico" class="flex flex-col items-center text-slate-400 hover:text-indigo-600 transition focus:text-indigo-600">
             <span class="text-xl">📊</span>
-            <span class="text-[10px] mt-1">Histórico</span>
+            <span class="text-[10px] mt-1 font-semibold">Histórico</span>
         </a>
     </nav>
 </body>

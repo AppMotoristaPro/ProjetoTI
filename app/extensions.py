@@ -10,16 +10,16 @@ def get_db_connection():
     
     parsed = urllib.parse.urlparse(Config.DATABASE_URL)
     try:
-        # O Neon EXIGE uma conexão segura. Isso cria o contexto SSL padrão.
+        # O Neon EXIGE uma conexão segura.
         context = ssl.create_default_context()
         
         conn = pg8000.dbapi.connect(
             user=parsed.username,
             password=parsed.password,
             host=parsed.hostname,
-            port=parsed.port or 5432, # Coloquei o 5432 como fallback de segurança
+            port=parsed.port or 5432,
             database=parsed.path.lstrip('/'),
-            ssl_context=context # <-- A mágica da segurança do Neon acontece aqui
+            ssl_context=context
         )
         return conn
     except Exception as e:
@@ -31,7 +31,7 @@ def init_db():
     if not conn:
         return
 
-    # Tabela de Usuários
+    # 1. Tabela de Usuários
     query_usuarios = """
     CREATE TABLE IF NOT EXISTS usuarios (
         id SERIAL PRIMARY KEY,
@@ -41,7 +41,7 @@ def init_db():
     );
     """
 
-    # Tabela de Despesas (Adaptada para Neon)
+    # 2. Tabela de Despesas base
     query_despesas = """
     CREATE TABLE IF NOT EXISTS despesas (
         id SERIAL PRIMARY KEY,
@@ -58,7 +58,19 @@ def init_db():
     );
     """
 
-    # Tabela de Push
+    # 3. Tabela de Salários (Rendas) por Mês/Ano
+    query_rendas = """
+    CREATE TABLE IF NOT EXISTS rendas (
+        id SERIAL PRIMARY KEY,
+        usuario VARCHAR(50) NOT NULL,
+        valor DECIMAL(10, 2) DEFAULT 0.00,
+        mes INT NOT NULL,
+        ano INT NOT NULL,
+        UNIQUE(usuario, mes, ano)
+    );
+    """
+
+    # 4. Tabela de Notificações Push
     query_push = """
     CREATE TABLE IF NOT EXISTS inscricoes_push (
         id SERIAL PRIMARY KEY,
@@ -72,10 +84,17 @@ def init_db():
         cur = conn.cursor()
         cur.execute(query_usuarios)
         cur.execute(query_despesas)
+        cur.execute(query_rendas)
         cur.execute(query_push)
+        
+        # Atualização Automática: Injetando as novas colunas de parcela na tabela existente!
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS recorrente BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS parcela_atual INT DEFAULT 1;")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS total_parcelas INT DEFAULT 1;")
+        
         conn.commit()
         cur.close()
-        print("✅ Tabelas do banco de dados verificadas/criadas com sucesso no Neon!")
+        print("✅ Tabelas e colunas atualizadas com sucesso no Neon!")
     except Exception as e:
         print(f"❌ Erro ao inicializar o banco: {e}")
     finally:
