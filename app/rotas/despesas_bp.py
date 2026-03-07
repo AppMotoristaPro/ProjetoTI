@@ -85,8 +85,14 @@ def pagar_despesa(despesa_id):
     arquivo = request.files.get('comprovante')
     comprovante_binario = None
     mimetype = None
-    if arquivo and arquivo.filename:
-        comprovante_binario, mimetype = comprimir_arquivo(arquivo)
+    
+    # Vacina: Só tenta comprimir o PDF/Imagem se realmente houver um arquivo!
+    if arquivo and arquivo.filename and arquivo.filename != '':
+        try:
+            comprovante_binario, mimetype = comprimir_arquivo(arquivo)
+        except Exception as e:
+            print(f"Erro ao comprimir arquivo: {e}")
+            return jsonify({"status": "erro", "mensagem": "Arquivo corrompido ou formato não suportado."}), 400
         
     sucesso = DespesaRepository.marcar_paga(despesa_id, comprovante_binario, mimetype)
     if sucesso: return jsonify({"status": "sucesso"}), 200

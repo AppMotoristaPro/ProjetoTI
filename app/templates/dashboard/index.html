@@ -74,7 +74,7 @@
 
 <div id="modalPagamento" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl text-center relative">
-        <button onclick="fecharModais()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <button onclick="fecharModais(); reverterCard(contaEmFocoId);" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-500 flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
         <h3 class="text-xl font-black text-slate-800 mb-2">Pagar Conta</h3>
         <p class="text-xs font-medium text-slate-500 mb-6">Deseja anexar o comprovante agora ou apenas marcar como paga?</p>
@@ -260,12 +260,12 @@
             const txtPrevisto = x.data_pretensao ? `<span class="text-orange-500">⚡ Prev: ${formatarData(x.data_pretensao)}</span>` : '';
 
             container.innerHTML += `
-                <div class="relative rounded-[28px] shadow-sm overflow-hidden mb-3 swipe-container bg-transparent">
+                <div id="conta-card-${x.id}" class="relative rounded-[28px] shadow-sm overflow-hidden mb-3 swipe-container bg-transparent">
                     <div class="swipe-bg absolute inset-0 bg-emerald-500 flex items-center pl-6 text-white font-black text-lg z-0" style="opacity: 0; transition: opacity 0.1s;">
                         <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> PAGO
                     </div>
                     
-                    <div class="swipe-card relative z-10 ultra-glass p-4 rounded-[28px] flex justify-between items-center cursor-pointer border border-white" 
+                    <div class="swipe-card relative z-10 ultra-glass p-4 rounded-[28px] flex justify-between items-center cursor-pointer border border-white/50" 
                          data-id="${x.id}" 
                          onclick="if(!isSwiping) abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas})">
                         
@@ -292,7 +292,7 @@
     const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarDashboard(); };
     const fecharModais = () => { document.querySelectorAll('[id^="modal"]').forEach(m => m.classList.add('hidden')); };
 
-    // --- MECÂNICA DE ARRASTAR COM OPACIDADE INTELIGENTE ---
+    // --- MECÂNICA DE ARRASTAR (OPACIDADE + RESGATE) ---
     let isSwiping = false, startX = 0, currentX = 0, swipeTarget = null, swipeBg = null;
     
     const startSwipe = (e) => {
@@ -330,10 +330,17 @@
             const id = swipeTarget.getAttribute('data-id');
             setTimeout(() => { abrirModalPagamento(id); }, 250);
         } else {
-            swipeTarget.style.transform = `translateX(0px)`;
-            if(swipeBg) swipeBg.style.opacity = '0';
+            reverterCard(swipeTarget.getAttribute('data-id'));
         }
         setTimeout(() => { swipeTarget = null; swipeBg = null; currentX = 0; isSwiping = false; }, 300);
+    };
+
+    const reverterCard = (id) => {
+        const card = document.querySelector(`.swipe-card[data-id="${id}"]`);
+        if(card) {
+            card.style.transform = `translateX(0px)`;
+            if(card.previousElementSibling) card.previousElementSibling.style.opacity = '0';
+        }
     };
 
     document.addEventListener('touchstart', startSwipe, {passive: true});
@@ -379,16 +386,48 @@
     document.getElementById('btnAnexarRecibo').onclick = () => {
         const input = document.getElementById('fileComprovante');
         input.value = ''; 
-        input.onchange = async () => { fecharModais(); await dispararPagamentoAPI(contaEmFocoId, input.files.length > 0 ? input.files[0] : null); };
+        input.onchange = async () => { 
+            fecharModais(); 
+            await dispararPagamentoAPI(contaEmFocoId, input.files.length > 0 ? input.files[0] : null); 
+        };
         input.click();
     };
-    document.getElementById('btnApenasBaixa').onclick = async () => { fecharModais(); await dispararPagamentoAPI(contaEmFocoId, null); };
+    
+    document.getElementById('btnApenasBaixa').onclick = async () => { 
+        fecharModais(); 
+        await dispararPagamentoAPI(contaEmFocoId, null); 
+    };
 
     const dispararPagamentoAPI = async (id, file) => {
+        // A MÁGICA DA EVAPORAÇÃO DO CARD
+        const cardNode = document.getElementById(`conta-card-${id}`);
+        if(cardNode) {
+            cardNode.style.transition = "all 0.3s ease";
+            cardNode.style.opacity = "0";
+            cardNode.style.height = "0px";
+            cardNode.style.marginBottom = "0px";
+            setTimeout(() => cardNode.remove(), 300);
+        }
+
         const formData = new FormData();
         if (file) formData.append('comprovante', file);
-        try { await fetch(`/api/despesas/${id}/pagar`, { method: 'POST', body: formData }); carregarDashboard(); } 
-        catch (error) { alert("Erro de rede."); carregarDashboard(); }
+        try { 
+            const res = await fetch(`/api/despesas/${id}/pagar`, { method: 'POST', body: formData }); 
+            if(!res.ok) {
+                alert("Erro ao marcar como pago!");
+                carregarDashboard(); // Recarrega se falhar para devolver o card
+            } else {
+                // Atualiza apenas os números do topo em segundo plano para ser mais rápido!
+                const d = new Date();
+                const resResumo = await fetch(`/api/resumo?mes=${d.getMonth()+1}&ano=${d.getFullYear()}`);
+                const r = await resResumo.json();
+                document.getElementById('saldo_final').innerText = formatarMoeda(r.saldo_final);
+                document.getElementById('total_pendente').innerText = formatarMoeda(r.total_pendente);
+            }
+        } catch (error) { 
+            alert("Erro de rede."); 
+            carregarDashboard(); 
+        }
     };
 
     const abrirModalRendaIgor = () => {

@@ -19,7 +19,6 @@ def get_db_connection():
             database=parsed.path.lstrip('/'),
             ssl_context=context
         )
-        # Força o fuso horário de Brasília direto na conexão
         cur = conn.cursor()
         cur.execute("SET TIME ZONE 'America/Sao_Paulo';")
         cur.close()
@@ -61,7 +60,6 @@ def init_db():
         cur.execute(query_push)
         cur.execute(query_caixinhas)
         
-        # Colunas premium injetadas
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS recorrente BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS parcela_atual INT DEFAULT 1;")
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS total_parcelas INT DEFAULT 1;")
@@ -71,9 +69,12 @@ def init_db():
         
         cur.execute("ALTER TABLE rendas ADD COLUMN IF NOT EXISTS fonte VARCHAR(50) DEFAULT 'Geral';")
         
-        # O pulo do gato: Ícones para as caixinhas!
-        cur.execute("ALTER TABLE caixinhas ADD COLUMN IF NOT EXISTS icone_svg VARCHAR(50) DEFAULT 'geral';")
-        
+        # Injeção forçada: Auto-cura para o erro da coluna faltante nas Caixinhas
+        try:
+            cur.execute("ALTER TABLE caixinhas ADD COLUMN icone_svg VARCHAR(50) DEFAULT 'geral';")
+        except Exception as e:
+            pass # Se a coluna já existir, ele ignora o erro e segue o baile
+
         try:
             cur.execute("ALTER TABLE rendas DROP CONSTRAINT IF EXISTS rendas_usuario_mes_ano_key;")
             cur.execute("ALTER TABLE rendas ADD CONSTRAINT rendas_usuario_fonte_mes_ano_key UNIQUE (usuario, fonte, mes, ano);")
