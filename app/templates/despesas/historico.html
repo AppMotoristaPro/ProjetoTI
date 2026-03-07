@@ -1,34 +1,72 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="mb-8 flex items-center gap-4">
-    <a href="/" class="w-12 h-12 rounded-2xl soft-glass flex items-center justify-center text-slate-400 transition active:scale-90">←</a>
+    <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-700 transition active:scale-90">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+    </a>
     <h2 class="text-xl font-black text-slate-800">Concluídos</h2>
+</div>
+
+<div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-orange-500 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+    </button>
+    <h2 id="mesDisplayHist" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-orange-500 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+    </button>
 </div>
 
 <div id="lista-historico" class="space-y-4"></div>
 
 <script>
+    let dataHist = new Date();
+
+    const formatarData = (ds) => { if (!ds) return '--/--'; const d = new Date(ds); return `${d.getUTCDate()}/${d.getUTCMonth() + 1}`; };
+
+    const atualizarDisplayMes = () => {
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        document.getElementById('mesDisplayHist').innerText = `${meses[dataHist.getMonth()]}/${dataHist.getFullYear()}`;
+    };
+
+    const mudarMes = (d) => { dataHist.setMonth(dataHist.getMonth() + d); carregarH(); };
+
     const carregarH = async () => {
+        atualizarDisplayMes();
         const c = document.getElementById('lista-historico');
-        const r = await fetch(`/api/despesas?mes=${new Date().getMonth()+1}&ano=${new Date().getFullYear()}`);
+        const r = await fetch(`/api/despesas?mes=${dataHist.getMonth()+1}&ano=${dataHist.getFullYear()}`);
         const d = (await r.json()).filter(x => x.pago);
         
-        c.innerHTML = d.length ? '' : '<p class="text-center text-slate-400 font-bold mt-10">Nada por aqui 🍃</p>';
+        c.innerHTML = d.length ? '' : '<p class="text-center text-slate-500 font-bold mt-10">Nada por aqui no momento.</p>';
         d.forEach(x => {
+            // Se tiver comprovante, o card clica e abre o PDF/Foto. Se não, avisa.
+            const onClickAttr = x.tem_comprovante ? `onclick="window.open('/comprovante/${x.id}', '_blank')"` : `onclick="alert('Esta conta foi dada baixa sem comprovante anexado.')"`;
+            const cursorClass = x.tem_comprovante ? 'cursor-pointer hover:bg-white/40' : 'opacity-80';
+            const iconBadge = x.tem_comprovante 
+                ? `<svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>`
+                : `<svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+
             c.innerHTML += `
-                <div class="p-5 rounded-[28px] soft-glass flex justify-between items-center opacity-70">
+                <div ${onClickAttr} class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition active:scale-95 ${cursorClass}">
                     <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center">✔️</div>
+                        <div class="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm border border-white">
+                            ${iconBadge}
+                        </div>
                         <div>
-                            <p class="font-bold text-slate-700 text-sm">${x.descricao}</p>
-                            <p class="text-[9px] font-black text-orange-500 uppercase tracking-wider">PAGO</p>
+                            <p class="font-bold text-slate-700 text-sm leading-tight">${x.descricao}</p>
+                            <p class="text-[9px] font-bold text-slate-500 mt-0.5">Vencimento original: ${formatarData(x.data_vencimento)}</p>
+                            <p class="text-[9px] font-black text-emerald-600 uppercase tracking-wider mt-1">PAGO POR: ${x.responsavel_pagamento}</p>
                         </div>
                     </div>
-                    <p class="font-black text-slate-800">${Number(x.valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
+                    <div class="text-right">
+                        <p class="font-black text-slate-800">${Number(x.valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
+                        ${x.tem_comprovante ? '<span class="text-[8px] text-indigo-500 font-bold uppercase underline">VER RECIBO</span>' : ''}
+                    </div>
                 </div>`;
         });
     };
-    carregarH();
+    
+    document.addEventListener("DOMContentLoaded", carregarH);
 </script>
 {% endblock %}
 
