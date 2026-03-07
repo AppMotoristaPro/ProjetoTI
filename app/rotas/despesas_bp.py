@@ -6,6 +6,10 @@ from app.services.compressao_service import comprimir_arquivo
 
 despesas_bp = Blueprint('despesas', __name__)
 
+# Inteligência de Fuso Horário de Brasília (UTC-3)
+def hoje_br():
+    return (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).date()
+
 @despesas_bp.route('/nova-conta', methods=['GET'])
 def tela_nova_conta():
     return render_template('despesas/nova_conta.html')
@@ -13,6 +17,10 @@ def tela_nova_conta():
 @despesas_bp.route('/historico', methods=['GET'])
 def tela_historico():
     return render_template('despesas/historico.html')
+
+@despesas_bp.route('/caixinhas', methods=['GET'])
+def tela_caixinhas():
+    return render_template('dashboard/caixinhas.html')
 
 @despesas_bp.route('/api/despesas/nova', methods=['POST'])
 def nova_despesa():
@@ -39,7 +47,7 @@ def listar():
 
 @despesas_bp.route('/api/resumo', methods=['GET'])
 def resumo():
-    hoje = datetime.date.today()
+    hoje = hoje_br()
     mes = int(request.args.get('mes', hoje.month))
     ano = int(request.args.get('ano', hoje.year))
     return jsonify(DespesaRepository.obter_resumo(mes, ano)), 200
@@ -47,9 +55,25 @@ def resumo():
 @despesas_bp.route('/api/rendas', methods=['POST'])
 def atualizar_renda():
     dados = request.json
-    sucesso = DespesaRepository.salvar_renda(dados.get('usuario'), dados.get('mes'), dados.get('ano'), dados.get('valor'))
+    sucesso = DespesaRepository.salvar_renda(
+        dados.get('usuario'), 
+        dados.get('fonte', 'Geral'), 
+        dados.get('mes'), 
+        dados.get('ano'), 
+        dados.get('valor')
+    )
     if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
+
+@despesas_bp.route('/api/caixinhas', methods=['GET', 'POST'])
+def gerenciar_caixinhas():
+    if request.method == 'GET':
+        return jsonify(DespesaRepository.listar_caixinhas()), 200
+    else:
+        dados = request.json
+        sucesso = DespesaRepository.salvar_caixinha(dados.get('nome'), dados.get('valor'))
+        if sucesso: return jsonify({"status": "sucesso"}), 200
+        return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/despesas/<int:despesa_id>/pagar', methods=['POST'])
 def pagar_despesa(despesa_id):
@@ -69,19 +93,16 @@ def ver_comprovante(despesa_id):
     if not bytes_dados: return "Não encontrado", 404
     return send_file(io.BytesIO(bytes_dados), mimetype=mimetype, as_attachment=False)
 
-# --- NOVAS ROTAS: EXCLUIR E EDITAR ---
 @despesas_bp.route('/api/despesas/<int:despesa_id>', methods=['DELETE'])
 def deletar_despesa(despesa_id):
     sucesso = DespesaRepository.excluir(despesa_id)
-    if sucesso:
-        return jsonify({"status": "sucesso"}), 200
+    if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/despesas/<int:despesa_id>/editar', methods=['PUT'])
 def editar_despesa(despesa_id):
     dados = request.json
     sucesso = DespesaRepository.atualizar(despesa_id, dados)
-    if sucesso:
-        return jsonify({"status": "sucesso"}), 200
+    if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 

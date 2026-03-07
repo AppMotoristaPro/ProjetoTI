@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-8 flex items-center gap-4">
+    <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+    </a>
+    <h2 class="text-xl font-black text-slate-800 tracking-tight">Caixinhas</h2>
+</div>
+
+<div class="ultra-glass p-8 rounded-[35px] shadow-sm text-center mb-6">
+    <div class="w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-4 border border-white">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+    </div>
+    <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Potencial para Guardar</p>
+    <p id="saldo_disponivel" class="text-4xl font-black text-slate-800 mt-2">R$ 0,00</p>
+    <p class="text-[10px] text-slate-400 font-medium mt-2">Esse é o seu saldo livre real já descontando outras caixinhas.</p>
+</div>
+
+<div class="flex justify-between items-center mb-4 px-2">
+    <h3 class="font-black text-slate-800">Minhas Caixinhas</h3>
+    <button onclick="abrirModalCaixinha()" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-white shadow-sm">+ Nova</button>
+</div>
+
+<div id="lista-caixinhas" class="space-y-4 pb-20">
+    <div class="text-center py-10"><p class="text-slate-500 font-bold animate-pulse">Carregando cofres...</p></div>
+</div>
+
+<div id="modalCaixinha" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModalCaixinha()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-6">Criar Caixinha</h3>
+        
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Nome do Objetivo</label>
+                <input type="text" id="nome_cx" placeholder="Ex: Viagem, Fundo Emergência..." class="w-full p-4 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-indigo-400">
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor Inicial</label>
+                <input type="number" id="valor_cx" step="0.01" placeholder="0.00" class="w-full p-4 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-indigo-600 outline-none focus:border-indigo-400 text-center">
+            </div>
+        </div>
+        <button onclick="salvarCaixinha()" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Guardar Dinheiro</button>
+    </div>
+</div>
+
+<script>
+    let saldoLivreTotal = 0;
+
+    const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    const carregarTudo = async () => {
+        const d = new Date();
+        const mes = d.getMonth() + 1;
+        const ano = d.getFullYear();
+
+        // Puxa o saldo livre geral e a lista de caixinhas
+        const resR = await fetch(`/api/resumo?mes=${mes}&ano=${ano}`);
+        const resumo = await resR.json();
+        saldoLivreTotal = resumo.saldo_final; // Já vem descontado o total das caixinhas pelo backend!
+        
+        document.getElementById('saldo_disponivel').innerText = formatarMoeda(saldoLivreTotal);
+
+        const resC = await fetch('/api/caixinhas');
+        const caixinhas = await resC.json();
+        const container = document.getElementById('lista-caixinhas');
+        container.innerHTML = '';
+
+        if(caixinhas.length === 0) {
+            container.innerHTML = `<div class="p-8 ultra-glass rounded-[28px] text-center border border-white"><p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Nenhum objetivo criado.</p></div>`;
+            return;
+        }
+
+        caixinhas.forEach(cx => {
+            container.innerHTML += `
+                <div class="p-5 ultra-glass rounded-[28px] border border-white flex justify-between items-center transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 border border-white">💰</div>
+                        <p class="font-bold text-slate-800 text-sm">${cx.nome}</p>
+                    </div>
+                    <p class="font-black text-indigo-600 text-lg">${formatarMoeda(cx.valor)}</p>
+                </div>`;
+        });
+    };
+
+    const abrirModalCaixinha = () => document.getElementById('modalCaixinha').classList.remove('hidden');
+    const fecharModalCaixinha = () => document.getElementById('modalCaixinha').classList.add('hidden');
+
+    const salvarCaixinha = async () => {
+        const nome = document.getElementById('nome_cx').value;
+        const valor = parseFloat(document.getElementById('valor_cx').value);
+        
+        if(!nome || isNaN(valor) || valor <= 0) return alert("Preencha corretamente!");
+        if(valor > saldoLivreTotal) return alert(`Você só tem ${formatarMoeda(saldoLivreTotal)} livre para guardar!`);
+
+        await fetch('/api/caixinhas', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({nome: nome, valor: valor})
+        });
+        
+        fecharModalCaixinha();
+        document.getElementById('nome_cx').value = '';
+        document.getElementById('valor_cx').value = '';
+        carregarTudo();
+    };
+
+    document.addEventListener("DOMContentLoaded", carregarTudo);
+</script>
+{% endblock %}
+

@@ -13,7 +13,6 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f4f6f9;
-            /* Bolhas de cores vibrantes no fundo para dar vida ao vidro */
             background-image: 
                 radial-gradient(circle at 15% 20%, rgba(186, 155, 253, 0.4) 0%, transparent 50%), 
                 radial-gradient(circle at 85% 80%, rgba(138, 191, 255, 0.4) 0%, transparent 50%), 
@@ -25,7 +24,6 @@
             padding-top: 20px;
         }
         
-        /* Vidro Premium com altíssimo desfoque e transparência */
         .ultra-glass {
             background: rgba(255, 255, 255, 0.35);
             backdrop-filter: blur(24px);
@@ -34,11 +32,7 @@
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
         }
 
-        .btn-active {
-            background: #ff8c00; 
-            box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3);
-        }
-        
+        .btn-active { background: #ff8c00; box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3); }
         ::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -48,13 +42,19 @@
         {% block content %}{% endblock %}
     </main>
 
-    <nav class="fixed bottom-6 w-[90%] max-w-sm left-1/2 -translate-x-1/2 ultra-glass flex justify-around items-center px-2 py-3 z-40 rounded-[35px]">
+    <nav class="fixed bottom-6 w-[92%] max-w-sm left-1/2 -translate-x-1/2 ultra-glass flex justify-between items-center px-4 py-3 z-40 rounded-[35px]">
         <a href="/" class="flex flex-col items-center group">
             <div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-indigo-600">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
             </div>
         </a>
         
+        <a href="/caixinhas" class="flex flex-col items-center group">
+            <div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-indigo-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+            </div>
+        </a>
+
         <a href="/nova-conta" class="flex flex-col items-center group relative z-50">
             <div class="btn-active w-12 h-12 rounded-full flex items-center justify-center shadow-lg text-white group-active:scale-95 transition-transform">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -63,7 +63,7 @@
         
         <a href="/historico" class="flex flex-col items-center group">
             <div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-indigo-600">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             </div>
         </a>
     </nav>
