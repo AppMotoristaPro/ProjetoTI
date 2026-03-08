@@ -33,18 +33,26 @@ def tela_variaveis(): return render_template('despesas/variaveis.html')
 @despesas_bp.route('/nova-conta', methods=['GET']) # Mantido por compatibilidade
 def tela_nova_conta(): return render_template('despesas/nova_conta.html')
 
-# --- API CORE ---
+# --- API CORE BLINDADA ---
 @despesas_bp.route('/api/despesas/nova', methods=['POST'])
 def nova_despesa():
     dados = request.form.to_dict()
     arquivo = request.files.get('comprovante')
     comprovante_binario = None
     mimetype = None
-    if arquivo and arquivo.filename:
-        comprovante_binario, mimetype = comprimir_arquivo(arquivo)
+    
+    if arquivo and arquivo.filename and arquivo.filename != '':
+        try:
+            comprovante_binario, mimetype = comprimir_arquivo(arquivo)
+        except Exception as e:
+            print(f"Erro fatal ao comprimir anexo, lendo arquivo bruto: {e}")
+            arquivo.seek(0)
+            comprovante_binario = arquivo.read()
+            mimetype = arquivo.mimetype
         
     dados['pago'] = True if request.form.get('pago') == 'true' else False
     sucesso = DespesaRepository.criar(dados, comprovante_binario, mimetype)
+    
     if sucesso: return jsonify({"status": "sucesso", "mensagem": "Salvo com sucesso!"}), 201
     return jsonify({"status": "erro"}), 500
 
@@ -104,8 +112,11 @@ def pagar_despesa(despesa_id):
     if arquivo and arquivo.filename and arquivo.filename != '':
         try:
             comprovante_binario, mimetype = comprimir_arquivo(arquivo)
-        except Exception:
-            return jsonify({"status": "erro", "mensagem": "Arquivo inválido"}), 400
+        except Exception as e:
+            print(f"Erro fatal ao comprimir comprovante, lendo arquivo bruto: {e}")
+            arquivo.seek(0)
+            comprovante_binario = arquivo.read()
+            mimetype = arquivo.mimetype
         
     sucesso = DespesaRepository.marcar_paga(despesa_id, comprovante_binario, mimetype)
     if sucesso: return jsonify({"status": "sucesso"}), 200
@@ -135,5 +146,6 @@ def editar_despesa(despesa_id):
     sucesso = DespesaRepository.atualizar(despesa_id, dados)
     if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
+
 
 
