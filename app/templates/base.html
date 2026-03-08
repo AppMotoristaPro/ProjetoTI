@@ -135,15 +135,15 @@
     </div>
 
     <script>
-        // PWA REGISTRATION
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
-        // TROCADOR DE TEMA CLICÁVEL
         function toggleTheme() {
             let current = localStorage.getItem('app_theme') || 'blue';
             let novo = current === 'blue' ? 'pink' : 'blue';
             localStorage.setItem('app_theme', novo);
             document.documentElement.setAttribute('data-theme', novo);
+            // Avisa os outros scripts (como o gráfico) que a cor mudou
+            window.dispatchEvent(new Event('themeChanged'));
         }
 
         const menu = document.getElementById('speedDialMenu');
@@ -160,7 +160,6 @@
         }
 
         function abrirModalDiaDia() { 
-            // Pega o dia exato do celular local
             const tzoffset = (new Date()).getTimezoneOffset() * 60000;
             const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
             document.getElementById('diadia_vencimento').value = localISOTime; 

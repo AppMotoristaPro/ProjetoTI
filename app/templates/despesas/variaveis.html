@@ -5,13 +5,13 @@
         <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg></a>
         <h2 class="text-xl font-black text-slate-800 tracking-tight">Variáveis</h2>
     </div>
-    <button onclick="abrirModalNovaVar()" class="bg-orange-500 w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg active:scale-95 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
+    <button onclick="abrirModalNovaVar()" class="btn-active w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg active:scale-95 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
 </div>
 
 <div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
-    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-orange-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
     <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
-    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-orange-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
 </div>
 
 <p class="text-[10px] text-slate-400 uppercase tracking-widest text-center mb-2 animate-pulse">Deslize a conta para a direita para pagar ➡</p>
@@ -46,7 +46,7 @@
                 </div>
             </div>
             <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Observações</label><textarea name="observacao" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm"></textarea></div>
-            <button type="submit" id="btnSalvarVar" class="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold active:scale-95 transition shadow-lg shadow-orange-500/30">Guardar Conta</button>
+            <button type="submit" id="btnSalvarVar" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition shadow-lg">Guardar Conta</button>
         </form>
     </div>
 </div>
@@ -55,11 +55,11 @@
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 id="det_nome" class="text-xl font-black text-slate-800 mb-1 pr-8">--</h3>
-        <p id="det_parcela" class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-6">--</p>
+        <p id="det_parcela" class="text-xs font-bold text-theme uppercase tracking-widest mb-6">--</p>
         <div class="space-y-4 mb-6">
             <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Valor</span><span id="det_valor" class="text-sm font-black text-slate-800">--</span></div>
             <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Vencimento</span><span id="det_vence" class="text-sm font-bold text-orange-600">--</span></div>
-            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Data Prevista</span><span id="det_prev" class="text-sm font-bold text-indigo-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Data Prevista</span><span id="det_prev" class="text-sm font-bold text-theme">--</span></div>
             <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Responsável</span><span id="det_resp" class="text-sm font-bold text-slate-800">--</span></div>
         </div>
         <div class="flex gap-2">
@@ -94,7 +94,7 @@
         <button onclick="fecharModais(); reverterCard(contaEmFocoId);" class="absolute top-4 right-4 text-slate-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-xl font-black text-slate-800 mb-6">Pagar Conta</h3>
         <div class="space-y-3">
-            <button id="btnAnexarRecibo" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2">Anexar Recibo</button>
+            <button id="btnAnexarRecibo" class="w-full py-4 btn-active text-white rounded-2xl font-bold flex items-center justify-center gap-2">Anexar Recibo</button>
             <button id="btnApenasBaixa" class="w-full py-4 bg-slate-100 text-slate-700 rounded-2xl font-bold">Apenas Dar Baixa</button>
         </div>
     </div>
@@ -129,7 +129,7 @@
                     <div class="swipe-card relative z-10 ultra-glass p-5 rounded-[28px] flex justify-between items-center cursor-pointer border border-white/50" data-id="${x.id}"
                          onclick="if(!isSwiping) abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas})">
                         <div class="flex items-start gap-3 w-[70%] pointer-events-none">
-                            <div class="w-10 h-10 mt-1 rounded-xl bg-white/70 flex items-center justify-center text-orange-500 shadow-sm border border-white">💳</div>
+                            <div class="w-10 h-10 mt-1 rounded-xl bg-white/70 flex items-center justify-center text-theme shadow-sm border border-white">💳</div>
                             <div class="truncate flex-1">
                                 <p class="font-bold text-slate-800 text-sm truncate leading-tight">${x.descricao}</p>
                                 ${badgeParcela}
@@ -138,7 +138,7 @@
                         </div>
                         <div class="flex flex-col items-end justify-center h-full gap-1 w-[30%] pointer-events-none">
                             <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
-                            <span class="text-[7px] font-black text-orange-600 uppercase bg-orange-100/50 px-2 py-0.5 rounded-md mt-1 line-clamp-1">${x.categoria}</span>
+                            <span class="text-[7px] font-black text-theme uppercase bg-theme-light px-2 py-0.5 rounded-md mt-1 line-clamp-1">${x.categoria}</span>
                         </div>
                     </div>
                 </div>`;
@@ -202,6 +202,4 @@
     document.addEventListener("DOMContentLoaded", carregarVariaveis);
 </script>
 {% endblock %}
-
-
 

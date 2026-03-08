@@ -85,7 +85,6 @@
             if(abaAtual === 'Diária') {
                 const descSafe = x.descricao.replace(/'/g, "\\'");
                 
-                // Escolhe o ícone baseado na categoria selecionada
                 const icones = {
                     'Combustível': '⛽',
                     'Mercado': '🛒',
@@ -95,7 +94,7 @@
                     'Besteira': '🍫',
                     'Outros': '🏷️'
                 };
-                const iconeCat = icones[x.categoria] || '☕'; // Se não achar, volta pro café
+                const iconeCat = icones[x.categoria] || '☕'; 
 
                 c.innerHTML += `
                     <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition cursor-pointer hover:bg-white/40"
@@ -104,7 +103,7 @@
                             <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">${iconeCat}</div>
                             <div class="truncate">
                                 <p class="font-bold text-slate-700 text-sm leading-tight truncate pr-2">${x.descricao}</p>
-                                <p class="text-[9px] font-bold text-emerald-500 mt-0.5">Pago dia: ${dataExibicao}</p>
+                                <p class="text-[9px] font-bold text-slate-500 mt-0.5">${x.categoria} • <span class="text-emerald-500">Pago dia: ${dataExibicao}</span></p>
                             </div>
                         </div>
                         <div class="w-[35%] flex flex-col items-end gap-3 border-l border-white/40 pl-2">
@@ -120,7 +119,7 @@
                             <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">${iconBadge}</div>
                             <div class="truncate">
                                 <p class="font-bold text-slate-700 text-sm leading-tight truncate pr-2">${x.descricao}</p>
-                                <p class="text-[9px] font-bold text-emerald-500 mt-0.5">Pago dia: ${dataExibicao}</p>
+                                <p class="text-[9px] font-bold text-slate-500 mt-0.5">${x.categoria} • <span class="text-emerald-500">Pago dia: ${dataExibicao}</span></p>
                             </div>
                         </div>
                         <div class="w-[35%] flex flex-col items-end gap-3 border-l border-white/40 pl-2">
@@ -132,7 +131,6 @@
         });
     };
 
-    // --- Edição/Exclusão para Diárias ---
     const fecharModais = () => { document.getElementById('modalDetalhesDiaria').classList.add('hidden'); document.getElementById('modalEditarDiaria').classList.add('hidden'); };
     
     const abrirModalDiaria = (id, desc, valor, dataV, resp, dataExibicao) => {

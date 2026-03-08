@@ -9,14 +9,13 @@
 </div>
 
 <div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
-    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-emerald-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
     <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
-    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-emerald-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
 </div>
 
 <div class="grid grid-cols-1 gap-4 mb-32" id="lista-entradas"></div>
 
-<!-- Modal Nova / Edição -->
 <div id="modalEntrada" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="fecharModalEntrada()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
@@ -28,7 +27,7 @@
             <div id="box_fnt"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Tipo de Entrada</label><select id="entrada_fonte" class="w-full p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 font-bold outline-none text-emerald-700"></select></div>
             <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Valor</label><input type="number" id="entrada_valor" step="0.01" placeholder="0.00" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl outline-none focus:border-emerald-400"></div>
         </div>
-        <button onclick="salvarEntrada()" class="w-full py-4 bg-emerald-500 text-white rounded-2xl font-bold active:scale-95 transition shadow-lg shadow-emerald-500/30">Salvar Entrada</button>
+        <button onclick="salvarEntrada()" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition shadow-lg">Salvar Entrada</button>
     </div>
 </div>
 
@@ -112,6 +111,4 @@
     document.addEventListener("DOMContentLoaded", carregarEntradas);
 </script>
 {% endblock %}
-
-
 
