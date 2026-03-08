@@ -8,25 +8,24 @@
 </div>
 
 <div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
-    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
     <h2 id="mesDisplayHist" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
-    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
 </div>
 
 <div class="flex p-1 bg-white/50 rounded-2xl mb-6 shadow-inner border border-white/60">
-    <button onclick="setAba('Fixa')" id="aba-Fixa" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl bg-white text-indigo-600 shadow-sm transition">Fixas</button>
+    <button onclick="setAba('Fixa')" id="aba-Fixa" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl bg-white text-theme shadow-sm transition">Fixas</button>
     <button onclick="setAba('Variável')" id="aba-Variável" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl text-slate-500 hover:bg-white/50 transition">Variáveis</button>
     <button onclick="setAba('Diária')" id="aba-Diária" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl text-slate-500 hover:bg-white/50 transition">Diário</button>
 </div>
 
 <div id="lista-historico" class="space-y-4 mb-32"></div>
 
-<!-- Modais Exclusivos da Aba Diária -->
 <div id="modalDetalhesDiaria" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 id="det_nome" class="text-xl font-black text-slate-800 mb-1 pr-8">--</h3>
-        <p class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-6">Gasto do Dia-a-Dia</p>
+        <p class="text-xs font-bold text-theme uppercase tracking-widest mb-6">Gasto do Dia-a-Dia</p>
         <div class="space-y-4 mb-6">
             <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Valor</span><span id="det_valor" class="text-sm font-black text-slate-800">--</span></div>
             <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Data Pago</span><span id="det_pag" class="text-sm font-bold text-emerald-600">--</span></div>
@@ -63,9 +62,9 @@
 
     const setAba = (tipo) => {
         abaAtual = tipo;
-        document.querySelectorAll('[id^="aba-"]').forEach(btn => { btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm'); btn.classList.add('text-slate-500'); });
+        document.querySelectorAll('[id^="aba-"]').forEach(btn => { btn.classList.remove('bg-white', 'text-theme', 'shadow-sm'); btn.classList.add('text-slate-500'); });
         const activeBtn = document.getElementById(`aba-${tipo}`);
-        activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-sm'); activeBtn.classList.remove('text-slate-500');
+        activeBtn.classList.add('bg-white', 'text-theme', 'shadow-sm'); activeBtn.classList.remove('text-slate-500');
         renderizarLista();
     };
 
@@ -85,11 +84,24 @@
             
             if(abaAtual === 'Diária') {
                 const descSafe = x.descricao.replace(/'/g, "\\'");
+                
+                // Escolhe o ícone baseado na categoria selecionada
+                const icones = {
+                    'Combustível': '⛽',
+                    'Mercado': '🛒',
+                    'Farmácia': '💊',
+                    'Restaurante': '🍽️',
+                    'Lazer': '🎬',
+                    'Besteira': '🍫',
+                    'Outros': '🏷️'
+                };
+                const iconeCat = icones[x.categoria] || '☕'; // Se não achar, volta pro café
+
                 c.innerHTML += `
                     <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition cursor-pointer hover:bg-white/40"
                          onclick="abrirModalDiaria(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.responsavel_pagamento}', '${dataExibicao}')">
                         <div class="flex items-center gap-4 w-[65%]">
-                            <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">☕</div>
+                            <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">${iconeCat}</div>
                             <div class="truncate">
                                 <p class="font-bold text-slate-700 text-sm leading-tight truncate pr-2">${x.descricao}</p>
                                 <p class="text-[9px] font-bold text-emerald-500 mt-0.5">Pago dia: ${dataExibicao}</p>
@@ -151,6 +163,4 @@
     document.addEventListener("DOMContentLoaded", carregarH);
 </script>
 {% endblock %}
-
-
 

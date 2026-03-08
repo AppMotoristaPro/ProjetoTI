@@ -6,7 +6,6 @@
     <meta name="theme-color" content="#f4f6f9">
     <title>Despesas T&I</title>
     
-    <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
     
@@ -40,6 +39,10 @@
             --grad-bg: radial-gradient(circle at 15% 20%, rgba(244, 114, 182, 0.4) 0%, transparent 50%), radial-gradient(circle at 85% 80%, rgba(192, 132, 252, 0.4) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(251, 113, 133, 0.3) 0%, transparent 60%);
         }
 
+        /* Classes para alternar elementos por tema dinamicamente */
+        [data-theme="pink"] .show-on-blue { display: none !important; }
+        [data-theme="blue"] .show-on-pink { display: none !important; }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f4f6f9;
@@ -70,7 +73,6 @@
     </style>
 </head>
 <body>
-    <!-- CABEÇALHO FIXO COM TROCADOR DE TEMA -->
     <header style="background: var(--bg-header)" class="fixed top-0 left-0 w-full pt-6 pb-4 px-4 text-center z-50 backdrop-blur-md border-b border-white/50">
         <h1 onclick="toggleTheme()" class="text-2xl font-black tracking-tight text-theme cursor-pointer active:scale-95 transition-transform">Despesas T&I 🫶</h1>
     </header>
@@ -79,7 +81,6 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- NAV BAR -->
     <nav class="fixed bottom-6 w-[92%] max-w-sm left-1/2 -translate-x-1/2 ultra-glass flex justify-between items-center px-4 py-3 z-50 rounded-[35px]">
         <a href="/" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></div></a>
 
@@ -103,7 +104,7 @@
     <div id="modalDiaDia" class="hidden fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 pb-24 transition-opacity">
         <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative animate-slide-up">
             <button onclick="fecharModalDiaDia()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-            <h3 class="text-lg font-black text-slate-800 mb-1">Gasto do Dia-a-Dia</h3>
+            <h3 class="text-lg font-black text-theme mb-1">Gasto do Dia-a-Dia</h3>
             <p class="text-xs font-medium text-slate-500 mb-6">Lançamento rápido na data de hoje.</p>
             
             <form id="formDiaDia" class="space-y-4">
@@ -119,7 +120,13 @@
                 <div>
                     <label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Categoria</label>
                     <select name="categoria" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required>
-                        <option value="Besteira">Besteira</option><option value="Combustível">Combustível</option><option value="Lazer">Lazer</option><option value="Outros">Outros</option>
+                        <option value="Besteira">Besteira</option>
+                        <option value="Combustível">Combustível</option>
+                        <option value="Farmácia">Farmácia</option>
+                        <option value="Lazer">Lazer</option>
+                        <option value="Mercado">Mercado</option>
+                        <option value="Restaurante">Restaurante</option>
+                        <option value="Outros">Outros</option>
                     </select>
                 </div>
                 <button type="submit" id="btnSalvarDiaDia" class="w-full py-4 mt-2 btn-active text-white rounded-2xl font-black tracking-widest active:scale-95 transition">LANÇAR GASTO</button>
@@ -176,6 +183,4 @@
     </script>
 </body>
 </html>
-
-
 

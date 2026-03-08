@@ -1,0 +1,2486 @@
+ESTRUTURA DO PROJETO:
+ProjetoTI/
+├── Procfile
+├── app
+│   ├── __init__.py
+│   ├── extensions.py
+│   ├── models
+│   │   ├── __init__.py
+│   │   ├── despesa.py
+│   │   └── usuario.py
+│   ├── repositories
+│   │   ├── __init__.py
+│   │   ├── base_repository.py
+│   │   ├── despesa_repository.py
+│   │   └── usuario_repository.py
+│   ├── rotas
+│   │   ├── __init__.py
+│   │   ├── auth_bp.py
+│   │   ├── dashboard_bp.py
+│   │   ├── despesas_bp.py
+│   │   └── push_bp.py
+│   ├── services
+│   │   ├── __init__.py
+│   │   ├── compressao_service.py
+│   │   ├── despesa_service.py
+│   │   └── notificacao_service.py
+│   ├── static
+│   │   ├── css
+│   │   │   └── style.css
+│   │   ├── icons
+│   │   ├── manifest.json
+│   │   └── service-worker.js
+│   └── templates
+│       ├── auth
+│       │   ├── login.html
+│       │   └── primeiro_acesso.html
+│       ├── base.html
+│       ├── dashboard
+│       │   ├── caixinhas.html
+│       │   ├── entradas.html
+│       │   └── index.html
+│       ├── despesas
+│       │   ├── fixas.html
+│       │   ├── historico.html
+│       │   ├── nova_conta.html
+│       │   └── variaveis.html
+│       └── errors
+│           ├── 403.html
+│           ├── 404.html
+│           └── 500.html
+├── backups
+├── config.py
+├── gerador.py
+├── requirements.txt
+├── run.py
+└── runtime.txt
+
+
+CÓDIGOS-FONTE:
+
+============================================================
+ARQUIVO: Procfile
+============================================================
+
+
+
+============================================================
+ARQUIVO: run.py
+============================================================
+
+from app import create_app
+import os
+
+app = create_app()
+
+if __name__ == '__main__':
+    # O Render usa a porta 10000 por padrão, e o Termux usa a que estiver livre (ex: 8080)
+    port = int(os.environ.get('PORT', 8080))
+    # host='0.0.0.0' é obrigatório para você conseguir acessar do navegador do celular
+    app.run(host='0.0.0.0', port=port, debug=True)
+
+
+
+============================================================
+ARQUIVO: config.py
+============================================================
+
+import os
+from dotenv import load_dotenv
+
+# Carrega as variáveis do arquivo .env (útil para quando você for testar no Termux)
+load_dotenv()
+
+class Config:
+    # 1. Configurações Básicas
+    # A chave secreta é obrigatória no Flask para manter a sessão dos usuários segura
+    SECRET_KEY = os.environ.get("SECRET_KEY", "chave-super-secreta-gestao-ti")
+    
+    # 2. Banco de Dados
+    # O Render vai fornecer a DATABASE_URL nas variáveis de ambiente
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+    
+    # 3. Chaves para a Notificação Push (Web Push API)
+    VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY")
+    VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY")
+    VAPID_CLAIM_EMAIL = os.environ.get("VAPID_CLAIM_EMAIL", "mailto:igor@exemplo.com")
+    
+    # 4. Segurança de Upload
+    # Limita o tamanho máximo do arquivo ANTES da compressão (aqui está configurado para 10 MB)
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024
+
+
+
+============================================================
+ARQUIVO: requirements.txt
+============================================================
+
+Flask==3.0.2
+pg8000==1.30.5
+python-dotenv==1.0.1
+gunicorn==21.2.0
+pywebpush==1.14.0
+Pillow
+pypdf==4.0.1
+
+
+
+============================================================
+ARQUIVO: runtime.txt
+============================================================
+
+
+
+============================================================
+ARQUIVO: .env
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/__init__.py
+============================================================
+
+from flask import Flask
+from config import Config
+from app.extensions import init_db
+
+def create_app():
+    # Inicializa o Flask
+    app = Flask(__name__)
+    
+    # Carrega as senhas do config.py
+    app.config.from_object(Config)
+
+    # Cria as tabelas no Supabase assim que o app liga
+    init_db()
+
+    # Rota de teste rápida para sabermos se o app está vivo
+    @app.route('/ping')
+    def ping():
+        return {"status": "ok", "mensagem": "Gestão TI está online e respirando!"}
+
+    # As rotas oficias dos Blueprints vão entrar aqui no próximo passo!
+from flask import Flask
+from config import Config
+from app.extensions import init_db
+
+# Importando o blueprint
+from app.rotas.despesas_bp import despesas_bp
+from app.rotas.dashboard_bp import dashboard_bp
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+
+    init_db()
+
+    @app.route('/ping')
+    def ping():
+        return {"status": "ok", "mensagem": "Gestão TI está online e respirando!"}
+
+    # Registrando o blueprint no aplicativo
+    app.register_blueprint(despesas_bp)
+    app.register_blueprint(dashboard_bp)
+
+    return app
+
+    return app
+
+
+
+============================================================
+ARQUIVO: app/extensions.py
+============================================================
+
+import pg8000.dbapi
+import urllib.parse
+import ssl
+from config import Config
+
+def get_db_connection():
+    if not Config.DATABASE_URL:
+        print("⚠️ Aviso: DATABASE_URL não configurada.")
+        return None
+    
+    parsed = urllib.parse.urlparse(Config.DATABASE_URL)
+    try:
+        context = ssl.create_default_context()
+        conn = pg8000.dbapi.connect(
+            user=parsed.username,
+            password=parsed.password,
+            host=parsed.hostname,
+            port=parsed.port or 5432,
+            database=parsed.path.lstrip('/'),
+            ssl_context=context
+        )
+        cur = conn.cursor()
+        cur.execute("SET TIME ZONE 'America/Sao_Paulo';")
+        cur.close()
+        return conn
+    except Exception as e:
+        print(f"❌ Erro ao conectar no PostgreSQL: {e}")
+        return None
+
+def init_db():
+    conn = get_db_connection()
+    if not conn:
+        return
+
+    query_usuarios = "CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, nome VARCHAR(50) UNIQUE NOT NULL, senha_hash VARCHAR(255) NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+    query_despesas = """
+    CREATE TABLE IF NOT EXISTS despesas (
+        id SERIAL PRIMARY KEY,
+        descricao VARCHAR(255) NOT NULL,
+        valor DECIMAL(10, 2) NOT NULL,
+        data_vencimento DATE NOT NULL,
+        data_pretensao DATE,
+        responsavel_pagamento VARCHAR(50) NOT NULL,
+        categoria VARCHAR(100),
+        pago BOOLEAN DEFAULT FALSE,
+        comprovante_dados BYTEA, 
+        comprovante_mimetype VARCHAR(50),
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+    query_rendas = "CREATE TABLE IF NOT EXISTS rendas (id SERIAL PRIMARY KEY, usuario VARCHAR(50) NOT NULL, valor DECIMAL(10, 2) DEFAULT 0.00, mes INT NOT NULL, ano INT NOT NULL);"
+    query_push = "CREATE TABLE IF NOT EXISTS inscricoes_push (id SERIAL PRIMARY KEY, usuario VARCHAR(50) NOT NULL, subscription_info JSONB NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+    query_caixinhas = "CREATE TABLE IF NOT EXISTS caixinhas (id SERIAL PRIMARY KEY, nome VARCHAR(100) UNIQUE NOT NULL, valor DECIMAL(10, 2) DEFAULT 0.00, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+    
+    query_depositos = """
+    CREATE TABLE IF NOT EXISTS depositos_caixinhas (
+        id SERIAL PRIMARY KEY,
+        caixinha_id INT NOT NULL,
+        valor DECIMAL(10, 2) NOT NULL,
+        mes INT NOT NULL,
+        ano INT NOT NULL,
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+
+    try:
+        cur = conn.cursor()
+        cur.execute(query_usuarios)
+        cur.execute(query_despesas)
+        cur.execute(query_rendas)
+        cur.execute(query_push)
+        cur.execute(query_caixinhas)
+        cur.execute(query_depositos)
+        
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS recorrente BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS parcela_atual INT DEFAULT 1;")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS total_parcelas INT DEFAULT 1;")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS observacao TEXT;")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS icone_svg VARCHAR(50) DEFAULT 'geral';")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS fonte_pagamento VARCHAR(50);")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS tipo_despesa VARCHAR(20) DEFAULT 'Variável';")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS grupo_id VARCHAR(50);")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS data_pagamento DATE;")
+        
+        cur.execute("ALTER TABLE rendas ADD COLUMN IF NOT EXISTS fonte VARCHAR(50) DEFAULT 'Geral';")
+
+        try: cur.execute("ALTER TABLE caixinhas ADD COLUMN icone_svg VARCHAR(50) DEFAULT 'geral';")
+        except Exception: pass 
+        
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        print(f"❌ Erro ao inicializar o banco: {e}")
+    finally:
+        conn.close()
+
+
+
+
+
+============================================================
+ARQUIVO: app/models/__init__.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/models/despesa.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/models/usuario.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/repositories/__init__.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/repositories/base_repository.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/repositories/despesa_repository.py
+============================================================
+
+import datetime
+import uuid
+from app.extensions import get_db_connection
+
+class DespesaRepository:
+
+    @staticmethod
+    def _somar_meses(data_original, meses_a_somar):
+        if not data_original: return None
+        mes = data_original.month - 1 + meses_a_somar
+        ano = data_original.year + mes // 12
+        mes = mes % 12 + 1
+        dia = min(data_original.day, [31, 29 if ano % 4 == 0 and (not ano % 100 == 0 or ano % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1])
+        return datetime.date(ano, mes, dia)
+
+    @staticmethod
+    def criar(dados, comprovante_binario, mimetype):
+        conn = get_db_connection()
+        if not conn: return False
+        try:
+            cur = conn.cursor()
+            tipo_despesa = dados.get('tipo_despesa', 'Variável')
+            grupo_id = str(uuid.uuid4())
+            
+            recorrente = str(dados.get('recorrente', 'false')).lower() == 'true'
+            parcela_inicial = int(dados.get('parcela_atual', 1))
+            total_parcelas = int(dados.get('total_parcelas', 1))
+            
+            if tipo_despesa == 'Fixa':
+                recorrente = True
+                parcela_inicial = 1
+                total_parcelas = 60
+            elif tipo_despesa == 'Diária':
+                recorrente = False
+                total_parcelas = 1
+            
+            data_vencimento = datetime.datetime.strptime(dados.get('data_vencimento'), '%Y-%m-%d').date()
+            data_pretensao = datetime.datetime.strptime(dados.get('data_pretensao'), '%Y-%m-%d').date() if dados.get('data_pretensao') else None
+            
+            parcelas_a_criar = total_parcelas - parcela_inicial + 1
+            if not recorrente or parcelas_a_criar < 1: parcelas_a_criar = 1
+
+            for i in range(parcelas_a_criar):
+                nova_data_venc = DespesaRepository._somar_meses(data_vencimento, i)
+                nova_data_pret = DespesaRepository._somar_meses(data_pretensao, i)
+                p_atual = parcela_inicial + i
+                descricao_final = dados.get('descricao')
+                
+                comp_bin = comprovante_binario if i == 0 else None
+                comp_mime = mimetype if i == 0 else None
+                status_pago = str(dados.get('pago', 'false')).lower() == 'true' if i == 0 else False
+                
+                data_pagamento = datetime.date.today() if status_pago else None
+                
+                query = """
+                    INSERT INTO despesas 
+                    (descricao, valor, data_vencimento, data_pretensao, responsavel_pagamento, categoria, pago, 
+                     comprovante_dados, comprovante_mimetype, recorrente, parcela_atual, total_parcelas, observacao, icone_svg, fonte_pagamento, tipo_despesa, grupo_id, data_pagamento)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                cur.execute(query, (
+                    descricao_final, dados.get('valor'), nova_data_venc, nova_data_pret, dados.get('responsavel_pagamento'), 
+                    dados.get('categoria', 'Geral'), status_pago, comp_bin, comp_mime, recorrente, p_atual, total_parcelas,
+                    dados.get('observacao', ''), dados.get('icone_svg', 'geral'), dados.get('fonte_pagamento'), tipo_despesa, grupo_id, data_pagamento
+                ))
+                
+            conn.commit()
+            cur.close()
+            return True
+        except Exception as e: return False
+        finally: conn.close()
+
+    @staticmethod
+    def listar_por_mes(mes, ano):
+        conn = get_db_connection()
+        if not conn: return []
+        try:
+            cur = conn.cursor()
+            query = """
+                SELECT id, descricao, valor, data_vencimento, data_pretensao, data_pagamento,
+                       responsavel_pagamento, categoria, pago, recorrente, parcela_atual, total_parcelas,
+                       observacao, icone_svg, fonte_pagamento, tipo_despesa, grupo_id, (comprovante_dados IS NOT NULL) as tem_comprovante 
+                FROM despesas 
+                WHERE EXTRACT(MONTH FROM data_vencimento) = %s AND EXTRACT(YEAR FROM data_vencimento) = %s
+                ORDER BY data_vencimento ASC
+            """
+            cur.execute(query, (mes, ano))
+            colunas = [desc[0] for desc in cur.description]
+            resultados = []
+            for row in cur.fetchall():
+                d = dict(zip(colunas, row))
+                if d.get('data_vencimento'): d['data_vencimento'] = d['data_vencimento'].strftime('%Y-%m-%d')
+                if d.get('data_pretensao'): d['data_pretensao'] = d['data_pretensao'].strftime('%Y-%m-%d')
+                if d.get('data_pagamento'): d['data_pagamento'] = d['data_pagamento'].strftime('%Y-%m-%d')
+                resultados.append(d)
+            return resultados
+        finally: conn.close()
+
+    # --- BUG FIX: O erro nas Rendas foi solucionado aqui ---
+    @staticmethod
+    def listar_rendas_detalhadas(mes, ano):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT id, usuario, fonte, valor FROM rendas WHERE mes=%s AND ano=%s ORDER BY id", (mes, ano))
+            colunas = [desc[0] for desc in cur.description]
+            return [dict(zip(colunas, row)) for row in cur.fetchall()]
+        finally: conn.close()
+
+    @staticmethod
+    def salvar_renda(usuario, fonte, mes, ano, valor):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s", (usuario, fonte, mes, ano))
+            linha = cur.fetchone()
+            if linha:
+                cur.execute("UPDATE rendas SET valor=%s WHERE id=%s", (valor, linha[0]))
+            else:
+                cur.execute("INSERT INTO rendas (usuario, fonte, mes, ano, valor) VALUES (%s, %s, %s, %s, %s)", (usuario, fonte, mes, ano, valor))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+    @staticmethod
+    def atualizar_renda(renda_id, valor):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("UPDATE rendas SET valor=%s WHERE id=%s", (valor, renda_id))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+    @staticmethod
+    def excluir_renda(renda_id):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM rendas WHERE id=%s", (renda_id,))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+    @staticmethod
+    def obter_resumo(mes, ano):
+        conn = get_db_connection()
+        if not conn: return {}
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT usuario, fonte, valor FROM rendas WHERE mes = %s AND ano = %s", (mes, ano))
+            rendas_detalhadas = {'Igor': {}, 'Thaynara': {}}
+            for row in cur.fetchall():
+                usr, fnt, val = row[0], row[1], float(row[2])
+                if usr in rendas_detalhadas: rendas_detalhadas[usr][fnt] = val
+            
+            renda_igor = sum(rendas_detalhadas['Igor'].values())
+            renda_thaynara = sum(rendas_detalhadas['Thaynara'].values())
+            total_renda = renda_igor + renda_thaynara
+            
+            cur.execute("SELECT responsavel_pagamento, SUM(valor) FROM despesas WHERE EXTRACT(MONTH FROM data_vencimento) = %s AND EXTRACT(YEAR FROM data_vencimento) = %s AND pago = FALSE GROUP BY responsavel_pagamento", (mes, ano))
+            pendentes = {row[0]: float(row[1]) for row in cur.fetchall()}
+            total_pendente = pendentes.get('Igor', 0.0) + pendentes.get('Thaynara', 0.0)
+            
+            cur.execute("SELECT SUM(valor) FROM despesas WHERE EXTRACT(MONTH FROM data_vencimento) = %s AND EXTRACT(YEAR FROM data_vencimento) = %s", (mes, ano))
+            res_desp = cur.fetchone()
+            total_todas_despesas_mes = float(res_desp[0]) if res_desp and res_desp[0] else 0.0
+            
+            cur.execute("SELECT SUM(valor) FROM depositos_caixinhas WHERE mes = %s AND ano = %s", (mes, ano))
+            res_cx = cur.fetchone()
+            total_caixinhas_mes = float(res_cx[0]) if res_cx and res_cx[0] else 0.0
+            
+            saldo_final = total_renda - total_todas_despesas_mes - total_caixinhas_mes
+            
+            cur.close()
+            return { 
+                "renda_igor": renda_igor, "renda_thaynara": renda_thaynara, 
+                "detalhes_igor": rendas_detalhadas['Igor'], "detalhes_thaynara": rendas_detalhadas['Thaynara'],
+                "total_renda": total_renda, "total_pendente": total_pendente,
+                "total_despesas_mes": total_todas_despesas_mes,
+                "total_caixinhas_mes": total_caixinhas_mes,
+                "saldo_final": saldo_final
+            }
+        finally: conn.close()
+
+    @staticmethod
+    def obter_comprovante(despesa_id):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT comprovante_dados, comprovante_mimetype FROM despesas WHERE id = %s", (despesa_id,))
+            resultado = cur.fetchone()
+            return (resultado[0], resultado[1]) if resultado and resultado[0] else (None, None)
+        finally: conn.close()
+
+    @staticmethod
+    def marcar_paga(despesa_id, comprovante_binario=None, mimetype=None):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            if comprovante_binario:
+                cur.execute("UPDATE despesas SET pago = TRUE, data_pagamento = CURRENT_DATE, comprovante_dados = %s, comprovante_mimetype = %s WHERE id = %s", (comprovante_binario, mimetype, despesa_id))
+            else:
+                cur.execute("UPDATE despesas SET pago = TRUE, data_pagamento = CURRENT_DATE WHERE id = %s", (despesa_id,))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+    @staticmethod
+    def desfazer_pagamento(despesa_id):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("UPDATE despesas SET pago = FALSE, data_pagamento = NULL, comprovante_dados = NULL, comprovante_mimetype = NULL WHERE id = %s", (despesa_id,))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+    @staticmethod
+    def atualizar(despesa_id, dados):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            if dados.get('data_pretensao') and dados.get('data_pretensao') != '':
+                query = "UPDATE despesas SET descricao=%s, valor=%s, data_vencimento=%s, data_pretensao=%s, responsavel_pagamento=%s, fonte_pagamento=%s WHERE id=%s"
+                cur.execute(query, (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('data_pretensao'), dados.get('responsavel_pagamento'), dados.get('fonte_pagamento'), despesa_id))
+            else:
+                query = "UPDATE despesas SET descricao=%s, valor=%s, data_vencimento=%s, data_pretensao=NULL, responsavel_pagamento=%s, fonte_pagamento=%s WHERE id=%s"
+                cur.execute(query, (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('responsavel_pagamento'), dados.get('fonte_pagamento'), despesa_id))
+            conn.commit()
+            return True
+        except Exception as e: print(e); return False
+        finally: conn.close()
+
+    @staticmethod
+    def excluir(despesa_id, excluir_todas=False):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            if excluir_todas:
+                cur.execute("SELECT descricao, valor, grupo_id FROM despesas WHERE id = %s", (despesa_id,))
+                ref = cur.fetchone()
+                if ref:
+                    cur.execute("DELETE FROM despesas WHERE (descricao = %s AND valor = %s AND total_parcelas > 1 AND pago = FALSE) OR (grupo_id = %s AND pago = FALSE)", (ref[0], ref[1], ref[2]))
+            else:
+                cur.execute("DELETE FROM despesas WHERE id = %s", (despesa_id,))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+    @staticmethod
+    def listar_caixinhas():
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT id, nome, valor, icone_svg FROM caixinhas ORDER BY criado_em ASC")
+            colunas = [desc[0] for desc in cur.description]
+            return [dict(zip(colunas, row)) for row in cur.fetchall()]
+        finally: conn.close()
+
+    @staticmethod
+    def salvar_caixinha(nome, valor, icone_svg='geral'):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM caixinhas WHERE nome=%s", (nome,))
+            linha = cur.fetchone()
+            hoje = datetime.date.today()
+            if linha:
+                cur.execute("UPDATE caixinhas SET icone_svg=%s WHERE id=%s", (icone_svg, linha[0]))
+            else:
+                cur.execute("INSERT INTO caixinhas (nome, valor, icone_svg) VALUES (%s, %s, %s) RETURNING id", (nome, valor, icone_svg))
+                novo_id = cur.fetchone()[0]
+                if float(valor) > 0:
+                    cur.execute("INSERT INTO depositos_caixinhas (caixinha_id, valor, mes, ano) VALUES (%s, %s, %s, %s)", (novo_id, valor, hoje.month, hoje.year))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+        
+    @staticmethod
+    def depositar_caixinha(caixinha_id, valor_adicional):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            hoje = datetime.date.today()
+            cur.execute("UPDATE caixinhas SET valor = valor + %s WHERE id = %s", (valor_adicional, caixinha_id))
+            cur.execute("INSERT INTO depositos_caixinhas (caixinha_id, valor, mes, ano) VALUES (%s, %s, %s, %s)", (caixinha_id, valor_adicional, hoje.month, hoje.year))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+    @staticmethod
+    def atualizar_caixinha(caixinha_id, nome, valor, icone_svg):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            query = "UPDATE caixinhas SET nome = %s, icone_svg = %s WHERE id = %s"
+            cur.execute(query, (nome, icone_svg, caixinha_id))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+    @staticmethod
+    def excluir_caixinha(caixinha_id):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM caixinhas WHERE id = %s", (caixinha_id,))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+
+
+
+
+============================================================
+ARQUIVO: app/repositories/usuario_repository.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/services/__init__.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/services/despesa_service.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/services/notificacao_service.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/services/compressao_service.py
+============================================================
+
+import io
+from PIL import Image
+from pypdf import PdfReader, PdfWriter
+
+def comprimir_arquivo(arquivo_storage):
+    """
+    Recebe o arquivo vindo do formulário HTML.
+    Comprime (Imagem ou PDF) e retorna os bytes otimizados e o mimetype final.
+    """
+    mimetype = arquivo_storage.mimetype
+    nome_arquivo = arquivo_storage.filename.lower()
+    
+    try:
+        # Lê os bytes originais que o utilizador enviou
+        bytes_iniciais = arquivo_storage.read()
+    except Exception:
+        return None, None
+        
+    if not bytes_iniciais:
+        return None, None
+    
+    # 1. COMPRESSÃO DE IMAGENS (PNG, JPG, JPEG)
+    if mimetype and mimetype.startswith('image/'):
+        try:
+            img = Image.open(io.BytesIO(bytes_iniciais))
+            
+            # Se a imagem for PNG com fundo transparente, converte para RGB para salvar como JPG
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            
+            # Redimensiona limitando a 1200 pixels (mantém qualidade, mas derruba o peso)
+            max_size = (1200, 1200)
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            
+            output = io.BytesIO()
+            img.save(output, format="JPEG", quality=70, optimize=True)
+            
+            return output.getvalue(), 'image/jpeg'
+        
+        except Exception as e:
+            print(f"⚠️ Erro ao comprimir imagem. Acionando Plano B (Original): {e}")
+            return bytes_iniciais, mimetype 
+
+    # 2. COMPRESSÃO DE PDF (Blindada)
+    elif mimetype == 'application/pdf' or nome_arquivo.endswith('.pdf'):
+        try:
+            leitor = PdfReader(io.BytesIO(bytes_iniciais))
+            escritor = PdfWriter()
+            
+            for pagina in leitor.pages:
+                try:
+                    # Tenta comprimir. Se a página for protegida ou ilegível, ignora o erro e avança.
+                    pagina.compress_content_streams()
+                except Exception:
+                    pass
+                escritor.add_page(pagina)
+                
+            output = io.BytesIO()
+            escritor.write(output)
+            
+            return output.getvalue(), 'application/pdf'
+            
+        except Exception as e:
+            print(f"⚠️ Erro estrutural no PDF. Acionando Plano B (Original): {e}")
+            return bytes_iniciais, mimetype
+
+    # 3. OUTROS FORMATOS
+    return bytes_iniciais, mimetype
+
+
+
+
+============================================================
+ARQUIVO: app/rotas/__init__.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/rotas/auth_bp.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/rotas/dashboard_bp.py
+============================================================
+
+from flask import Blueprint, render_template
+
+dashboard_bp = Blueprint('dashboard', __name__)
+
+@dashboard_bp.route('/')
+def index():
+    # Carrega a nossa tela HTML maravilhosa
+    return render_template('dashboard/index.html')
+
+
+
+============================================================
+ARQUIVO: app/rotas/despesas_bp.py
+============================================================
+
+import io
+import datetime
+from flask import Blueprint, request, jsonify, send_file, render_template
+from app.repositories.despesa_repository import DespesaRepository
+from app.services.compressao_service import comprimir_arquivo
+
+despesas_bp = Blueprint('despesas', __name__)
+
+def hoje_br():
+    return (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).date()
+
+# --- ARQUIVOS PWA (INSTALAÇÃO APP) ---
+@despesas_bp.route('/manifest.json')
+def manifest():
+    return jsonify({
+        "name": "Despesas T&I",
+        "short_name": "Gestão T&I",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#f4f6f9",
+        "theme_color": "#4f46e5",
+        "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png", "sizes": "512x512", "type": "image/png"}]
+    })
+
+@despesas_bp.route('/sw.js')
+def sw():
+    js = "self.addEventListener('install', (e) => { self.skipWaiting(); }); self.addEventListener('fetch', (e) => { });"
+    return send_file(io.BytesIO(js.encode('utf-8')), mimetype='application/javascript')
+
+# --- TELAS V2.0 ---
+@despesas_bp.route('/', methods=['GET'])
+def home(): return render_template('dashboard/index.html')
+@despesas_bp.route('/historico', methods=['GET'])
+def tela_historico(): return render_template('despesas/historico.html')
+@despesas_bp.route('/caixinhas', methods=['GET'])
+def tela_caixinhas(): return render_template('dashboard/caixinhas.html')
+@despesas_bp.route('/entradas', methods=['GET'])
+def tela_entradas(): return render_template('dashboard/entradas.html')
+@despesas_bp.route('/fixas', methods=['GET'])
+def tela_fixas(): return render_template('despesas/fixas.html')
+@despesas_bp.route('/variaveis', methods=['GET'])
+def tela_variaveis(): return render_template('despesas/variaveis.html')
+
+# --- DESPESAS API ---
+@despesas_bp.route('/api/despesas/nova', methods=['POST'])
+def nova_despesa():
+    dados = request.form.to_dict()
+    arquivo = request.files.get('comprovante')
+    comprovante_binario = None
+    mimetype = None
+    if arquivo and arquivo.filename and arquivo.filename != '':
+        try: comprovante_binario, mimetype = comprimir_arquivo(arquivo)
+        except Exception: arquivo.seek(0); comprovante_binario = arquivo.read(); mimetype = arquivo.mimetype
+        
+    dados['pago'] = True if request.form.get('pago') == 'true' else False
+    sucesso = DespesaRepository.criar(dados, comprovante_binario, mimetype)
+    if sucesso: return jsonify({"status": "sucesso"}), 201
+    return jsonify({"status": "erro"}), 500
+
+@despesas_bp.route('/api/despesas', methods=['GET'])
+def listar():
+    mes = request.args.get('mes'); ano = request.args.get('ano')
+    if mes and ano: return jsonify(DespesaRepository.listar_por_mes(int(mes), int(ano))), 200
+    return jsonify([]), 200
+
+@despesas_bp.route('/api/resumo', methods=['GET'])
+def resumo():
+    hoje = hoje_br()
+    mes = int(request.args.get('mes', hoje.month)); ano = int(request.args.get('ano', hoje.year))
+    return jsonify(DespesaRepository.obter_resumo(mes, ano)), 200
+
+# --- RENDAS API ---
+@despesas_bp.route('/api/rendas/lista', methods=['GET'])
+def listar_rendas():
+    mes = request.args.get('mes'); ano = request.args.get('ano')
+    return jsonify(DespesaRepository.listar_rendas_detalhadas(int(mes), int(ano))), 200
+
+@despesas_bp.route('/api/rendas', methods=['POST'])
+def atualizar_renda():
+    dados = request.json
+    sucesso = DespesaRepository.salvar_renda(dados.get('usuario'), dados.get('fonte', 'Geral'), dados.get('mes'), dados.get('ano'), dados.get('valor'))
+    if sucesso: return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+@despesas_bp.route('/api/rendas/<int:renda_id>', methods=['DELETE', 'PUT'])
+def alterar_renda(renda_id):
+    if request.method == 'DELETE':
+        if DespesaRepository.excluir_renda(renda_id): return jsonify({"status": "sucesso"}), 200
+    else:
+        if DespesaRepository.atualizar_renda(renda_id, request.json.get('valor')): return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+# --- CAIXINHAS API ---
+@despesas_bp.route('/api/caixinhas', methods=['GET', 'POST'])
+def gerenciar_caixinhas():
+    if request.method == 'GET': return jsonify(DespesaRepository.listar_caixinhas()), 200
+    else:
+        dados = request.json
+        if DespesaRepository.salvar_caixinha(dados.get('nome'), dados.get('valor'), dados.get('icone_svg', 'geral')): return jsonify({"status": "sucesso"}), 200
+        return jsonify({"status": "erro"}), 500
+
+@despesas_bp.route('/api/caixinhas/<int:caixinha_id>/depositar', methods=['POST'])
+def depositar_caixinha(caixinha_id):
+    if DespesaRepository.depositar_caixinha(caixinha_id, request.json.get('valor')): return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+@despesas_bp.route('/api/caixinhas/<int:caixinha_id>', methods=['DELETE', 'PUT'])
+def alterar_caixinha(caixinha_id):
+    if request.method == 'DELETE':
+        if DespesaRepository.excluir_caixinha(caixinha_id): return jsonify({"status": "sucesso"}), 200
+    else:
+        dados = request.json
+        if DespesaRepository.atualizar_caixinha(caixinha_id, dados.get('nome'), dados.get('valor'), dados.get('icone_svg')): return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+# --- PAGAMENTOS API ---
+@despesas_bp.route('/api/despesas/<int:despesa_id>/pagar', methods=['POST'])
+def pagar_despesa(despesa_id):
+    arquivo = request.files.get('comprovante')
+    comprovante_binario = None; mimetype = None
+    if arquivo and arquivo.filename and arquivo.filename != '':
+        try: comprovante_binario, mimetype = comprimir_arquivo(arquivo)
+        except Exception: arquivo.seek(0); comprovante_binario = arquivo.read(); mimetype = arquivo.mimetype
+    sucesso = DespesaRepository.marcar_paga(despesa_id, comprovante_binario, mimetype)
+    if sucesso: return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+@despesas_bp.route('/api/despesas/<int:despesa_id>/desfazer', methods=['POST'])
+def desfazer_pagamento(despesa_id):
+    if DespesaRepository.desfazer_pagamento(despesa_id): return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+@despesas_bp.route('/comprovante/<int:despesa_id>', methods=['GET'])
+def ver_comprovante(despesa_id):
+    bytes_dados, mimetype = DespesaRepository.obter_comprovante(despesa_id)
+    if not bytes_dados: return "Não encontrado", 404
+    return send_file(io.BytesIO(bytes_dados), mimetype=mimetype, as_attachment=False)
+
+@despesas_bp.route('/api/despesas/<int:despesa_id>', methods=['DELETE'])
+def deletar_despesa(despesa_id):
+    lote = request.args.get('todas') == 'true'
+    sucesso = DespesaRepository.excluir(despesa_id, excluir_todas=lote)
+    if sucesso: return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+@despesas_bp.route('/api/despesas/<int:despesa_id>/editar', methods=['PUT'])
+def editar_despesa(despesa_id):
+    if DespesaRepository.atualizar(despesa_id, request.json): return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+
+
+
+
+============================================================
+ARQUIVO: app/rotas/push_bp.py
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/static/manifest.json
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/static/service-worker.js
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/static/css/style.css
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/templates/base.html
+============================================================
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#f4f6f9">
+    <title>Despesas T&I</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    
+    <script>
+        // MOTOR DE TEMA PESSOAL (Azul x Rosa) - Roda antes de renderizar para não piscar!
+        const temaSalvo = localStorage.getItem('app_theme') || 'blue';
+        document.documentElement.setAttribute('data-theme', temaSalvo);
+    </script>
+
+    <style>
+        :root {
+            --bg-glass: rgba(255, 255, 255, 0.4);
+            --bg-header: rgba(244, 246, 249, 0.85);
+            /* TEMA AZUL (Igor) */
+            --color-primary: #4f46e5; /* indigo-600 */
+            --color-primary-light: #e0e7ff; /* indigo-100 */
+            --color-action: #ff8c00;
+            --grad-bg: radial-gradient(circle at 15% 20%, rgba(186, 155, 253, 0.4) 0%, transparent 50%), radial-gradient(circle at 85% 80%, rgba(138, 191, 255, 0.4) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(255, 179, 198, 0.3) 0%, transparent 60%);
+        }
+
+        [data-theme="pink"] {
+            /* TEMA ROSA/ROXO (Thay) */
+            --color-primary: #db2777; /* pink-600 */
+            --color-primary-light: #fce7f3; /* pink-100 */
+            --color-action: #9333ea; /* purple-600 */
+            --grad-bg: radial-gradient(circle at 15% 20%, rgba(244, 114, 182, 0.4) 0%, transparent 50%), radial-gradient(circle at 85% 80%, rgba(192, 132, 252, 0.4) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(251, 113, 133, 0.3) 0%, transparent 60%);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f6f9;
+            background-image: var(--grad-bg);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: #2d3748;
+            padding-bottom: 120px; 
+            padding-top: 80px;
+        }
+        
+        .ultra-glass {
+            background: var(--bg-glass);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .btn-active { background: var(--color-action); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); }
+        .text-theme { color: var(--color-primary); }
+        .bg-theme-light { background-color: var(--color-primary-light); color: var(--color-primary); }
+        
+        ::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .speed-dial-menu { opacity: 0; transform: translateY(20px) scale(0.9); pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .speed-dial-menu.active { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+    </style>
+</head>
+<body>
+    <!-- CABEÇALHO FIXO COM TROCADOR DE TEMA -->
+    <header style="background: var(--bg-header)" class="fixed top-0 left-0 w-full pt-6 pb-4 px-4 text-center z-50 backdrop-blur-md border-b border-white/50">
+        <h1 onclick="toggleTheme()" class="text-2xl font-black tracking-tight text-theme cursor-pointer active:scale-95 transition-transform">Despesas T&I 🫶</h1>
+    </header>
+
+    <main class="p-4 max-w-lg mx-auto relative z-10">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- NAV BAR -->
+    <nav class="fixed bottom-6 w-[92%] max-w-sm left-1/2 -translate-x-1/2 ultra-glass flex justify-between items-center px-4 py-3 z-50 rounded-[35px]">
+        <a href="/" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></div></a>
+
+        <div class="relative flex flex-col items-center group">
+            <div id="speedDialMenu" class="speed-dial-menu absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col gap-3 pb-2 w-48 z-50">
+                <a href="/entradas" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">💰</span> Entradas</a>
+                <a href="/fixas" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-theme-light flex items-center justify-center">🏠</span> Contas Fixas</a>
+                <a href="/variaveis" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">💳</span> Variáveis</a>
+            </div>
+            <button onclick="toggleSpeedDial()" class="p-2 rounded-xl transition-all active:scale-90 text-slate-500 hover:text-theme focus:outline-none"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg></button>
+        </div>
+
+        <button onclick="abrirModalDiaDia()" class="flex flex-col items-center relative z-50 active:scale-95 transition-transform focus:outline-none"><div class="btn-active w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white -mt-5"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div></button>
+
+        <a href="/caixinhas" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div></a>
+        <a href="/historico" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div></a>
+    </nav>
+
+    <div id="speedDialOverlay" onclick="toggleSpeedDial()" class="fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] z-40 hidden transition-opacity opacity-0"></div>
+
+    <div id="modalDiaDia" class="hidden fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 pb-24 transition-opacity">
+        <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative animate-slide-up">
+            <button onclick="fecharModalDiaDia()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            <h3 class="text-lg font-black text-slate-800 mb-1">Gasto do Dia-a-Dia</h3>
+            <p class="text-xs font-medium text-slate-500 mb-6">Lançamento rápido na data de hoje.</p>
+            
+            <form id="formDiaDia" class="space-y-4">
+                <input type="hidden" name="tipo_despesa" value="Diária">
+                <input type="hidden" name="pago" value="true">
+                <input type="hidden" id="diadia_vencimento" name="data_vencimento">
+                
+                <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">O que foi?</label><input type="text" name="descricao" placeholder="Ex: Café, Estacionamento..." class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required></div>
+                <div class="flex gap-3">
+                    <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Valor</label><input type="number" step="0.01" name="valor" placeholder="0.00" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-black outline-none" required></div>
+                    <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Quem Pagou?</label><select name="responsavel_pagamento" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+                </div>
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Categoria</label>
+                    <select name="categoria" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required>
+                        <option value="Besteira">Besteira</option><option value="Combustível">Combustível</option><option value="Lazer">Lazer</option><option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <button type="submit" id="btnSalvarDiaDia" class="w-full py-4 mt-2 btn-active text-white rounded-2xl font-black tracking-widest active:scale-95 transition">LANÇAR GASTO</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // PWA REGISTRATION
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+
+        // TROCADOR DE TEMA CLICÁVEL
+        function toggleTheme() {
+            let current = localStorage.getItem('app_theme') || 'blue';
+            let novo = current === 'blue' ? 'pink' : 'blue';
+            localStorage.setItem('app_theme', novo);
+            document.documentElement.setAttribute('data-theme', novo);
+        }
+
+        const menu = document.getElementById('speedDialMenu');
+        const overlay = document.getElementById('speedDialOverlay');
+        let isSpeedDialOpen = false;
+
+        function toggleSpeedDial() {
+            isSpeedDialOpen = !isSpeedDialOpen;
+            if (isSpeedDialOpen) {
+                menu.classList.add('active'); overlay.classList.remove('hidden'); setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            } else {
+                menu.classList.remove('active'); overlay.classList.add('opacity-0'); setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
+
+        function abrirModalDiaDia() { 
+            // Pega o dia exato do celular local
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+            document.getElementById('diadia_vencimento').value = localISOTime; 
+            document.getElementById('modalDiaDia').classList.remove('hidden'); 
+        }
+        function fecharModalDiaDia() { document.getElementById('modalDiaDia').classList.add('hidden'); }
+
+        document.getElementById('formDiaDia').addEventListener('submit', async (e) => {
+            e.preventDefault(); const btn = document.getElementById('btnSalvarDiaDia'); btn.innerText = 'SALVANDO... ⏳'; btn.disabled = true;
+            try {
+                const res = await fetch('/api/despesas/nova', { method: 'POST', body: new FormData(e.target) });
+                if (res.ok) {
+                    fecharModalDiaDia(); e.target.reset();
+                    if (typeof carregarDashboard === "function") { carregarDashboard(); } 
+                    else if (typeof carregarH === "function") { carregarH(); }
+                    else { window.location.reload(); }
+                } else { alert("Erro ao salvar o gasto diário."); }
+            } catch (error) { alert("Erro de rede."); } finally { btn.innerText = 'LANÇAR GASTO'; btn.disabled = false; }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+============================================================
+ARQUIVO: app/templates/dashboard/index.html
+============================================================
+
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full mt-2">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+    <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+</div>
+
+<!-- Cards Rápidos Clicáveis -->
+<div class="grid grid-cols-2 gap-3 mb-6">
+    <div onclick="abrirExplicacaoSaldo()" class="ultra-glass p-5 rounded-[28px] shadow-sm border border-white/60 cursor-pointer active:scale-95 transition">
+        <div class="flex justify-between items-center mb-1">
+            <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Saldo Livre</p>
+            <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <p id="saldo_final" class="text-xl font-black text-theme">R$ 0,00</p>
+    </div>
+    <div onclick="abrirResumoPendentes()" class="ultra-glass p-5 rounded-[28px] shadow-sm border border-white/60 cursor-pointer active:scale-95 transition">
+        <div class="flex justify-between items-center mb-1">
+            <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Pendente</p>
+            <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+        </div>
+        <p id="total_pendente" class="text-xl font-black text-orange-500">R$ 0,00</p>
+    </div>
+</div>
+
+<div class="space-y-4 mb-6">
+    
+    <!-- 1. GRÁFICO VELOCÍMETRO (Progresso Mensal) -->
+    <div class="ultra-glass p-6 rounded-[32px] shadow-sm border border-white/50 relative">
+        <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-2 text-center">Contas do Mês</h3>
+        <div class="relative h-40 w-full flex justify-center">
+            <canvas id="chartDespesas"></canvas>
+            <div id="chartDespesasEmpty" class="hidden absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sem Despesas</div>
+            <div class="absolute bottom-6 left-0 right-0 text-center pointer-events-none">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Resta Pagar</span>
+                <span class="text-2xl font-black text-slate-800" id="gauge-valor">R$ 0,00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2 e 3. Gráficos de Pizza Neon -->
+    <div class="grid grid-cols-2 gap-3">
+        <div class="ultra-glass p-4 rounded-[28px] shadow-sm border border-white/50">
+            <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center text-indigo-500">Rendas Igor</h3>
+            <div class="relative h-40 w-full"><canvas id="chartRendaIgor"></canvas></div>
+        </div>
+        <div class="ultra-glass p-4 rounded-[28px] shadow-sm border border-white/50">
+            <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center text-pink-500">Rendas Thay</h3>
+            <div class="relative h-40 w-full"><canvas id="chartRendaThay"></canvas></div>
+        </div>
+    </div>
+
+    <!-- 4. Distribuição -->
+    <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50">
+        <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Distribuição de Gastos</h3>
+        <div class="relative h-56 w-full flex justify-center"><canvas id="chartTiposDespesa"></canvas></div>
+    </div>
+
+    <!-- 5. Categorias Horizontais -->
+    <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50">
+        <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Gastos por Categoria</h3>
+        <div class="relative h-64 w-full"><canvas id="chartCategorias"></canvas></div>
+    </div>
+</div>
+
+<!-- CALENDÁRIO INTELIGENTE -->
+<div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50 mb-10">
+    <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Calendário de Vencimentos</h3>
+    <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-black text-slate-400 mb-2"><div class="text-red-400">DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div></div>
+    <div id="calendar-grid" class="grid grid-cols-7 gap-1.5"></div>
+</div>
+
+<!-- ================= MODAIS C/ Z-INDEX REFORÇADO ================= -->
+<div id="modalExplicaSaldo" class="hidden fixed inset-0 z-[70] flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div class="w-full max-w-sm mx-auto bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="document.getElementById('modalExplicaSaldo').classList.add('hidden')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-4">Matemática do Saldo</h3>
+        <div class="space-y-3 font-bold text-sm">
+            <div class="flex justify-between text-emerald-600"><span>(+) Renda Total do Mês</span><span id="math_renda"></span></div>
+            <div class="flex justify-between text-red-500"><span>(-) Despesas (Todas)</span><span id="math_desp"></span></div>
+            <div class="flex justify-between text-theme border-b border-slate-100 pb-3"><span>(-) Guardado nas Caixinhas</span><span id="math_cx"></span></div>
+            <div class="flex justify-between text-slate-800 pt-1 font-black text-lg"><span>= Saldo Livre</span><span id="math_saldo"></span></div>
+        </div>
+    </div>
+</div>
+
+<div id="modalPendenteLista" class="hidden fixed inset-0 z-[70] flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div class="w-full max-w-sm mx-auto bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[80vh] overflow-y-auto">
+        <button onclick="document.getElementById('modalPendenteLista').classList.add('hidden')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-6">Contas Pendentes</h3>
+        <div id="lista_detalhe_pendentes" class="space-y-2"></div>
+    </div>
+</div>
+
+<div id="modalCalendarioDia" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="document.getElementById('modalCalendarioDia').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="modal_cal_data" class="text-sm font-black text-theme uppercase tracking-widest mb-4">--/--/----</h3>
+        <div id="lista_contas_dia" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1"></div>
+    </div>
+</div>
+
+<script>
+    let currentData = new Date(); let despesasGlobais = []; let resumoGlobal = null;
+    let chartDespesasObj = null; let chartRendaIgorObj = null; let chartRendaThayObj = null; let chartTiposObj = null; let chartCatObj = null;
+    Chart.register(ChartDataLabels);
+
+    const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
+    const getDataBase = (x) => x.data_pretensao ? x.data_pretensao : x.data_vencimento;
+
+    const atualizarDisplayMes = () => {
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
+    };
+
+    const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarDashboard(); };
+
+    const carregarDashboard = async () => {
+        atualizarDisplayMes();
+        try {
+            const resResumo = await fetch(`/api/resumo?mes=${currentData.getMonth()+1}&ano=${currentData.getFullYear()}`);
+            resumoGlobal = await resResumo.json();
+            const resDespesas = await fetch(`/api/despesas?mes=${currentData.getMonth()+1}&ano=${currentData.getFullYear()}`);
+            despesasGlobais = await resDespesas.json();
+
+            document.getElementById('saldo_final').innerText = formatarMoeda(resumoGlobal.saldo_final);
+            document.getElementById('total_pendente').innerText = formatarMoeda(resumoGlobal.total_pendente);
+
+            renderizarGraficos(resumoGlobal, despesasGlobais);
+            renderizarCalendario(despesasGlobais);
+        } catch(e) { console.error(e); }
+    };
+
+    const renderizarGraficos = (resumo, despesas) => {
+        Chart.defaults.color = '#64748b'; Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.font.weight = 'bold';
+        const dlOpt = { color: '#fff', font: { weight: 'bold', size: 10 }, formatter: (v) => v > 0 ? 'R$ ' + Math.round(v) : '', textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 5 };
+        
+        // Cores Neon de alto contraste para rendas
+        const coresNeonIgor = ['#0ea5e9', '#8b5cf6', '#14b8a6', '#f59e0b'];
+        const coresNeonThay = ['#ec4899', '#d946ef', '#f43f5e', '#8b5cf6'];
+
+        // 1. Gráfico Velocímetro (Gauge)
+        const tPagas = despesas.filter(d => d.pago).reduce((a,c) => a + parseFloat(c.valor), 0);
+        const tPendentes = despesas.filter(d => !d.pago).reduce((a,c) => a + parseFloat(c.valor), 0);
+        document.getElementById('gauge-valor').innerText = formatarMoeda(tPendentes);
+
+        if (chartDespesasObj) chartDespesasObj.destroy();
+        const ctxDesp = document.getElementById('chartDespesas');
+        if(tPagas === 0 && tPendentes === 0) {
+            ctxDesp.style.display = 'none'; document.getElementById('chartDespesasEmpty').classList.remove('hidden');
+        } else {
+            ctxDesp.style.display = 'block'; document.getElementById('chartDespesasEmpty').classList.add('hidden');
+            chartDespesasObj = new Chart(ctxDesp, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pagas', 'Pendentes'],
+                    datasets: [{ data: [tPagas, tPendentes], backgroundColor: ['#10b981', '#cbd5e1'], borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    circumference: 180, rotation: 270, cutout: '80%',
+                    plugins: { legend: { display: false }, datalabels: { display: false } }
+                }
+            });
+        }
+
+        // 2. Gráficos Pizza (Rendas Igor)
+        if (chartRendaIgorObj) chartRendaIgorObj.destroy();
+        chartRendaIgorObj = new Chart(document.getElementById('chartRendaIgor'), {
+            type: 'pie',
+            data: {
+                labels: Object.keys(resumo.detalhes_igor).length ? Object.keys(resumo.detalhes_igor) : ['Nenhuma'],
+                datasets: [{ data: Object.values(resumo.detalhes_igor).length ? Object.values(resumo.detalhes_igor) : [1], backgroundColor: coresNeonIgor, borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: {boxWidth: 8, font: {size: 9}} }, datalabels: dlOpt } }
+        });
+
+        // 3. Gráficos Pizza (Rendas Thay)
+        if (chartRendaThayObj) chartRendaThayObj.destroy();
+        chartRendaThayObj = new Chart(document.getElementById('chartRendaThay'), {
+            type: 'pie',
+            data: {
+                labels: Object.keys(resumo.detalhes_thaynara).length ? Object.keys(resumo.detalhes_thaynara) : ['Nenhuma'],
+                datasets: [{ data: Object.values(resumo.detalhes_thaynara).length ? Object.values(resumo.detalhes_thaynara) : [1], backgroundColor: coresNeonThay, borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: {boxWidth: 8, font: {size: 9}} }, datalabels: dlOpt } }
+        });
+
+        // 4. Distribuição de Despesas
+        let tFixa = despesas.filter(d => d.tipo_despesa === 'Fixa').reduce((a,c) => a + parseFloat(c.valor), 0);
+        let tVar = despesas.filter(d => d.tipo_despesa === 'Variável').reduce((a,c) => a + parseFloat(c.valor), 0);
+        let tDia = despesas.filter(d => d.tipo_despesa === 'Diária').reduce((a,c) => a + parseFloat(c.valor), 0);
+        let tCx = resumo.total_caixinhas_mes; 
+
+        if (chartTiposObj) chartTiposObj.destroy();
+        chartTiposObj = new Chart(document.getElementById('chartTiposDespesa'), {
+            type: 'pie',
+            data: {
+                labels: ['Fixas', 'Variáveis', 'Dia-a-Dia', 'Cofre (Mês)'],
+                datasets: [{ data: [tFixa, tVar, tDia, tCx], backgroundColor: ['#4f46e5', '#f97316', '#ec4899', '#10b981'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font:{size:10} } }, datalabels: dlOpt } }
+        });
+
+        // 5. Gráfico Barra (Horizontal C/ Fonte Menor)
+        const catMap = {}; despesas.forEach(d => { catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); });
+        const catsOrd = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+
+        if (chartCatObj) chartCatObj.destroy();
+        chartCatObj = new Chart(document.getElementById('chartCategorias'), {
+            type: 'bar',
+            data: {
+                labels: catsOrd.map(c => c[0]).length ? catsOrd.map(c => c[0]) : ['Nenhuma'],
+                datasets: [{ data: catsOrd.map(c => c[1]).length ? catsOrd.map(c => c[1]) : [0], backgroundColor: '#8b5cf6', borderRadius: 6 }]
+            },
+            options: {
+                indexAxis: 'y', 
+                responsive: true, maintainAspectRatio: false,
+                scales: { x: { display: false, grid: {display: false} }, y: { grid: {display: false}, border: {display: false}, ticks: { font: {size: 9} } } },
+                plugins: { legend: { display: false }, datalabels: { color: '#64748b', anchor: 'end', align: 'right', font: {size: 8}, formatter: (v) => v>0 ? 'R$ '+Math.round(v) : '' } }
+            }
+        });
+    };
+
+    const renderizarCalendario = (despesas) => {
+        const grid = document.getElementById('calendar-grid'); grid.innerHTML = '';
+        const ano = currentData.getFullYear(), mes = currentData.getMonth();
+        const primeiroDia = new Date(ano, mes, 1).getDay(), diasNoMes = new Date(ano, mes + 1, 0).getDate();
+        const hojeObj = new Date(); const isMesAtual = hojeObj.getMonth() === mes && hojeObj.getFullYear() === ano;
+        
+        const despFiltradas = despesas.filter(d => d.tipo_despesa !== 'Diária');
+        for (let i = 0; i < primeiroDia; i++) grid.innerHTML += `<div></div>`;
+        for (let dia = 1; dia <= diasNoMes; dia++) {
+            const dataStr = `${ano}-${String(mes+1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+            const contasDoDia = despFiltradas.filter(d => getDataBase(d) === dataStr);
+            let dotHtml = '<div class="w-1.5 h-1.5 mt-1"></div>';
+            if (contasDoDia.length > 0) dotHtml = `<div class="w-1.5 h-1.5 rounded-full ${contasDoDia.every(c => c.pago) ? 'bg-emerald-400' : 'bg-orange-500 animate-pulse'} mx-auto mt-1 shadow-sm"></div>`;
+            const bgClass = isMesAtual && dia === hojeObj.getDate() ? 'bg-theme-light shadow-lg' : 'bg-white/40 text-slate-700 hover:bg-white/80 border border-white/50';
+            grid.innerHTML += `<div onclick="abrirModalCalendario('${dataStr}')" class="flex flex-col items-center justify-center p-2 rounded-xl cursor-pointer transition active:scale-90 ${bgClass}"><span class="text-xs font-bold">${dia}</span>${dotHtml}</div>`;
+        }
+    };
+
+    const abrirModalCalendario = (dataStr) => {
+        const contasDoDia = despesasGlobais.filter(d => d.tipo_despesa !== 'Diária' && getDataBase(d) === dataStr);
+        document.getElementById('modal_cal_data').innerText = `Dia ${formatarData(dataStr)}/${dataStr.split('-')[0]}`;
+        const cont = document.getElementById('lista_contas_dia'); cont.innerHTML = '';
+        if (contasDoDia.length === 0) cont.innerHTML = `<div class="text-center py-6"><p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Sem compromissos</p></div>`;
+        else contasDoDia.forEach(c => {
+            cont.innerHTML += `<div class="p-4 bg-slate-50 border border-slate-100 rounded-[20px] flex justify-between items-center"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-xs">${c.tipo_despesa === 'Fixa' ? '🏠' : '💳'}</div><div><p class="text-sm font-bold text-slate-800 leading-tight">${c.descricao}</p><p class="text-[9px] font-semibold text-slate-500 mt-0.5">${c.responsavel_pagamento} • ${c.categoria}</p></div></div><div class="flex flex-col items-end gap-1"><p class="font-black text-slate-800">${formatarMoeda(c.valor)}</p><span class="px-2 py-0.5 rounded text-[8px] font-black uppercase ${c.pago ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">${c.pago ? 'PAGO' : 'PENDENTE'}</span></div></div>`;
+        });
+        document.getElementById('modalCalendarioDia').classList.remove('hidden');
+    };
+
+    const abrirExplicacaoSaldo = () => {
+        document.getElementById('math_renda').innerText = formatarMoeda(resumoGlobal.total_renda);
+        document.getElementById('math_desp').innerText = formatarMoeda(resumoGlobal.total_despesas_mes);
+        document.getElementById('math_cx').innerText = formatarMoeda(resumoGlobal.total_caixinhas_mes);
+        document.getElementById('math_saldo').innerText = formatarMoeda(resumoGlobal.saldo_final);
+        document.getElementById('modalExplicaSaldo').classList.remove('hidden');
+    };
+
+    const abrirResumoPendentes = () => {
+        const cont = document.getElementById('lista_detalhe_pendentes'); cont.innerHTML = '';
+        const pendentes = despesasGlobais.filter(x => !x.pago);
+        if(pendentes.length === 0) cont.innerHTML = "<p class='text-center text-xs text-slate-400 font-bold py-4'>Tudo pago! 🎉</p>";
+        else pendentes.forEach(p => {
+            cont.innerHTML += `<div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0"><span class="text-xs font-bold text-slate-600 truncate pr-2">${p.descricao}</span><span class="text-xs font-black text-orange-500 whitespace-nowrap">${formatarMoeda(p.valor)}</span></div>`;
+        });
+        document.getElementById('modalPendenteLista').classList.remove('hidden');
+    };
+
+    document.addEventListener("DOMContentLoaded", carregarDashboard);
+</script>
+{% endblock %}
+
+
+
+
+
+============================================================
+ARQUIVO: app/templates/dashboard/caixinhas.html
+============================================================
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-8 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        </a>
+        <h2 class="text-xl font-black text-slate-800 tracking-tight">Caixinhas</h2>
+    </div>
+    <button onclick="abrirModalCaixinha()" class="btn-active w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg active:scale-95 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+    </button>
+</div>
+
+<div id="lista-caixinhas" class="grid grid-cols-2 gap-4 pb-24"></div>
+
+<!-- Modal Depósito Rápido -->
+<div id="modalDepositar" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative text-center">
+        <button onclick="document.getElementById('modalDepositar').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-xs font-bold text-theme uppercase tracking-widest mb-1">Depositar em</h3>
+        <p id="dep_nome_cx" class="text-xl font-black text-slate-800 mb-2">Viagem</p>
+        <p class="text-[10px] text-slate-400 font-bold mb-6">Saldo Livre do Mês: <span id="dep_saldo_livre" class="text-emerald-500"></span></p>
+        
+        <input type="hidden" id="dep_id_cx">
+        <input type="number" id="dep_valor" step="0.01" placeholder="Quanto vai guardar?" class="w-full p-4 mb-6 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-theme outline-none text-center">
+        
+        <button onclick="efetuarDeposito()" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Confirmar Depósito</button>
+    </div>
+</div>
+
+<div id="modalCaixinha" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModalCaixinha()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="cx_titulo_modal" class="text-lg font-black text-slate-800 mb-2">Criar Caixinha</h3>
+        <p class="text-[10px] text-slate-400 font-bold mb-6">Saldo Livre do Mês: <span id="cx_saldo_livre" class="text-emerald-500"></span></p>
+
+        <input type="hidden" id="cx_id_edit">
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-2">Ícone do Cofre</label>
+                <div class="flex gap-2 justify-between">
+                    <label class="cursor-pointer"><input type="radio" name="cx_icone" value="casa" class="peer hidden"><div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></div></label>
+                    <label class="cursor-pointer"><input type="radio" name="cx_icone" value="carro" class="peer hidden"><div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h8a2 2 0 012 2v2m-1 4a2 2 0 11-4 0 2 2 0 014 0zM7 15a2 2 0 11-4 0 2 2 0 014 0zm10-6h1m-1 0H7m11 0a2 2 0 012 2v2a2 2 0 01-2 2h-1m-4 0H7m-4 0a2 2 0 01-2-2V9a2 2 0 012-2h1m11 0l-3-4H8L5 7"></path></svg></div></label>
+                    <label class="cursor-pointer"><input type="radio" name="cx_icone" value="carrinho" class="peer hidden"><div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63-.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div></label>
+                    <label class="cursor-pointer"><input type="radio" name="cx_icone" value="geral" class="peer hidden" checked><div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div></label>
+                </div>
+            </div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Nome do Objetivo</label><input type="text" id="nome_cx" class="w-full p-3 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor Inicial</label><input type="number" id="valor_cx" step="0.01" class="w-full p-3 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-theme outline-none text-center"></div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnExcluirCaixinha" onclick="deletarCaixinha()" class="hidden w-14 bg-red-50 text-red-500 items-center justify-center rounded-2xl hover:bg-red-100"><svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+            <button onclick="salvarCaixinha()" class="flex-1 py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let saldoLivreTotal = 0;
+    const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    const carregarTudo = async () => {
+        const d = new Date();
+        const resR = await fetch(`/api/resumo?mes=${d.getMonth() + 1}&ano=${d.getFullYear()}`);
+        const resumo = await resR.json();
+        saldoLivreTotal = resumo.saldo_final;
+        
+        // Atualiza a dica nos modais
+        document.getElementById('dep_saldo_livre').innerText = formatarMoeda(saldoLivreTotal);
+        document.getElementById('cx_saldo_livre').innerText = formatarMoeda(saldoLivreTotal);
+
+        const resC = await fetch('/api/caixinhas');
+        const caixinhasAtuais = await resC.json();
+        const container = document.getElementById('lista-caixinhas'); container.innerHTML = '';
+
+        if(caixinhasAtuais.length === 0) return;
+
+        caixinhasAtuais.forEach(cx => {
+            const nomeSafe = cx.nome.replace(/'/g, "\\'");
+            container.innerHTML += `
+                <div class="p-5 ultra-glass rounded-[28px] border border-white/60 flex flex-col items-center justify-center text-center shadow-sm relative group">
+                    <button onclick="abrirModalEditarCaixinha(${cx.id}, '${nomeSafe}', ${cx.valor}, '${cx.icone_svg}')" class="absolute top-3 right-3 text-slate-300 hover:text-theme"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                    <div class="w-10 h-10 rounded-2xl bg-white/70 flex items-center justify-center text-theme shadow-inner mb-2">💰</div>
+                    <p class="font-bold text-slate-700 text-xs leading-tight w-full truncate">${cx.nome}</p>
+                    <p class="font-black text-theme text-sm mt-0.5">${formatarMoeda(cx.valor)}</p>
+                    <button onclick="abrirDepositar(${cx.id}, '${nomeSafe}')" class="mt-3 text-[9px] font-black uppercase tracking-widest text-theme bg-theme-light px-3 py-1.5 rounded-lg active:scale-95 transition w-full">Depositar</button>
+                </div>`;
+        });
+    };
+
+    const abrirDepositar = (id, nome) => {
+        document.getElementById('dep_id_cx').value = id;
+        document.getElementById('dep_nome_cx').innerText = nome;
+        document.getElementById('dep_valor').value = '';
+        document.getElementById('modalDepositar').classList.remove('hidden');
+    };
+
+    const efetuarDeposito = async () => {
+        const v = parseFloat(document.getElementById('dep_valor').value);
+        if(isNaN(v) || v <= 0) return alert("Valor inválido!");
+        if(v > saldoLivreTotal) return alert(`Atenção: Você tem apenas ${formatarMoeda(saldoLivreTotal)} de Saldo Livre!`);
+        
+        await fetch(`/api/caixinhas/${document.getElementById('dep_id_cx').value}/depositar`, {
+            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({valor: v})
+        });
+        document.getElementById('modalDepositar').classList.add('hidden');
+        carregarTudo();
+    };
+
+    const abrirModalCaixinha = () => { document.getElementById('cx_titulo_modal').innerText = "Nova Caixinha"; document.getElementById('cx_id_edit').value = ''; document.getElementById('btnExcluirCaixinha').classList.add('hidden'); document.getElementById('modalCaixinha').classList.remove('hidden'); };
+    const fecharModalCaixinha = () => document.getElementById('modalCaixinha').classList.add('hidden');
+    const abrirModalEditarCaixinha = (id, n, v, i) => { document.getElementById('cx_id_edit').value = id; document.getElementById('nome_cx').value = n; document.getElementById('valor_cx').value = v; document.getElementById('btnExcluirCaixinha').classList.remove('hidden'); document.getElementById('modalCaixinha').classList.remove('hidden'); };
+    
+    const salvarCaixinha = async () => {
+        const id = document.getElementById('cx_id_edit').value;
+        const v = parseFloat(document.getElementById('valor_cx').value) || 0;
+        if(v > saldoLivreTotal && !id) return alert(`Atenção: Você tem apenas ${formatarMoeda(saldoLivreTotal)} livre para guardar!`);
+        
+        await fetch(id ? `/api/caixinhas/${id}` : '/api/caixinhas', { method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome: document.getElementById('nome_cx').value, valor: v, icone_svg: document.querySelector('input[name="cx_icone"]:checked').value})});
+        fecharModalCaixinha(); carregarTudo();
+    };
+
+    const deletarCaixinha = async () => { if(confirm("Quebrar cofre?")) { await fetch(`/api/caixinhas/${document.getElementById('cx_id_edit').value}`, { method: 'DELETE' }); fecharModalCaixinha(); carregarTudo(); } };
+
+    document.addEventListener("DOMContentLoaded", carregarTudo);
+</script>
+{% endblock %}
+
+
+
+
+
+============================================================
+ARQUIVO: app/templates/dashboard/entradas.html
+============================================================
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-8 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg></a>
+        <h2 class="text-xl font-black text-slate-800 tracking-tight">Entradas</h2>
+    </div>
+    <button onclick="abrirModalNovaEntrada()" class="btn-active w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg active:scale-95 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
+</div>
+
+<div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-emerald-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+    <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-emerald-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+</div>
+
+<div class="grid grid-cols-1 gap-4 mb-32" id="lista-entradas"></div>
+
+<!-- Modal Nova / Edição -->
+<div id="modalEntrada" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModalEntrada()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="ent_titulo" class="text-lg font-black text-slate-800 mb-6">Lançar Receita</h3>
+        
+        <input type="hidden" id="entrada_id">
+        <div class="space-y-4 mb-6">
+            <div id="box_usu"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">De quem é?</label><select id="entrada_usuario" onchange="atualizarFontesRenda()" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"><option value="Igor" selected>Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            <div id="box_fnt"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Tipo de Entrada</label><select id="entrada_fonte" class="w-full p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 font-bold outline-none text-emerald-700"></select></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Valor</label><input type="number" id="entrada_valor" step="0.01" placeholder="0.00" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl outline-none focus:border-emerald-400"></div>
+        </div>
+        <button onclick="salvarEntrada()" class="w-full py-4 bg-emerald-500 text-white rounded-2xl font-bold active:scale-95 transition shadow-lg shadow-emerald-500/30">Salvar Entrada</button>
+    </div>
+</div>
+
+<script>
+    let currentData = new Date();
+    const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarEntradas(); };
+
+    const fontes = { 'Igor': ['Shopee', 'Uber'], 'Thaynara': ['Salário', 'VR', 'VA', 'Ajuda de Custo'] };
+    function atualizarFontesRenda() {
+        const usu = document.getElementById('entrada_usuario').value;
+        const sel = document.getElementById('entrada_fonte'); sel.innerHTML = '';
+        fontes[usu].forEach(f => sel.innerHTML += `<option value="${f}">${f}</option>`);
+    }
+
+    const carregarEntradas = async () => {
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
+        
+        const res = await fetch(`/api/rendas/lista?mes=${currentData.getMonth()+1}&ano=${currentData.getFullYear()}`);
+        const dados = await res.json();
+        const cont = document.getElementById('lista-entradas'); cont.innerHTML = '';
+        
+        if(dados.length === 0) { cont.innerHTML = `<div class="text-center py-8 ultra-glass rounded-3xl"><p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Sem receitas neste mês.</p></div>`; return; }
+        
+        dados.forEach(r => {
+            const bgClass = r.usuario === 'Igor' ? 'bg-indigo-100 text-indigo-600' : 'bg-pink-100 text-pink-600';
+            cont.innerHTML += `
+                <div class="p-5 ultra-glass rounded-[28px] border border-white/60 flex justify-between items-center shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl ${bgClass} flex items-center justify-center font-bold text-sm shadow-inner">${r.usuario.charAt(0)}</div>
+                        <div>
+                            <p class="font-bold text-slate-800 text-sm">${r.fonte}</p>
+                            <div class="flex gap-2 mt-0.5">
+                                <button onclick="abrirEditar(${r.id}, '${r.usuario}', '${r.fonte}', ${r.valor})" class="text-[9px] font-black uppercase text-theme hover:opacity-70">Editar</button>
+                                <button onclick="excluirRenda(${r.id})" class="text-[9px] font-black uppercase text-red-500 hover:text-red-700">Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="font-black text-emerald-600 text-lg">+ ${formatarMoeda(r.valor)}</p>
+                </div>`;
+        });
+    };
+
+    const abrirModalNovaEntrada = () => { 
+        document.getElementById('ent_titulo').innerText = "Lançar Receita";
+        document.getElementById('entrada_id').value = ''; document.getElementById('entrada_valor').value = '';
+        document.getElementById('box_usu').classList.remove('hidden'); document.getElementById('box_fnt').classList.remove('hidden');
+        atualizarFontesRenda(); document.getElementById('modalEntrada').classList.remove('hidden'); 
+    };
+    
+    const abrirEditar = (id, usu, fnt, val) => {
+        document.getElementById('ent_titulo').innerText = `Editar: ${fnt}`;
+        document.getElementById('entrada_id').value = id;
+        document.getElementById('entrada_valor').value = val;
+        document.getElementById('box_usu').classList.add('hidden'); document.getElementById('box_fnt').classList.add('hidden');
+        document.getElementById('modalEntrada').classList.remove('hidden');
+    };
+
+    const fecharModalEntrada = () => document.getElementById('modalEntrada').classList.add('hidden');
+
+    const salvarEntrada = async () => {
+        const id = document.getElementById('entrada_id').value; const v = parseFloat(document.getElementById('entrada_valor').value);
+        if(isNaN(v) || v <= 0) return alert('Valor inválido!');
+        
+        if (id) {
+            await fetch(`/api/rendas/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({valor: v}) });
+        } else {
+            await fetch('/api/rendas', {
+                method:'POST', headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({usuario: document.getElementById('entrada_usuario').value, fonte: document.getElementById('entrada_fonte').value, mes: currentData.getMonth()+1, ano: currentData.getFullYear(), valor: v})
+            });
+        }
+        fecharModalEntrada(); carregarEntradas();
+    };
+
+    const excluirRenda = async (id) => {
+        if(confirm("Excluir esta entrada?")) { await fetch(`/api/rendas/${id}`, {method: 'DELETE'}); carregarEntradas(); }
+    };
+
+    document.addEventListener("DOMContentLoaded", carregarEntradas);
+</script>
+{% endblock %}
+
+
+
+
+
+============================================================
+ARQUIVO: app/templates/despesas/nova_conta.html
+============================================================
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-8 flex items-center gap-4">
+    <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+    </a>
+    <h2 class="text-xl font-black text-slate-800 tracking-tight">Adicionar Despesas</h2>
+</div>
+
+<div class="ultra-glass p-8 rounded-[35px] shadow-sm">
+    <form id="formDespesa" class="space-y-6">
+        
+        <div>
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Descrição</label>
+            <input type="text" name="descricao" required placeholder="Ex: IPVA" class="w-full mt-2 p-4 rounded-2xl bg-white/60 border border-white outline-none text-slate-800 font-medium">
+        </div>
+
+        <div>
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Valor</label>
+            <input type="number" name="valor" step="0.01" required placeholder="0.00" class="w-full mt-2 p-4 rounded-2xl bg-white/60 border border-white outline-none font-bold text-slate-800">
+        </div>
+
+        <div class="flex gap-4">
+            <div class="w-1/2">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Vencimento Oficial</label>
+                <input type="date" name="data_vencimento" required class="w-full mt-2 p-4 rounded-2xl bg-white/60 border border-white outline-none text-slate-800 text-sm">
+            </div>
+            <div class="w-1/2">
+                <label class="text-[10px] font-bold text-orange-500 uppercase tracking-widest ml-1">Data Prevista Pago</label>
+                <input type="date" name="data_pretensao" class="w-full mt-2 p-4 rounded-2xl bg-orange-50/50 border border-orange-100 outline-none text-slate-800 text-sm">
+            </div>
+        </div>
+
+        <div>
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Categoria</label>
+            <select name="categoria" required class="w-full mt-2 p-4 rounded-2xl bg-white/60 border border-white outline-none font-medium text-slate-800">
+                <option value="" disabled selected>Selecione a Categoria</option>
+                <option value="Alimentação">Alimentação</option>
+                <option value="Combustível">Combustível</option>
+                <option value="Lazer">Lazer</option>
+                <option value="Manutenção">Manutenção</option>
+                <option value="Contas Fixas">Contas Fixas</option>
+                <option value="Outros">Outros</option>
+            </select>
+        </div>
+
+        <div class="flex gap-4">
+            <div class="w-1/2">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Responsável</label>
+                <select id="selectResp" name="responsavel_pagamento" onchange="atualizarFontesPagamento()" class="w-full mt-2 p-4 rounded-2xl bg-white/60 border border-white outline-none font-bold text-slate-800">
+                    <option value="Igor" selected>Igor</option>
+                    <option value="Thaynara">Thaynara</option>
+                </select>
+            </div>
+            <div class="w-1/2">
+                <label class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest ml-1">Pago Com:</label>
+                <select id="selectFonte" name="fonte_pagamento" class="w-full mt-2 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 outline-none font-medium text-slate-800">
+                    </select>
+            </div>
+        </div>
+
+        <button type="submit" id="btnSalvar" class="btn-active w-full py-5 rounded-2xl text-white font-black text-lg tracking-widest transition shadow-xl">SALVAR</button>
+    </form>
+</div>
+
+<script>
+    const fontes = {
+        'Igor': ['Geral', 'Shopee', 'Uber'],
+        'Thaynara': ['Geral', 'Salário', 'VR', 'Vale Combustível']
+    };
+
+    function atualizarFontesPagamento() {
+        const resp = document.getElementById('selectResp').value;
+        const selectFonte = document.getElementById('selectFonte');
+        selectFonte.innerHTML = '';
+        fontes[resp].forEach(f => {
+            selectFonte.innerHTML += `<option value="${f}">${f}</option>`;
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", atualizarFontesPagamento);
+
+    document.getElementById('formDespesa').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const b = document.getElementById('btnSalvar');
+        b.innerText = 'ENVIANDO... ⏳'; b.disabled = true;
+        await fetch('/api/despesas/nova', { method: 'POST', body: new FormData(e.target) });
+        window.location.href = '/';
+    });
+</script>
+{% endblock %}
+
+
+
+============================================================
+ARQUIVO: app/templates/despesas/historico.html
+============================================================
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg></a>
+        <h2 class="text-xl font-black text-slate-800 tracking-tight">Histórico</h2>
+    </div>
+</div>
+
+<div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+    <h2 id="mesDisplayHist" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+</div>
+
+<div class="flex p-1 bg-white/50 rounded-2xl mb-6 shadow-inner border border-white/60">
+    <button onclick="setAba('Fixa')" id="aba-Fixa" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl bg-white text-indigo-600 shadow-sm transition">Fixas</button>
+    <button onclick="setAba('Variável')" id="aba-Variável" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl text-slate-500 hover:bg-white/50 transition">Variáveis</button>
+    <button onclick="setAba('Diária')" id="aba-Diária" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl text-slate-500 hover:bg-white/50 transition">Diário</button>
+</div>
+
+<div id="lista-historico" class="space-y-4 mb-32"></div>
+
+<!-- Modais Exclusivos da Aba Diária -->
+<div id="modalDetalhesDiaria" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="det_nome" class="text-xl font-black text-slate-800 mb-1 pr-8">--</h3>
+        <p class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-6">Gasto do Dia-a-Dia</p>
+        <div class="space-y-4 mb-6">
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Valor</span><span id="det_valor" class="text-sm font-black text-slate-800">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Data Pago</span><span id="det_pag" class="text-sm font-bold text-emerald-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Responsável</span><span id="det_resp" class="text-sm font-bold text-slate-800">--</span></div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnEditarAbrir" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200">Editar</button>
+            <button id="btnExcluirAtivo" class="w-14 bg-red-50 text-red-500 flex items-center justify-center rounded-2xl hover:bg-red-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        </div>
+    </div>
+</div>
+
+<div id="modalEditarDiaria" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-4">Corrigir Gasto</h3>
+        <form id="formEditar" class="space-y-3">
+            <input type="hidden" id="edit_id">
+            <input type="hidden" id="edit_data">
+            <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Descrição</label><input type="text" id="edit_descricao" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 font-medium" required></div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Valor</label><input type="number" step="0.01" id="edit_valor" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold" required></div>
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Responsável</label><select id="edit_responsavel" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 font-medium"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            </div>
+            <button type="submit" class="w-full py-4 mt-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let dataHist = new Date(); let despesasPagas = []; let abaAtual = 'Fixa';
+    const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y,m,d] = ds.split('-'); return `${d}/${m}`; };
+    const mudarMes = (d) => { dataHist.setMonth(dataHist.getMonth() + d); carregarH(); };
+
+    const setAba = (tipo) => {
+        abaAtual = tipo;
+        document.querySelectorAll('[id^="aba-"]').forEach(btn => { btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm'); btn.classList.add('text-slate-500'); });
+        const activeBtn = document.getElementById(`aba-${tipo}`);
+        activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-sm'); activeBtn.classList.remove('text-slate-500');
+        renderizarLista();
+    };
+
+    const carregarH = async () => {
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        document.getElementById('mesDisplayHist').innerText = `${meses[dataHist.getMonth()]} / ${dataHist.getFullYear()}`;
+        const r = await fetch(`/api/despesas?mes=${dataHist.getMonth()+1}&ano=${dataHist.getFullYear()}`);
+        despesasPagas = (await r.json()).filter(x => x.pago); renderizarLista();
+    };
+
+    const renderizarLista = () => {
+        const c = document.getElementById('lista-historico'); const filtradas = despesasPagas.filter(x => x.tipo_despesa === abaAtual);
+        c.innerHTML = filtradas.length ? '' : '<p class="text-center text-slate-500 text-xs font-bold mt-10 uppercase tracking-widest">Nenhum registro.</p>';
+        
+        filtradas.forEach(x => {
+            const dataExibicao = x.data_pagamento ? formatarData(x.data_pagamento) : formatarData(x.data_vencimento);
+            
+            if(abaAtual === 'Diária') {
+                const descSafe = x.descricao.replace(/'/g, "\\'");
+                c.innerHTML += `
+                    <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition cursor-pointer hover:bg-white/40"
+                         onclick="abrirModalDiaria(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.responsavel_pagamento}', '${dataExibicao}')">
+                        <div class="flex items-center gap-4 w-[65%]">
+                            <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">☕</div>
+                            <div class="truncate">
+                                <p class="font-bold text-slate-700 text-sm leading-tight truncate pr-2">${x.descricao}</p>
+                                <p class="text-[9px] font-bold text-emerald-500 mt-0.5">Pago dia: ${dataExibicao}</p>
+                            </div>
+                        </div>
+                        <div class="w-[35%] flex flex-col items-end gap-3 border-l border-white/40 pl-2">
+                            <p class="font-black text-slate-800 text-sm mt-3">${Number(x.valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
+                        </div>
+                    </div>`;
+            } else {
+                const onClickAttr = x.tem_comprovante ? `onclick="window.open('/comprovante/${x.id}', '_blank')"` : `onclick="alert('Baixa sem comprovante.')"`;
+                const iconBadge = x.tem_comprovante ? `<span class="text-emerald-500">📎</span>` : `<span class="text-slate-300">📄</span>`;
+                c.innerHTML += `
+                    <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition">
+                        <div ${onClickAttr} class="flex items-center gap-4 w-[65%] cursor-pointer hover:bg-white/40 rounded-xl p-1">
+                            <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">${iconBadge}</div>
+                            <div class="truncate">
+                                <p class="font-bold text-slate-700 text-sm leading-tight truncate pr-2">${x.descricao}</p>
+                                <p class="text-[9px] font-bold text-emerald-500 mt-0.5">Pago dia: ${dataExibicao}</p>
+                            </div>
+                        </div>
+                        <div class="w-[35%] flex flex-col items-end gap-3 border-l border-white/40 pl-2">
+                            <button onclick="desfazerPagamento(${x.id})" class="text-orange-400 hover:text-orange-500 transition text-[9px] font-black uppercase bg-orange-50 px-2 py-1 rounded-md">Desfazer</button>
+                            <p class="font-black text-slate-800 text-sm">${Number(x.valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
+                        </div>
+                    </div>`;
+            }
+        });
+    };
+
+    // --- Edição/Exclusão para Diárias ---
+    const fecharModais = () => { document.getElementById('modalDetalhesDiaria').classList.add('hidden'); document.getElementById('modalEditarDiaria').classList.add('hidden'); };
+    
+    const abrirModalDiaria = (id, desc, valor, dataV, resp, dataExibicao) => {
+        document.getElementById('det_nome').innerText = desc; document.getElementById('det_valor').innerText = Number(valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        document.getElementById('det_pag').innerText = dataExibicao; document.getElementById('det_resp').innerText = resp;
+        
+        document.getElementById('btnEditarAbrir').onclick = () => {
+            document.getElementById('edit_id').value = id; document.getElementById('edit_descricao').value = desc;
+            document.getElementById('edit_valor').value = valor; document.getElementById('edit_data').value = dataV;
+            document.getElementById('edit_responsavel').value = resp;
+            document.getElementById('modalEditarDiaria').classList.remove('hidden');
+        };
+        document.getElementById('btnExcluirAtivo').onclick = async () => {
+            if(confirm("Excluir este gasto do dia a dia?")) { await fetch(`/api/despesas/${id}`, { method: 'DELETE' }); fecharModais(); carregarH(); }
+        };
+        document.getElementById('modalDetalhesDiaria').classList.remove('hidden');
+    };
+
+    document.getElementById('formEditar').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dados = { descricao: document.getElementById('edit_descricao').value, valor: parseFloat(document.getElementById('edit_valor').value), data_vencimento: document.getElementById('edit_data').value, responsavel_pagamento: document.getElementById('edit_responsavel').value };
+        await fetch(`/api/despesas/${document.getElementById('edit_id').value}/editar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+        fecharModais(); carregarH();
+    });
+
+    const desfazerPagamento = async (id) => { if(confirm("Marcar como PENDENTE e devolver pro painel?")) { await fetch(`/api/despesas/${id}/desfazer`, { method: 'POST' }); carregarH(); } };
+
+    document.addEventListener("DOMContentLoaded", carregarH);
+</script>
+{% endblock %}
+
+
+
+
+
+============================================================
+ARQUIVO: app/templates/despesas/fixas.html
+============================================================
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-8 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        </a>
+        <h2 class="text-xl font-black text-slate-800 tracking-tight">Contas Fixas</h2>
+    </div>
+    <button onclick="abrirModalNovaFixa()" class="bg-indigo-600 w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg active:scale-95 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+    </button>
+</div>
+
+<div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+    <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+</div>
+
+<p class="text-[10px] text-slate-400 uppercase tracking-widest text-center mb-2 animate-pulse">Deslize a conta para a direita para pagar ➡</p>
+<div class="space-y-4 mb-32" id="lista-fixas"></div>
+
+<!-- Modal Nova Fixa -->
+<div id="modalNovaFixa" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-8">
+        <button onclick="document.getElementById('modalNovaFixa').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-6">Nova Conta Fixa</h3>
+        
+        <form id="formFixa" class="space-y-4">
+            <input type="hidden" name="tipo_despesa" value="Fixa">
+            
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Descrição</label><input type="text" name="descricao" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-indigo-400"></div>
+            
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Categoria</label>
+                <select name="categoria" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700 focus:border-indigo-400">
+                    <option value="Mercado">Mercado</option>
+                    <option value="Aluguel">Aluguel</option>
+                    <option value="Faculdade">Faculdade</option>
+                    <option value="Carro">Carro</option>
+                    <option value="Vivo">Vivo</option>
+                    <option value="Noh">Noh</option>
+                    <option value="Outros">Outros</option>
+                </select>
+            </div>
+
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor</label><input type="number" step="0.01" name="valor" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-black outline-none focus:border-indigo-400"></div>
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Vencimento</label><input type="date" name="data_vencimento" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-indigo-400"></div>
+            </div>
+
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Previsão Pago</label><input type="date" name="data_pretensao" class="w-full p-3 rounded-xl bg-orange-50 border border-orange-100 text-sm outline-none focus:border-orange-400"></div>
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Quem Paga?</label>
+                    <select name="responsavel_pagamento" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700 focus:border-indigo-400">
+                        <option value="Igor">Igor</option><option value="Thaynara">Thaynara</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Observações</label><textarea name="observacao" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm focus:border-indigo-400"></textarea></div>
+
+            <button type="submit" id="btnSalvarFixa" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold active:scale-95 transition shadow-lg shadow-indigo-500/30">Guardar Conta Fixa</button>
+        </form>
+    </div>
+</div>
+
+<!-- ================= MODAIS DE DETALHES E EDIÇÃO ================= -->
+<div id="modalDetalhes" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="det_nome" class="text-xl font-black text-slate-800 mb-1 pr-8">--</h3>
+        <p id="det_parcela" class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-6">--</p>
+        
+        <div class="space-y-4 mb-6">
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Valor</span><span id="det_valor" class="text-sm font-black text-slate-800">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Vencimento</span><span id="det_vence" class="text-sm font-bold text-orange-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Data Prevista</span><span id="det_prev" class="text-sm font-bold text-indigo-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Responsável</span><span id="det_resp" class="text-sm font-bold text-slate-800">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Pago Com:</span><span id="det_fonte" class="text-sm font-bold text-emerald-600">--</span></div>
+            <div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Observações</span>
+                <p id="det_obs" class="text-xs font-medium text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed min-h-[50px]"></p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnEditarAbrir" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200">Editar</button>
+            <button id="btnExcluirAtivo" class="w-14 bg-red-50 text-red-500 flex items-center justify-center rounded-2xl hover:bg-red-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        </div>
+    </div>
+</div>
+
+<div id="modalEditar" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-4">Corrigir Conta</h3>
+        <form id="formEditar" class="space-y-3">
+            <input type="hidden" id="edit_id">
+            <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Descrição</label><input type="text" id="edit_descricao" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium" required></div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Valor</label><input type="number" step="0.01" id="edit_valor" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-bold" required></div>
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Vencimento</label><input type="date" id="edit_data" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 text-sm" required></div>
+            </div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Data Prevista</label><input type="date" id="edit_prev" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 text-sm"></div>
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Responsável</label><select id="edit_responsavel" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            </div>
+            <button type="submit" class="w-full py-4 mt-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Pagamento -->
+<div id="modalPagamento" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl text-center relative">
+        <button onclick="fecharModais(); reverterCard(contaEmFocoId);" class="absolute top-4 right-4 text-slate-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-xl font-black text-slate-800 mb-6">Pagar Conta</h3>
+        <div class="space-y-3">
+            <button id="btnAnexarRecibo" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2">Anexar Recibo</button>
+            <button id="btnApenasBaixa" class="w-full py-4 bg-slate-100 text-slate-700 rounded-2xl font-bold">Apenas Dar Baixa</button>
+        </div>
+    </div>
+</div>
+<input type="file" id="fileComprovante" class="hidden" accept=".pdf, image/*">
+
+<script>
+    let currentData = new Date(); 
+    let despesasGlobais = [];
+    let contaEmFocoId = null;
+
+    const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
+
+    const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarFixas(); };
+
+    const carregarFixas = async () => {
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
+        
+        const m = currentData.getMonth() + 1, a = currentData.getFullYear();
+        const res = await fetch(`/api/despesas?mes=${m}&ano=${a}`);
+        const todas = await res.json();
+        
+        despesasGlobais = todas.filter(x => x.tipo_despesa === 'Fixa' && !x.pago);
+        const cont = document.getElementById('lista-fixas');
+        cont.innerHTML = '';
+
+        if(despesasGlobais.length === 0) {
+            cont.innerHTML = `<div class="text-center py-8 ultra-glass rounded-3xl"><p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Tudo em dia!</p></div>`;
+            return;
+        }
+
+        despesasGlobais.forEach(x => {
+            const descSafe = x.descricao.replace(/'/g, "\\'");
+            const obsSafe = (x.observacao || "").replace(/'/g, "\\'").replace(/\n/g, " ");
+            const fonteSafe = (x.fonte_pagamento || "Geral");
+
+            cont.innerHTML += `
+                <div id="conta-card-${x.id}" class="relative rounded-[28px] shadow-sm overflow-hidden swipe-container bg-transparent">
+                    <div class="swipe-bg absolute inset-0 bg-emerald-500 flex items-center pl-6 text-white font-black text-lg z-0" style="opacity: 0; transition: opacity 0.1s;">PAGO</div>
+                    <div class="swipe-card relative z-10 ultra-glass p-5 rounded-[28px] flex justify-between items-center cursor-pointer border border-white/50" data-id="${x.id}"
+                         onclick="if(!isSwiping) abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas})">
+                        <div class="flex items-center gap-3 w-[70%] pointer-events-none">
+                            <div class="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center text-indigo-600 shadow-sm border border-white">🏠</div>
+                            <div class="truncate">
+                                <p class="font-bold text-slate-800 text-sm truncate leading-tight">${x.descricao}</p>
+                                <p class="text-[9px] font-bold text-slate-500 mt-1">📅 Venc: ${formatarData(x.data_vencimento)}</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-1 w-[30%] pointer-events-none">
+                            <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
+                            <span class="text-[8px] font-black text-indigo-600 uppercase bg-indigo-100/50 px-2 py-0.5 rounded-md">${x.categoria}</span>
+                        </div>
+                    </div>
+                </div>`;
+        });
+    };
+
+    const abrirModalNovaFixa = () => document.getElementById('modalNovaFixa').classList.remove('hidden');
+
+    document.getElementById('formFixa').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnSalvarFixa'); btn.innerText = 'A GERAR 60 MESES... ⏳'; btn.disabled = true;
+        await fetch('/api/despesas/nova', { method: 'POST', body: new FormData(e.target) });
+        document.getElementById('modalNovaFixa').classList.add('hidden');
+        btn.innerText = 'Guardar Conta Fixa'; btn.disabled = false;
+        e.target.reset(); carregarFixas();
+    });
+
+    // --- RAIO-X DETALHES E EXCLUSÃO ---
+    const fecharModais = () => { 
+        document.querySelectorAll('[id^="modal"]').forEach(m => {
+            if(m.id !== 'modalNovaFixa') m.classList.add('hidden');
+        }); 
+    };
+
+    const abrirModalDetalhes = (id, desc, valor, dataV, dataP, resp, fonte, obs, p_atual, t_parc) => {
+        document.getElementById('det_nome').innerText = desc;
+        document.getElementById('det_parcela').innerText = 'Conta Fixa';
+        document.getElementById('det_valor').innerText = formatarMoeda(valor);
+        document.getElementById('det_vence').innerText = formatarData(dataV);
+        document.getElementById('det_prev').innerText = dataP ? formatarData(dataP) : 'Não definida';
+        document.getElementById('det_resp').innerText = resp;
+        document.getElementById('det_fonte').innerText = fonte;
+        document.getElementById('det_obs').innerText = obs || "Sem observações adicionais.";
+        
+        document.getElementById('btnEditarAbrir').onclick = () => {
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_descricao').value = desc;
+            document.getElementById('edit_valor').value = valor;
+            document.getElementById('edit_data').value = dataV;
+            document.getElementById('edit_prev').value = dataP || '';
+            document.getElementById('edit_responsavel').value = resp;
+            document.getElementById('modalEditar').classList.remove('hidden');
+        };
+
+        document.getElementById('btnExcluirAtivo').onclick = async () => {
+            let params = '';
+            const excTodas = confirm("Esta é uma conta fixa recorrente. Deseja excluir TODAS as parcelas/meses futuros desta conta?\n\n[OK] = Excluir TODAS\n[Cancelar] = Excluir SÓ ESTA");
+            if (excTodas) params = '?todas=true';
+            
+            await fetch(`/api/despesas/${id}${params}`, { method: 'DELETE' });
+            fecharModais(); carregarFixas();
+        };
+
+        document.getElementById('modalDetalhes').classList.remove('hidden');
+    };
+
+    document.getElementById('formEditar').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dados = { descricao: document.getElementById('edit_descricao').value, valor: parseFloat(document.getElementById('edit_valor').value), data_vencimento: document.getElementById('edit_data').value, data_pretensao: document.getElementById('edit_prev').value, responsavel_pagamento: document.getElementById('edit_responsavel').value };
+        await fetch(`/api/despesas/${document.getElementById('edit_id').value}/editar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+        fecharModais(); carregarFixas();
+    });
+
+    // --- SWIPE TO PAY ---
+    let isSwiping = false, startX = 0, currentX = 0, swipeTarget = null, swipeBg = null;
+    document.addEventListener('touchstart', e => {
+        const card = e.target.closest('.swipe-card'); if(!card) return;
+        swipeTarget = card; swipeBg = card.previousElementSibling; startX = e.touches[0].clientX; card.style.transition = 'none'; if(swipeBg) swipeBg.style.transition = 'none'; isSwiping = false;
+    }, {passive: true});
+    document.addEventListener('touchmove', e => {
+        if(!swipeTarget) return; currentX = e.touches[0].clientX - startX;
+        if(currentX > 10) isSwiping = true;
+        if(currentX > 0) { swipeTarget.style.transform = `translateX(${currentX}px)`; if (swipeBg) swipeBg.style.opacity = Math.min(currentX / 100, 1); }
+    }, {passive: true});
+    document.addEventListener('touchend', () => {
+        if(!swipeTarget) return;
+        swipeTarget.style.transition = 'transform 0.3s ease'; if (swipeBg) swipeBg.style.transition = 'opacity 0.3s ease';
+        if(currentX > 100) {
+            swipeTarget.style.transform = `translateX(150%)`; if(swipeBg) swipeBg.style.opacity = '1';
+            contaEmFocoId = swipeTarget.getAttribute('data-id'); setTimeout(() => document.getElementById('modalPagamento').classList.remove('hidden'), 250);
+        } else { reverterCard(swipeTarget.getAttribute('data-id')); }
+        setTimeout(() => { swipeTarget = null; swipeBg = null; currentX = 0; isSwiping = false; }, 300);
+    });
+
+    const reverterCard = (id) => {
+        const card = document.querySelector(`.swipe-card[data-id="${id}"]`);
+        if(card) { card.style.transform = `translateX(0px)`; if(card.previousElementSibling) card.previousElementSibling.style.opacity = '0'; }
+    };
+
+    document.getElementById('btnAnexarRecibo').onclick = () => {
+        const input = document.getElementById('fileComprovante'); input.value = ''; 
+        input.onchange = async () => { fecharModais(); await dispararPagamento(input.files[0]); }; input.click();
+    };
+    document.getElementById('btnApenasBaixa').onclick = async () => { fecharModais(); await dispararPagamento(null); };
+
+    const dispararPagamento = async (file) => {
+        const cardNode = document.getElementById(`conta-card-${contaEmFocoId}`);
+        if(cardNode) { cardNode.style.transition = "all 0.3s"; cardNode.style.opacity = "0"; setTimeout(() => cardNode.remove(), 300); }
+        const formData = new FormData(); if(file) formData.append('comprovante', file);
+        await fetch(`/api/despesas/${contaEmFocoId}/pagar`, { method: 'POST', body: formData });
+    };
+
+    document.addEventListener("DOMContentLoaded", carregarFixas);
+</script>
+{% endblock %}
+
+
+
+
+
+============================================================
+ARQUIVO: app/templates/despesas/variaveis.html
+============================================================
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-8 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg></a>
+        <h2 class="text-xl font-black text-slate-800 tracking-tight">Variáveis</h2>
+    </div>
+    <button onclick="abrirModalNovaVar()" class="bg-orange-500 w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg active:scale-95 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
+</div>
+
+<div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-orange-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+    <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-orange-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+</div>
+
+<p class="text-[10px] text-slate-400 uppercase tracking-widest text-center mb-2 animate-pulse">Deslize a conta para a direita para pagar ➡</p>
+<div class="space-y-4 mb-32" id="lista-variaveis"></div>
+
+<div id="modalNovaVar" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-8">
+        <button onclick="document.getElementById('modalNovaVar').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-6">Conta Variável</h3>
+        <form id="formVar" class="space-y-4">
+            <input type="hidden" name="tipo_despesa" value="Variável">
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Descrição</label><input type="text" name="descricao" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-orange-400"></div>
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Categoria</label>
+                <select name="categoria" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700">
+                    <option value="Aliança">Aliança</option><option value="O Boticário">O Boticário</option><option value="Renegociação Faculdade">Renegociação Faculdade</option><option value="Imobiliária">Imobiliária</option><option value="Cartão de Crédito">Cartão de Crédito</option><option value="Outros">Outros</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor</label><input type="number" step="0.01" name="valor" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-black outline-none focus:border-orange-400"></div>
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Vencimento</label><input type="date" name="data_vencimento" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none"></div>
+            </div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Previsão Pago</label><input type="date" name="data_pretensao" class="w-full p-3 rounded-xl bg-orange-50 border border-orange-100 text-sm outline-none"></div>
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Quem Paga?</label><select name="responsavel_pagamento" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            </div>
+            <div class="p-3 rounded-2xl bg-orange-50 border border-orange-100">
+                <div class="flex items-center gap-2 mb-2"><input type="checkbox" id="recorrente" name="recorrente" value="true" onchange="toggleParcelas()" class="w-4 h-4 accent-orange-500"><label for="recorrente" class="text-xs font-bold text-orange-800">É Parcelado?</label></div>
+                <div id="box-parcelas" class="hidden flex gap-2 pt-2 border-t border-orange-200/50">
+                    <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Parcela Atual</label><input type="number" name="parcela_atual" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
+                    <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Total Meses</label><input type="number" name="total_parcelas" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
+                </div>
+            </div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Observações</label><textarea name="observacao" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm"></textarea></div>
+            <button type="submit" id="btnSalvarVar" class="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold active:scale-95 transition shadow-lg shadow-orange-500/30">Guardar Conta</button>
+        </form>
+    </div>
+</div>
+
+<div id="modalDetalhes" class="hidden fixed inset-0 z-[70] flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="det_nome" class="text-xl font-black text-slate-800 mb-1 pr-8">--</h3>
+        <p id="det_parcela" class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-6">--</p>
+        <div class="space-y-4 mb-6">
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Valor</span><span id="det_valor" class="text-sm font-black text-slate-800">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Vencimento</span><span id="det_vence" class="text-sm font-bold text-orange-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Data Prevista</span><span id="det_prev" class="text-sm font-bold text-indigo-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Responsável</span><span id="det_resp" class="text-sm font-bold text-slate-800">--</span></div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnEditarAbrir" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200">Editar</button>
+            <button id="btnExcluirAtivo" class="w-14 bg-red-50 text-red-500 flex items-center justify-center rounded-2xl hover:bg-red-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        </div>
+    </div>
+</div>
+
+<div id="modalEditar" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-4">Corrigir Conta</h3>
+        <form id="formEditar" class="space-y-3">
+            <input type="hidden" id="edit_id">
+            <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Descrição</label><input type="text" id="edit_descricao" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium" required></div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Valor</label><input type="number" step="0.01" id="edit_valor" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-bold" required></div>
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Vencimento</label><input type="date" id="edit_data" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 text-sm" required></div>
+            </div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Data Prevista</label><input type="date" id="edit_prev" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 text-sm"></div>
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Responsável</label><select id="edit_responsavel" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            </div>
+            <button type="submit" class="w-full py-4 mt-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
+
+<div id="modalPagamento" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl text-center relative">
+        <button onclick="fecharModais(); reverterCard(contaEmFocoId);" class="absolute top-4 right-4 text-slate-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-xl font-black text-slate-800 mb-6">Pagar Conta</h3>
+        <div class="space-y-3">
+            <button id="btnAnexarRecibo" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2">Anexar Recibo</button>
+            <button id="btnApenasBaixa" class="w-full py-4 bg-slate-100 text-slate-700 rounded-2xl font-bold">Apenas Dar Baixa</button>
+        </div>
+    </div>
+</div>
+<input type="file" id="fileComprovante" class="hidden" accept=".pdf, image/*">
+
+<script>
+    let currentData = new Date(); let contaEmFocoId = null;
+    const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
+    function toggleParcelas() { const box = document.getElementById('box-parcelas'); if(document.getElementById('recorrente').checked) box.classList.remove('hidden'); else box.classList.add('hidden'); }
+    const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarVariaveis(); };
+
+    const carregarVariaveis = async () => {
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
+        const res = await fetch(`/api/despesas?mes=${currentData.getMonth()+1}&ano=${currentData.getFullYear()}`);
+        const todas = await res.json();
+        const varsGlobais = todas.filter(x => x.tipo_despesa === 'Variável' && !x.pago);
+        const cont = document.getElementById('lista-variaveis'); cont.innerHTML = '';
+        if(varsGlobais.length === 0) { cont.innerHTML = `<div class="text-center py-8 ultra-glass rounded-3xl"><p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Tudo em dia!</p></div>`; return; }
+
+        varsGlobais.forEach(x => {
+            const descSafe = x.descricao.replace(/'/g, "\\'");
+            const obsSafe = (x.observacao || "").replace(/'/g, "\\'").replace(/\n/g, " ");
+            const fonteSafe = (x.fonte_pagamento || "Geral");
+            const badgeParcela = x.total_parcelas > 1 ? `<p class="text-[10px] text-orange-600 font-black tracking-widest uppercase mt-0.5">Parcela ${x.parcela_atual}/${x.total_parcelas}</p>` : '';
+            
+            cont.innerHTML += `
+                <div id="conta-card-${x.id}" class="relative rounded-[28px] shadow-sm overflow-hidden swipe-container bg-transparent">
+                    <div class="swipe-bg absolute inset-0 bg-emerald-500 flex items-center pl-6 text-white font-black text-lg z-0" style="opacity: 0; transition: opacity 0.1s;">PAGO</div>
+                    <div class="swipe-card relative z-10 ultra-glass p-5 rounded-[28px] flex justify-between items-center cursor-pointer border border-white/50" data-id="${x.id}"
+                         onclick="if(!isSwiping) abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas})">
+                        <div class="flex items-start gap-3 w-[70%] pointer-events-none">
+                            <div class="w-10 h-10 mt-1 rounded-xl bg-white/70 flex items-center justify-center text-orange-500 shadow-sm border border-white">💳</div>
+                            <div class="truncate flex-1">
+                                <p class="font-bold text-slate-800 text-sm truncate leading-tight">${x.descricao}</p>
+                                ${badgeParcela}
+                                <p class="text-[9px] font-bold text-slate-500 mt-1">📅 Venc: ${formatarData(x.data_vencimento)}</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end justify-center h-full gap-1 w-[30%] pointer-events-none">
+                            <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
+                            <span class="text-[7px] font-black text-orange-600 uppercase bg-orange-100/50 px-2 py-0.5 rounded-md mt-1 line-clamp-1">${x.categoria}</span>
+                        </div>
+                    </div>
+                </div>`;
+        });
+    };
+
+    const abrirModalNovaVar = () => document.getElementById('modalNovaVar').classList.remove('hidden');
+
+    document.getElementById('formVar').addEventListener('submit', async (e) => {
+        e.preventDefault(); const btn = document.getElementById('btnSalvarVar'); btn.innerText = 'LANÇANDO... ⏳'; btn.disabled = true;
+        await fetch('/api/despesas/nova', { method: 'POST', body: new FormData(e.target) });
+        document.getElementById('modalNovaVar').classList.add('hidden'); btn.innerText = 'Guardar Conta'; btn.disabled = false;
+        e.target.reset(); carregarVariaveis();
+    });
+
+    const fecharModais = () => { document.querySelectorAll('[id^="modal"]').forEach(m => { if(m.id !== 'modalNovaVar') m.classList.add('hidden'); }); };
+
+    const abrirModalDetalhes = (id, desc, valor, dataV, dataP, resp, fonte, obs, p_atual, t_parc) => {
+        document.getElementById('det_nome').innerText = desc;
+        document.getElementById('det_parcela').innerText = t_parc > 1 ? `Parcela ${p_atual} de ${t_parc}` : 'Conta Variável / Única';
+        document.getElementById('det_valor').innerText = formatarMoeda(valor);
+        document.getElementById('det_vence').innerText = formatarData(dataV);
+        document.getElementById('det_prev').innerText = dataP ? formatarData(dataP) : 'Não definida';
+        document.getElementById('det_resp').innerText = resp;
+        
+        document.getElementById('btnEditarAbrir').onclick = () => {
+            document.getElementById('edit_id').value = id; document.getElementById('edit_descricao').value = desc;
+            document.getElementById('edit_valor').value = valor; document.getElementById('edit_data').value = dataV;
+            document.getElementById('edit_prev').value = dataP || ''; document.getElementById('edit_responsavel').value = resp;
+            document.getElementById('modalEditar').classList.remove('hidden');
+        };
+
+        document.getElementById('btnExcluirAtivo').onclick = async () => {
+            let params = '';
+            if (t_parc > 1) {
+                const excTodas = confirm("Esta é uma conta com parcelas. Deseja excluir TODAS as parcelas futuras desta conta?\n\n[OK] = Excluir TODAS as parcelas\n[Cancelar] = Excluir SÓ ESTA");
+                if (excTodas) params = '?todas=true';
+            } else { if(!confirm("Confirmar exclusão desta conta?")) return; }
+            await fetch(`/api/despesas/${id}${params}`, { method: 'DELETE' }); fecharModais(); carregarVariaveis();
+        };
+        document.getElementById('modalDetalhes').classList.remove('hidden');
+    };
+
+    document.getElementById('formEditar').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dados = { descricao: document.getElementById('edit_descricao').value, valor: parseFloat(document.getElementById('edit_valor').value), data_vencimento: document.getElementById('edit_data').value, data_pretensao: document.getElementById('edit_prev').value, responsavel_pagamento: document.getElementById('edit_responsavel').value };
+        await fetch(`/api/despesas/${document.getElementById('edit_id').value}/editar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+        fecharModais(); carregarVariaveis();
+    });
+
+    let isSwiping = false, startX = 0, currentX = 0, swipeTarget = null, swipeBg = null;
+    document.addEventListener('touchstart', e => { const card = e.target.closest('.swipe-card'); if(!card) return; swipeTarget = card; swipeBg = card.previousElementSibling; startX = e.touches[0].clientX; card.style.transition = 'none'; if(swipeBg) swipeBg.style.transition = 'none'; isSwiping = false; }, {passive: true});
+    document.addEventListener('touchmove', e => { if(!swipeTarget) return; currentX = e.touches[0].clientX - startX; if(currentX > 10) isSwiping = true; if(currentX > 0) { swipeTarget.style.transform = `translateX(${currentX}px)`; if (swipeBg) swipeBg.style.opacity = Math.min(currentX / 100, 1); } }, {passive: true});
+    document.addEventListener('touchend', () => { if(!swipeTarget) return; swipeTarget.style.transition = 'transform 0.3s ease'; if (swipeBg) swipeBg.style.transition = 'opacity 0.3s ease'; if(currentX > 100) { swipeTarget.style.transform = `translateX(150%)`; if(swipeBg) swipeBg.style.opacity = '1'; contaEmFocoId = swipeTarget.getAttribute('data-id'); setTimeout(() => document.getElementById('modalPagamento').classList.remove('hidden'), 250); } else { reverterCard(swipeTarget.getAttribute('data-id')); } setTimeout(() => { swipeTarget = null; swipeBg = null; currentX = 0; isSwiping = false; }, 300); });
+    const reverterCard = (id) => { const card = document.querySelector(`.swipe-card[data-id="${id}"]`); if(card) { card.style.transform = `translateX(0px)`; if(card.previousElementSibling) card.previousElementSibling.style.opacity = '0'; } };
+    
+    document.getElementById('btnAnexarRecibo').onclick = () => { const input = document.getElementById('fileComprovante'); input.value = ''; input.onchange = async () => { fecharModais(); await dispararPagamento(input.files[0]); }; input.click(); };
+    document.getElementById('btnApenasBaixa').onclick = async () => { fecharModais(); await dispararPagamento(null); };
+    const dispararPagamento = async (file) => { const cardNode = document.getElementById(`conta-card-${contaEmFocoId}`); if(cardNode) { cardNode.style.transition = "all 0.3s"; cardNode.style.opacity = "0"; setTimeout(() => cardNode.remove(), 300); } const formData = new FormData(); if(file) formData.append('comprovante', file); await fetch(`/api/despesas/${contaEmFocoId}/pagar`, { method: 'POST', body: formData }); };
+
+    document.addEventListener("DOMContentLoaded", carregarVariaveis);
+</script>
+{% endblock %}
+
+
+
+
+
+============================================================
+ARQUIVO: app/templates/auth/login.html
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/templates/auth/primeiro_acesso.html
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/templates/errors/403.html
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/templates/errors/404.html
+============================================================
+
+
+
+============================================================
+ARQUIVO: app/templates/errors/500.html
+============================================================
+
+
