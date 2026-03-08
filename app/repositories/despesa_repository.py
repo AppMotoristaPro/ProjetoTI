@@ -1,4 +1,5 @@
 import datetime
+import uuid
 from app.extensions import get_db_connection
 
 class DespesaRepository:
@@ -18,9 +19,21 @@ class DespesaRepository:
         if not conn: return False
         try:
             cur = conn.cursor()
+            tipo_despesa = dados.get('tipo_despesa', 'Variável')
+            grupo_id = str(uuid.uuid4()) # ID único para agrupar as fixas e parceladas
+            
             recorrente = str(dados.get('recorrente', 'false')).lower() == 'true'
             parcela_inicial = int(dados.get('parcela_atual', 1))
             total_parcelas = int(dados.get('total_parcelas', 1))
+            
+            # Se for Fixa, criamos para os próximos 60 meses (5 anos)
+            if tipo_despesa == 'Fixa':
+                recorrente = True
+                parcela_inicial = 1
+                total_parcelas = 60
+            elif tipo_despesa == 'Diária':
+                recorrente = False
+                total_parcelas = 1
             
             data_vencimento = datetime.datetime.strptime(dados.get('data_vencimento'), '%Y-%m-%d').date()
             data_pretensao = datetime.datetime.strptime(dados.get('data_pretensao'), '%Y-%m-%d').date() if dados.get('data_pretensao') else None
@@ -41,13 +54,13 @@ class DespesaRepository:
                 query = """
                     INSERT INTO despesas 
                     (descricao, valor, data_vencimento, data_pretensao, responsavel_pagamento, categoria, pago, 
-                     comprovante_dados, comprovante_mimetype, recorrente, parcela_atual, total_parcelas, observacao, icone_svg, fonte_pagamento)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     comprovante_dados, comprovante_mimetype, recorrente, parcela_atual, total_parcelas, observacao, icone_svg, fonte_pagamento, tipo_despesa, grupo_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 cur.execute(query, (
                     descricao_final, dados.get('valor'), nova_data_venc, nova_data_pret, dados.get('responsavel_pagamento'), 
                     dados.get('categoria', 'Geral'), status_pago, comp_bin, comp_mime, recorrente, p_atual, total_parcelas,
-                    dados.get('observacao', ''), dados.get('icone_svg', 'geral'), dados.get('fonte_pagamento')
+                    dados.get('observacao', ''), dados.get('icone_svg', 'geral'), dados.get('fonte_pagamento'), tipo_despesa, grupo_id
                 ))
                 
             conn.commit()
@@ -67,7 +80,7 @@ class DespesaRepository:
             query = """
                 SELECT id, descricao, valor, data_vencimento, data_pretensao, 
                        responsavel_pagamento, categoria, pago, recorrente, parcela_atual, total_parcelas,
-                       observacao, icone_svg, fonte_pagamento, (comprovante_dados IS NOT NULL) as tem_comprovante 
+                       observacao, icone_svg, fonte_pagamento, tipo_despesa, grupo_id, (comprovante_dados IS NOT NULL) as tem_comprovante 
                 FROM despesas 
                 WHERE EXTRACT(MONTH FROM data_vencimento) = %s AND EXTRACT(YEAR FROM data_vencimento) = %s
                 ORDER BY data_vencimento ASC
@@ -163,9 +176,7 @@ class DespesaRepository:
                 cur.execute("UPDATE despesas SET pago = TRUE WHERE id = %s", (despesa_id,))
             conn.commit()
             return True
-        except Exception as e: 
-            print(f"Erro ao marcar paga: {e}")
-            return False
+        except Exception as e: return False
         finally: conn.close()
 
     @staticmethod
@@ -176,9 +187,7 @@ class DespesaRepository:
             cur.execute("UPDATE despesas SET pago = FALSE, comprovante_dados = NULL, comprovante_mimetype = NULL WHERE id = %s", (despesa_id,))
             conn.commit()
             return True
-        except Exception as e: 
-            print(f"Erro ao desfazer pagamento: {e}")
-            return False
+        except Exception as e: return False
         finally: conn.close()
 
     @staticmethod
@@ -190,9 +199,7 @@ class DespesaRepository:
             cur.execute(query, (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('responsavel_pagamento'), dados.get('fonte_pagamento'), despesa_id))
             conn.commit()
             return True
-        except Exception as e: 
-            print(f"Erro ao atualizar: {e}")
-            return False
+        except Exception as e: return False
         finally: conn.close()
 
     @staticmethod
@@ -201,20 +208,17 @@ class DespesaRepository:
         try:
             cur = conn.cursor()
             if excluir_todas:
-                cur.execute("SELECT descricao, valor FROM despesas WHERE id = %s", (despesa_id,))
+                cur.execute("SELECT descricao, valor, grupo_id FROM despesas WHERE id = %s", (despesa_id,))
                 ref = cur.fetchone()
                 if ref:
-                    cur.execute("DELETE FROM despesas WHERE descricao = %s AND valor = %s AND total_parcelas > 1 AND pago = FALSE", (ref[0], ref[1]))
+                    cur.execute("DELETE FROM despesas WHERE (descricao = %s AND valor = %s AND total_parcelas > 1 AND pago = FALSE) OR (grupo_id = %s AND pago = FALSE)", (ref[0], ref[1], ref[2]))
             else:
                 cur.execute("DELETE FROM despesas WHERE id = %s", (despesa_id,))
             conn.commit()
             return True
-        except Exception as e: 
-            print(f"Erro ao excluir: {e}")
-            return False
+        except Exception as e: return False
         finally: conn.close()
 
-    # --- CRUD CAIXINHAS AUDITADO ---
     @staticmethod
     def listar_caixinhas():
         conn = get_db_connection()
@@ -238,11 +242,20 @@ class DespesaRepository:
                 cur.execute("INSERT INTO caixinhas (nome, valor, icone_svg) VALUES (%s, %s, %s)", (nome, valor, icone_svg))
             conn.commit()
             return True
-        except Exception as e: 
-            print(f"Erro ao criar caixinha: {e}")
-            return False
+        except Exception as e: return False
         finally: conn.close()
         
+    @staticmethod
+    def depositar_caixinha(caixinha_id, valor_adicional):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("UPDATE caixinhas SET valor = valor + %s WHERE id = %s", (valor_adicional, caixinha_id))
+            conn.commit()
+            return True
+        except Exception as e: return False
+        finally: conn.close()
+
     @staticmethod
     def atualizar_caixinha(caixinha_id, nome, valor, icone_svg):
         conn = get_db_connection()
@@ -252,9 +265,7 @@ class DespesaRepository:
             cur.execute(query, (nome, valor, icone_svg, caixinha_id))
             conn.commit()
             return True
-        except Exception as e: 
-            print(f"Erro ao atualizar caixinha: {e}")
-            return False
+        except Exception as e: return False
         finally: conn.close()
 
     @staticmethod
@@ -265,8 +276,7 @@ class DespesaRepository:
             cur.execute("DELETE FROM caixinhas WHERE id = %s", (caixinha_id,))
             conn.commit()
             return True
-        except Exception as e: 
-            print(f"Erro ao excluir caixinha: {e}")
-            return False
+        except Exception as e: return False
         finally: conn.close()
+
 

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="mb-8 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        </a>
+        <h2 class="text-xl font-black text-slate-800 tracking-tight">Variáveis</h2>
+    </div>
+    <button onclick="abrirModalNovaVar()" class="bg-orange-500 w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg active:scale-95 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+    </button>
+</div>
+
+<div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-orange-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+    <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-orange-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+</div>
+
+<p class="text-[10px] text-slate-400 uppercase tracking-widest text-center mb-2 animate-pulse">Deslize a conta para a direita para pagar ➡</p>
+<div class="space-y-4 mb-24" id="lista-variaveis"></div>
+
+<div id="modalNovaVar" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <button onclick="document.getElementById('modalNovaVar').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-6">Conta Variável</h3>
+        
+        <form id="formVar" class="space-y-4">
+            <input type="hidden" name="tipo_despesa" value="Variável">
+            
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Descrição</label><input type="text" name="descricao" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-orange-400"></div>
+            
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Categoria</label>
+                <select name="categoria" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700">
+                    <option value="ALIANÇA">Aliança</option><option value="OBOTICARIO">Oboticário</option><option value="RENEGOCIAÇÃO FACULDADE">Renegociação Faculdade</option><option value="IMOBILIÁRIA">Imobiliária</option><option value="CARTÃO DE CREDITO">Cartão de Crédito</option>
+                </select>
+            </div>
+
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor</label><input type="number" step="0.01" name="valor" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-black outline-none focus:border-orange-400"></div>
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Vencimento</label><input type="date" name="data_vencimento" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none"></div>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-orange-50 border border-orange-100">
+                <div class="flex items-center gap-2 mb-2">
+                    <input type="checkbox" id="recorrente" name="recorrente" value="true" onchange="toggleParcelas()" class="w-4 h-4 accent-orange-500">
+                    <label for="recorrente" class="text-xs font-bold text-orange-800">É Parcelado?</label>
+                </div>
+                <div id="box-parcelas" class="hidden flex gap-2 pt-2 border-t border-orange-200/50">
+                    <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Parcela Atual</label><input type="number" name="parcela_atual" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
+                    <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Total Meses</label><input type="number" name="total_parcelas" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
+                </div>
+            </div>
+
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Quem Paga?</label><select name="responsavel_pagamento" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Observações</label><textarea name="observacao" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm"></textarea></div>
+
+            <button type="submit" id="btnSalvarVar" class="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold active:scale-95 transition shadow-lg shadow-orange-500/30">Guardar Conta</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Pagamento -->
+<div id="modalPagamento" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl text-center relative">
+        <button onclick="fecharModais(); reverterCard(contaEmFocoId);" class="absolute top-4 right-4 text-slate-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-xl font-black text-slate-800 mb-6">Pagar Conta</h3>
+        <div class="space-y-3">
+            <button id="btnAnexarRecibo" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2">Anexar Recibo</button>
+            <button id="btnApenasBaixa" class="w-full py-4 bg-slate-100 text-slate-700 rounded-2xl font-bold">Apenas Dar Baixa</button>
+        </div>
+    </div>
+</div>
+<input type="file" id="fileComprovante" class="hidden" accept=".pdf, image/*">
+
+<script>
+    let currentData = new Date(); let contaEmFocoId = null;
+    const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
+
+    function toggleParcelas() {
+        const box = document.getElementById('box-parcelas');
+        if(document.getElementById('recorrente').checked) box.classList.remove('hidden'); else box.classList.add('hidden');
+    }
+
+    const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarVariaveis(); };
+
+    const carregarVariaveis = async () => {
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
+        
+        const res = await fetch(`/api/despesas?mes=${currentData.getMonth()+1}&ano=${currentData.getFullYear()}`);
+        const todas = await res.json();
+        const varsGlobais = todas.filter(x => x.tipo_despesa === 'Variável' && !x.pago);
+        const cont = document.getElementById('lista-variaveis'); cont.innerHTML = '';
+
+        if(varsGlobais.length === 0) { cont.innerHTML = `<div class="text-center py-8 ultra-glass rounded-3xl"><p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Tudo em dia!</p></div>`; return; }
+
+        varsGlobais.forEach(x => {
+            const badgeParcela = x.total_parcelas > 1 ? `<p class="text-[10px] text-orange-600 font-black tracking-widest uppercase mt-0.5">Parcela ${x.parcela_atual}/${x.total_parcelas}</p>` : '';
+            cont.innerHTML += `
+                <div id="conta-card-${x.id}" class="relative rounded-[28px] shadow-sm overflow-hidden swipe-container bg-transparent">
+                    <div class="swipe-bg absolute inset-0 bg-emerald-500 flex items-center pl-6 text-white font-black text-lg z-0" style="opacity: 0; transition: opacity 0.1s;">PAGO</div>
+                    <div class="swipe-card relative z-10 ultra-glass p-5 rounded-[28px] flex justify-between items-center cursor-pointer border border-white/50" data-id="${x.id}">
+                        <div class="flex items-start gap-3 w-[70%] pointer-events-none">
+                            <div class="w-10 h-10 mt-1 rounded-xl bg-white/70 flex items-center justify-center text-orange-500 shadow-sm border border-white">💳</div>
+                            <div class="truncate flex-1">
+                                <p class="font-bold text-slate-800 text-sm truncate leading-tight">${x.descricao}</p>
+                                ${badgeParcela}
+                                <p class="text-[9px] font-bold text-slate-500 mt-1">📅 Venc: ${formatarData(x.data_vencimento)}</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end justify-center h-full gap-1 w-[30%] pointer-events-none">
+                            <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
+                            <span class="text-[7px] font-black text-orange-600 uppercase bg-orange-100/50 px-2 py-0.5 rounded-md mt-1 line-clamp-1">${x.categoria}</span>
+                        </div>
+                    </div>
+                </div>`;
+        });
+    };
+
+    const abrirModalNovaVar = () => document.getElementById('modalNovaVar').classList.remove('hidden');
+
+    document.getElementById('formVar').addEventListener('submit', async (e) => {
+        e.preventDefault(); const btn = document.getElementById('btnSalvarVar'); btn.innerText = 'LANÇANDO... ⏳'; btn.disabled = true;
+        await fetch('/api/despesas/nova', { method: 'POST', body: new FormData(e.target) });
+        document.getElementById('modalNovaVar').classList.add('hidden'); btn.innerText = 'Guardar Conta'; btn.disabled = false;
+        e.target.reset(); carregarVariaveis();
+    });
+
+    // --- SWIPE TO PAY --- (Cópia exata da inteligência Fixas)
+    let isSwiping = false, startX = 0, currentX = 0, swipeTarget = null, swipeBg = null;
+    document.addEventListener('touchstart', e => { const card = e.target.closest('.swipe-card'); if(!card) return; swipeTarget = card; swipeBg = card.previousElementSibling; startX = e.touches[0].clientX; card.style.transition = 'none'; if(swipeBg) swipeBg.style.transition = 'none'; isSwiping = false; }, {passive: true});
+    document.addEventListener('touchmove', e => { if(!swipeTarget) return; currentX = e.touches[0].clientX - startX; if(currentX > 10) isSwiping = true; if(currentX > 0) { swipeTarget.style.transform = `translateX(${currentX}px)`; if (swipeBg) swipeBg.style.opacity = Math.min(currentX / 100, 1); } }, {passive: true});
+    document.addEventListener('touchend', () => { if(!swipeTarget) return; swipeTarget.style.transition = 'transform 0.3s ease'; if (swipeBg) swipeBg.style.transition = 'opacity 0.3s ease'; if(currentX > 100) { swipeTarget.style.transform = `translateX(150%)`; if(swipeBg) swipeBg.style.opacity = '1'; contaEmFocoId = swipeTarget.getAttribute('data-id'); setTimeout(() => document.getElementById('modalPagamento').classList.remove('hidden'), 250); } else { reverterCard(swipeTarget.getAttribute('data-id')); } setTimeout(() => { swipeTarget = null; swipeBg = null; currentX = 0; isSwiping = false; }, 300); });
+    const reverterCard = (id) => { const card = document.querySelector(`.swipe-card[data-id="${id}"]`); if(card) { card.style.transform = `translateX(0px)`; if(card.previousElementSibling) card.previousElementSibling.style.opacity = '0'; } };
+    
+    const fecharModais = () => document.getElementById('modalPagamento').classList.add('hidden');
+    document.getElementById('btnAnexarRecibo').onclick = () => { const input = document.getElementById('fileComprovante'); input.value = ''; input.onchange = async () => { fecharModais(); await dispararPagamento(input.files[0]); }; input.click(); };
+    document.getElementById('btnApenasBaixa').onclick = async () => { fecharModais(); await dispararPagamento(null); };
+    const dispararPagamento = async (file) => { const cardNode = document.getElementById(`conta-card-${contaEmFocoId}`); if(cardNode) { cardNode.style.transition = "all 0.3s"; cardNode.style.opacity = "0"; setTimeout(() => cardNode.remove(), 300); } const formData = new FormData(); if(file) formData.append('comprovante', file); await fetch(`/api/despesas/${contaEmFocoId}/pagar`, { method: 'POST', body: formData }); };
+
+    document.addEventListener("DOMContentLoaded", carregarVariaveis);
+</script>
+{% endblock %}
+
+

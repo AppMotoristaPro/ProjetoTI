@@ -60,32 +60,33 @@ def init_db():
         cur.execute(query_push)
         cur.execute(query_caixinhas)
         
+        # Colunas antigas premium
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS recorrente BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS parcela_atual INT DEFAULT 1;")
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS total_parcelas INT DEFAULT 1;")
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS observacao TEXT;")
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS icone_svg VARCHAR(50) DEFAULT 'geral';")
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS fonte_pagamento VARCHAR(50);")
-        
         cur.execute("ALTER TABLE rendas ADD COLUMN IF NOT EXISTS fonte VARCHAR(50) DEFAULT 'Geral';")
         
-        # Injeção forçada: Auto-cura para o erro da coluna faltante nas Caixinhas
+        # NOVAS COLUNAS DA VERSÃO 2.0 (Tipo de despesa e Lote)
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS tipo_despesa VARCHAR(20) DEFAULT 'Variável';")
+        cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS grupo_id VARCHAR(50);")
+
         try:
             cur.execute("ALTER TABLE caixinhas ADD COLUMN icone_svg VARCHAR(50) DEFAULT 'geral';")
-        except Exception as e:
-            pass # Se a coluna já existir, ele ignora o erro e segue o baile
-
+        except Exception: pass 
         try:
             cur.execute("ALTER TABLE rendas DROP CONSTRAINT IF EXISTS rendas_usuario_mes_ano_key;")
             cur.execute("ALTER TABLE rendas ADD CONSTRAINT rendas_usuario_fonte_mes_ano_key UNIQUE (usuario, fonte, mes, ano);")
-        except Exception as e:
-            pass
+        except Exception: pass
         
         conn.commit()
         cur.close()
-        print("✅ Estrutura Big Tech atualizada com sucesso no Neon!")
+        print("✅ Banco v2.0 atualizado com sucesso no Neon!")
     except Exception as e:
         print(f"❌ Erro ao inicializar o banco: {e}")
     finally:
         conn.close()
+
 
