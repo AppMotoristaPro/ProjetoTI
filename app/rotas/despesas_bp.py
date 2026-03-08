@@ -9,6 +9,25 @@ despesas_bp = Blueprint('despesas', __name__)
 def hoje_br():
     return (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).date()
 
+# --- ARQUIVOS PWA (INSTALAÇÃO APP) ---
+@despesas_bp.route('/manifest.json')
+def manifest():
+    return jsonify({
+        "name": "Despesas T&I",
+        "short_name": "Gestão T&I",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#f4f6f9",
+        "theme_color": "#4f46e5",
+        "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png", "sizes": "512x512", "type": "image/png"}]
+    })
+
+@despesas_bp.route('/sw.js')
+def sw():
+    js = "self.addEventListener('install', (e) => { self.skipWaiting(); }); self.addEventListener('fetch', (e) => { });"
+    return send_file(io.BytesIO(js.encode('utf-8')), mimetype='application/javascript')
+
+# --- TELAS V2.0 ---
 @despesas_bp.route('/', methods=['GET'])
 def home(): return render_template('dashboard/index.html')
 @despesas_bp.route('/historico', methods=['GET'])
@@ -22,7 +41,7 @@ def tela_fixas(): return render_template('despesas/fixas.html')
 @despesas_bp.route('/variaveis', methods=['GET'])
 def tela_variaveis(): return render_template('despesas/variaveis.html')
 
-# --- DESPESAS ---
+# --- DESPESAS API ---
 @despesas_bp.route('/api/despesas/nova', methods=['POST'])
 def nova_despesa():
     dados = request.form.to_dict()
@@ -50,7 +69,7 @@ def resumo():
     mes = int(request.args.get('mes', hoje.month)); ano = int(request.args.get('ano', hoje.year))
     return jsonify(DespesaRepository.obter_resumo(mes, ano)), 200
 
-# --- RENDAS CRUD ---
+# --- RENDAS API ---
 @despesas_bp.route('/api/rendas/lista', methods=['GET'])
 def listar_rendas():
     mes = request.args.get('mes'); ano = request.args.get('ano')
@@ -71,7 +90,7 @@ def alterar_renda(renda_id):
         if DespesaRepository.atualizar_renda(renda_id, request.json.get('valor')): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# --- CAIXINHAS E PAGAMENTOS ---
+# --- CAIXINHAS API ---
 @despesas_bp.route('/api/caixinhas', methods=['GET', 'POST'])
 def gerenciar_caixinhas():
     if request.method == 'GET': return jsonify(DespesaRepository.listar_caixinhas()), 200
@@ -94,6 +113,7 @@ def alterar_caixinha(caixinha_id):
         if DespesaRepository.atualizar_caixinha(caixinha_id, dados.get('nome'), dados.get('valor'), dados.get('icone_svg')): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
+# --- PAGAMENTOS API ---
 @despesas_bp.route('/api/despesas/<int:despesa_id>/pagar', methods=['POST'])
 def pagar_despesa(despesa_id):
     arquivo = request.files.get('comprovante')

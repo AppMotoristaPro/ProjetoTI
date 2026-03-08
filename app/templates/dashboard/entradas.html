@@ -17,7 +17,7 @@
 <div class="grid grid-cols-1 gap-4 mb-32" id="lista-entradas"></div>
 
 <!-- Modal Nova / Edição -->
-<div id="modalEntrada" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+<div id="modalEntrada" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="fecharModalEntrada()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 id="ent_titulo" class="text-lg font-black text-slate-800 mb-6">Lançar Receita</h3>
@@ -63,7 +63,7 @@
                         <div>
                             <p class="font-bold text-slate-800 text-sm">${r.fonte}</p>
                             <div class="flex gap-2 mt-0.5">
-                                <button onclick="abrirEditar(${r.id}, '${r.usuario}', '${r.fonte}', ${r.valor})" class="text-[9px] font-black uppercase text-indigo-500 hover:text-indigo-700">Editar</button>
+                                <button onclick="abrirEditar(${r.id}, '${r.usuario}', '${r.fonte}', ${r.valor})" class="text-[9px] font-black uppercase text-theme hover:opacity-70">Editar</button>
                                 <button onclick="excluirRenda(${r.id})" class="text-[9px] font-black uppercase text-red-500 hover:text-red-700">Excluir</button>
                             </div>
                         </div>
@@ -84,7 +84,6 @@
         document.getElementById('ent_titulo').innerText = `Editar: ${fnt}`;
         document.getElementById('entrada_id').value = id;
         document.getElementById('entrada_valor').value = val;
-        // Esconde usuário e fonte na edição para não desorganizar o banco
         document.getElementById('box_usu').classList.add('hidden'); document.getElementById('box_fnt').classList.add('hidden');
         document.getElementById('modalEntrada').classList.remove('hidden');
     };

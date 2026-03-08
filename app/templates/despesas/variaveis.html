@@ -17,7 +17,7 @@
 <p class="text-[10px] text-slate-400 uppercase tracking-widest text-center mb-2 animate-pulse">Deslize a conta para a direita para pagar ➡</p>
 <div class="space-y-4 mb-32" id="lista-variaveis"></div>
 
-<div id="modalNovaVar" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+<div id="modalNovaVar" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-8">
         <button onclick="document.getElementById('modalNovaVar').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-lg font-black text-slate-800 mb-6">Conta Variável</h3>
@@ -27,7 +27,7 @@
             <div>
                 <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Categoria</label>
                 <select name="categoria" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700">
-                    <option value="ALIANÇA">Aliança</option><option value="OBOTICARIO">Oboticário</option><option value="RENEGOCIAÇÃO FACULDADE">Renegociação Faculdade</option><option value="IMOBILIÁRIA">Imobiliária</option><option value="CARTÃO DE CREDITO">Cartão de Crédito</option><option value="Outros">Outros</option>
+                    <option value="Aliança">Aliança</option><option value="O Boticário">O Boticário</option><option value="Renegociação Faculdade">Renegociação Faculdade</option><option value="Imobiliária">Imobiliária</option><option value="Cartão de Crédito">Cartão de Crédito</option><option value="Outros">Outros</option>
                 </select>
             </div>
             <div class="flex gap-2">
@@ -39,10 +39,7 @@
                 <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Quem Paga?</label><select name="responsavel_pagamento" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
             </div>
             <div class="p-3 rounded-2xl bg-orange-50 border border-orange-100">
-                <div class="flex items-center gap-2 mb-2">
-                    <input type="checkbox" id="recorrente" name="recorrente" value="true" onchange="toggleParcelas()" class="w-4 h-4 accent-orange-500">
-                    <label for="recorrente" class="text-xs font-bold text-orange-800">É Parcelado?</label>
-                </div>
+                <div class="flex items-center gap-2 mb-2"><input type="checkbox" id="recorrente" name="recorrente" value="true" onchange="toggleParcelas()" class="w-4 h-4 accent-orange-500"><label for="recorrente" class="text-xs font-bold text-orange-800">É Parcelado?</label></div>
                 <div id="box-parcelas" class="hidden flex gap-2 pt-2 border-t border-orange-200/50">
                     <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Parcela Atual</label><input type="number" name="parcela_atual" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
                     <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Total Meses</label><input type="number" name="total_parcelas" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
@@ -54,8 +51,7 @@
     </div>
 </div>
 
-<!-- ================= MODAIS DE DETALHES E EDIÇÃO ================= -->
-<div id="modalDetalhes" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
+<div id="modalDetalhes" class="hidden fixed inset-0 z-[70] flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 id="det_nome" class="text-xl font-black text-slate-800 mb-1 pr-8">--</h3>
@@ -73,7 +69,7 @@
     </div>
 </div>
 
-<div id="modalEditar" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+<div id="modalEditar" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-lg font-black text-slate-800 mb-4">Corrigir Conta</h3>
@@ -93,7 +89,7 @@
     </div>
 </div>
 
-<div id="modalPagamento" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+<div id="modalPagamento" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl text-center relative">
         <button onclick="fecharModais(); reverterCard(contaEmFocoId);" class="absolute top-4 right-4 text-slate-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-xl font-black text-slate-800 mb-6">Pagar Conta</h3>
@@ -167,8 +163,6 @@
         document.getElementById('det_vence').innerText = formatarData(dataV);
         document.getElementById('det_prev').innerText = dataP ? formatarData(dataP) : 'Não definida';
         document.getElementById('det_resp').innerText = resp;
-        document.getElementById('det_fonte').innerText = fonte;
-        document.getElementById('det_obs').innerText = obs || "Sem observações adicionais.";
         
         document.getElementById('btnEditarAbrir').onclick = () => {
             document.getElementById('edit_id').value = id; document.getElementById('edit_descricao').value = desc;

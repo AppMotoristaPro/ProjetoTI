@@ -4,92 +4,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#f4f6f9">
-    <title>Gestão TI v2.0</title>
+    <title>Despesas T&I</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
     
+    <script>
+        // MOTOR DE TEMA PESSOAL (Azul x Rosa) - Roda antes de renderizar para não piscar!
+        const temaSalvo = localStorage.getItem('app_theme') || 'blue';
+        document.documentElement.setAttribute('data-theme', temaSalvo);
+    </script>
+
     <style>
+        :root {
+            --bg-glass: rgba(255, 255, 255, 0.4);
+            --bg-header: rgba(244, 246, 249, 0.85);
+            /* TEMA AZUL (Igor) */
+            --color-primary: #4f46e5; /* indigo-600 */
+            --color-primary-light: #e0e7ff; /* indigo-100 */
+            --color-action: #ff8c00;
+            --grad-bg: radial-gradient(circle at 15% 20%, rgba(186, 155, 253, 0.4) 0%, transparent 50%), radial-gradient(circle at 85% 80%, rgba(138, 191, 255, 0.4) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(255, 179, 198, 0.3) 0%, transparent 60%);
+        }
+
+        [data-theme="pink"] {
+            /* TEMA ROSA/ROXO (Thay) */
+            --color-primary: #db2777; /* pink-600 */
+            --color-primary-light: #fce7f3; /* pink-100 */
+            --color-action: #9333ea; /* purple-600 */
+            --grad-bg: radial-gradient(circle at 15% 20%, rgba(244, 114, 182, 0.4) 0%, transparent 50%), radial-gradient(circle at 85% 80%, rgba(192, 132, 252, 0.4) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(251, 113, 133, 0.3) 0%, transparent 60%);
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f4f6f9;
-            background-image: 
-                radial-gradient(circle at 15% 20%, rgba(186, 155, 253, 0.4) 0%, transparent 50%), 
-                radial-gradient(circle at 85% 80%, rgba(138, 191, 255, 0.4) 0%, transparent 50%), 
-                radial-gradient(circle at 50% 50%, rgba(255, 179, 198, 0.3) 0%, transparent 60%);
+            background-image: var(--grad-bg);
             background-attachment: fixed;
             min-height: 100vh;
             color: #2d3748;
             padding-bottom: 120px; 
-            padding-top: 80px; /* Espaço para o Header Flutuante */
+            padding-top: 80px;
         }
         
         .ultra-glass {
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
+            background: var(--bg-glass);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.8);
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
         }
 
-        .btn-active { background: #ff8c00; box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3); }
+        .btn-active { background: var(--color-action); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); }
+        .text-theme { color: var(--color-primary); }
+        .bg-theme-light { background-color: var(--color-primary-light); color: var(--color-primary); }
+        
         ::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
         .speed-dial-menu { opacity: 0; transform: translateY(20px) scale(0.9); pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .speed-dial-menu.active { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
-
-        /* ANIMAÇÃO DO LIQUIDO (Progresso Mensal) */
-        .liquid-wrapper {
-            position: relative; width: 150px; height: 150px; border-radius: 50%; background: #f8fafc; 
-            border: 6px solid white; box-shadow: 0 10px 25px rgba(0,0,0,0.05), inset 0 6px 15px rgba(0,0,0,0.1); 
-            overflow: hidden; margin: 0 auto;
-        }
-        .liquid-wave {
-            position: absolute; width: 350px; height: 350px; background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%); 
-            left: -100px; top: var(--water-level, 100%); border-radius: 40%; 
-            animation: liquid-spin 6s infinite linear; transition: top 1.5s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0.9;
-        }
-        .liquid-wave::after {
-            content: ''; position: absolute; width: 350px; height: 350px; background: rgba(56, 189, 248, 0.5); 
-            left: 10px; top: -15px; border-radius: 43%; animation: liquid-spin 8s infinite linear;
-        }
-        @keyframes liquid-spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <!-- CABEÇALHO DO APP -->
-    <header class="fixed top-0 left-0 w-full pt-6 pb-4 px-4 text-center z-40 bg-[#f4f6f9]/80 backdrop-blur-md border-b border-white/50">
-        <h1 class="text-2xl font-black text-slate-800 tracking-tight">Despesas T&I 🫶</h1>
+    <!-- CABEÇALHO FIXO COM TROCADOR DE TEMA -->
+    <header style="background: var(--bg-header)" class="fixed top-0 left-0 w-full pt-6 pb-4 px-4 text-center z-50 backdrop-blur-md border-b border-white/50">
+        <h1 onclick="toggleTheme()" class="text-2xl font-black tracking-tight text-theme cursor-pointer active:scale-95 transition-transform">Despesas T&I 🫶</h1>
     </header>
 
     <main class="p-4 max-w-lg mx-auto relative z-10">
         {% block content %}{% endblock %}
     </main>
 
+    <!-- NAV BAR -->
     <nav class="fixed bottom-6 w-[92%] max-w-sm left-1/2 -translate-x-1/2 ultra-glass flex justify-between items-center px-4 py-3 z-50 rounded-[35px]">
-        <a href="/" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-indigo-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></div></a>
+        <a href="/" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></div></a>
 
         <div class="relative flex flex-col items-center group">
             <div id="speedDialMenu" class="speed-dial-menu absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col gap-3 pb-2 w-48 z-50">
                 <a href="/entradas" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">💰</span> Entradas</a>
-                <a href="/fixas" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">🏠</span> Contas Fixas</a>
+                <a href="/fixas" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-theme-light flex items-center justify-center">🏠</span> Contas Fixas</a>
                 <a href="/variaveis" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">💳</span> Variáveis</a>
             </div>
-            <button onclick="toggleSpeedDial()" class="p-2 rounded-xl transition-all active:scale-90 text-slate-500 hover:text-indigo-600 focus:outline-none"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg></button>
+            <button onclick="toggleSpeedDial()" class="p-2 rounded-xl transition-all active:scale-90 text-slate-500 hover:text-theme focus:outline-none"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg></button>
         </div>
 
         <button onclick="abrirModalDiaDia()" class="flex flex-col items-center relative z-50 active:scale-95 transition-transform focus:outline-none"><div class="btn-active w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white -mt-5"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div></button>
 
-        <a href="/caixinhas" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-indigo-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div></a>
-        <a href="/historico" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-indigo-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div></a>
+        <a href="/caixinhas" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div></a>
+        <a href="/historico" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div></a>
     </nav>
 
     <div id="speedDialOverlay" onclick="toggleSpeedDial()" class="fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] z-40 hidden transition-opacity opacity-0"></div>
 
-    <div id="modalDiaDia" class="hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div id="modalDiaDia" class="hidden fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 pb-24 transition-opacity">
         <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative animate-slide-up">
             <button onclick="fecharModalDiaDia()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
             <h3 class="text-lg font-black text-slate-800 mb-1">Gasto do Dia-a-Dia</h3>
@@ -100,23 +111,34 @@
                 <input type="hidden" name="pago" value="true">
                 <input type="hidden" id="diadia_vencimento" name="data_vencimento">
                 
-                <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">O que foi?</label><input type="text" name="descricao" placeholder="Ex: Café, Estacionamento..." class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none focus:border-indigo-400" required></div>
+                <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">O que foi?</label><input type="text" name="descricao" placeholder="Ex: Café, Estacionamento..." class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required></div>
                 <div class="flex gap-3">
-                    <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Valor</label><input type="number" step="0.01" name="valor" placeholder="0.00" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-black outline-none focus:border-indigo-400" required></div>
-                    <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Quem Pagou?</label><select name="responsavel_pagamento" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none focus:border-indigo-400" required><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+                    <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Valor</label><input type="number" step="0.01" name="valor" placeholder="0.00" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-black outline-none" required></div>
+                    <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Quem Pagou?</label><select name="responsavel_pagamento" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
                 </div>
                 <div>
                     <label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Categoria</label>
-                    <select name="categoria" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none focus:border-indigo-400" required>
+                    <select name="categoria" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required>
                         <option value="Besteira">Besteira</option><option value="Combustível">Combustível</option><option value="Lazer">Lazer</option><option value="Outros">Outros</option>
                     </select>
                 </div>
-                <button type="submit" id="btnSalvarDiaDia" class="w-full py-4 mt-2 bg-indigo-600 text-white rounded-2xl font-black tracking-widest active:scale-95 transition shadow-lg shadow-indigo-600/30">LANÇAR GASTO</button>
+                <button type="submit" id="btnSalvarDiaDia" class="w-full py-4 mt-2 btn-active text-white rounded-2xl font-black tracking-widest active:scale-95 transition">LANÇAR GASTO</button>
             </form>
         </div>
     </div>
 
     <script>
+        // PWA REGISTRATION
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+
+        // TROCADOR DE TEMA CLICÁVEL
+        function toggleTheme() {
+            let current = localStorage.getItem('app_theme') || 'blue';
+            let novo = current === 'blue' ? 'pink' : 'blue';
+            localStorage.setItem('app_theme', novo);
+            document.documentElement.setAttribute('data-theme', novo);
+        }
+
         const menu = document.getElementById('speedDialMenu');
         const overlay = document.getElementById('speedDialOverlay');
         let isSpeedDialOpen = false;
@@ -130,7 +152,13 @@
             }
         }
 
-        function abrirModalDiaDia() { document.getElementById('diadia_vencimento').value = new Date().toISOString().split('T')[0]; document.getElementById('modalDiaDia').classList.remove('hidden'); }
+        function abrirModalDiaDia() { 
+            // Pega o dia exato do celular local
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+            document.getElementById('diadia_vencimento').value = localISOTime; 
+            document.getElementById('modalDiaDia').classList.remove('hidden'); 
+        }
         function fecharModalDiaDia() { document.getElementById('modalDiaDia').classList.add('hidden'); }
 
         document.getElementById('formDiaDia').addEventListener('submit', async (e) => {

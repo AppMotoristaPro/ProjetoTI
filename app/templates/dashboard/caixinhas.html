@@ -12,35 +12,29 @@
     </button>
 </div>
 
-<div class="ultra-glass p-8 rounded-[35px] shadow-sm text-center mb-6">
-    <div class="w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-4 border border-white">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-    </div>
-    <p class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Potencial para Guardar</p>
-    <p id="saldo_disponivel" class="text-4xl font-black text-slate-800 mt-2">R$ 0,00</p>
-</div>
-
 <div id="lista-caixinhas" class="grid grid-cols-2 gap-4 pb-24"></div>
 
 <!-- Modal Depósito Rápido -->
-<div id="modalDepositar" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+<div id="modalDepositar" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative text-center">
         <button onclick="document.getElementById('modalDepositar').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-1">Depositar em</h3>
-        <p id="dep_nome_cx" class="text-xl font-black text-slate-800 mb-6">Viagem</p>
+        <h3 class="text-xs font-bold text-theme uppercase tracking-widest mb-1">Depositar em</h3>
+        <p id="dep_nome_cx" class="text-xl font-black text-slate-800 mb-2">Viagem</p>
+        <p class="text-[10px] text-slate-400 font-bold mb-6">Saldo Livre do Mês: <span id="dep_saldo_livre" class="text-emerald-500"></span></p>
         
         <input type="hidden" id="dep_id_cx">
-        <input type="number" id="dep_valor" step="0.01" placeholder="Quanto vai guardar hoje?" class="w-full p-4 mb-6 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-indigo-600 outline-none focus:border-indigo-400 text-center">
+        <input type="number" id="dep_valor" step="0.01" placeholder="Quanto vai guardar?" class="w-full p-4 mb-6 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-theme outline-none text-center">
         
         <button onclick="efetuarDeposito()" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Confirmar Depósito</button>
     </div>
 </div>
 
-<!-- Mantenha o modal de Criar/Editar Caixinha que já existe aqui! Omiti para caber no código, mas não apague o #modalCaixinha que fizemos na Fase 1 -->
-<div id="modalCaixinha" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+<div id="modalCaixinha" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="fecharModalCaixinha()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <h3 id="cx_titulo_modal" class="text-lg font-black text-slate-800 mb-6">Criar Caixinha</h3>
+        <h3 id="cx_titulo_modal" class="text-lg font-black text-slate-800 mb-2">Criar Caixinha</h3>
+        <p class="text-[10px] text-slate-400 font-bold mb-6">Saldo Livre do Mês: <span id="cx_saldo_livre" class="text-emerald-500"></span></p>
+
         <input type="hidden" id="cx_id_edit">
         <div class="space-y-4 mb-6">
             <div>
@@ -48,11 +42,12 @@
                 <div class="flex gap-2 justify-between">
                     <label class="cursor-pointer"><input type="radio" name="cx_icone" value="casa" class="peer hidden"><div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg></div></label>
                     <label class="cursor-pointer"><input type="radio" name="cx_icone" value="carro" class="peer hidden"><div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h8a2 2 0 012 2v2m-1 4a2 2 0 11-4 0 2 2 0 014 0zM7 15a2 2 0 11-4 0 2 2 0 014 0zm10-6h1m-1 0H7m11 0a2 2 0 012 2v2a2 2 0 01-2 2h-1m-4 0H7m-4 0a2 2 0 01-2-2V9a2 2 0 012-2h1m11 0l-3-4H8L5 7"></path></svg></div></label>
+                    <label class="cursor-pointer"><input type="radio" name="cx_icone" value="carrinho" class="peer hidden"><div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63-.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div></label>
                     <label class="cursor-pointer"><input type="radio" name="cx_icone" value="geral" class="peer hidden" checked><div class="w-10 h-10 rounded-xl bg-slate-50 border-2 border-transparent peer-checked:border-indigo-500 peer-checked:text-indigo-600 flex items-center justify-center text-slate-400 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div></label>
                 </div>
             </div>
             <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Nome do Objetivo</label><input type="text" id="nome_cx" class="w-full p-3 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"></div>
-            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor Inicial</label><input type="number" id="valor_cx" step="0.01" class="w-full p-3 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-indigo-600 outline-none text-center"></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor Inicial</label><input type="number" id="valor_cx" step="0.01" class="w-full p-3 mt-1 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-theme outline-none text-center"></div>
         </div>
         <div class="flex gap-2">
             <button id="btnExcluirCaixinha" onclick="deletarCaixinha()" class="hidden w-14 bg-red-50 text-red-500 items-center justify-center rounded-2xl hover:bg-red-100"><svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
@@ -70,7 +65,10 @@
         const resR = await fetch(`/api/resumo?mes=${d.getMonth() + 1}&ano=${d.getFullYear()}`);
         const resumo = await resR.json();
         saldoLivreTotal = resumo.saldo_final;
-        document.getElementById('saldo_disponivel').innerText = formatarMoeda(saldoLivreTotal);
+        
+        // Atualiza a dica nos modais
+        document.getElementById('dep_saldo_livre').innerText = formatarMoeda(saldoLivreTotal);
+        document.getElementById('cx_saldo_livre').innerText = formatarMoeda(saldoLivreTotal);
 
         const resC = await fetch('/api/caixinhas');
         const caixinhasAtuais = await resC.json();
@@ -82,11 +80,11 @@
             const nomeSafe = cx.nome.replace(/'/g, "\\'");
             container.innerHTML += `
                 <div class="p-5 ultra-glass rounded-[28px] border border-white/60 flex flex-col items-center justify-center text-center shadow-sm relative group">
-                    <button onclick="abrirModalEditarCaixinha(${cx.id}, '${nomeSafe}', ${cx.valor}, '${cx.icone_svg}')" class="absolute top-3 right-3 text-slate-300 hover:text-slate-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                    <div class="w-10 h-10 rounded-2xl bg-white/70 flex items-center justify-center text-indigo-600 shadow-inner mb-2">💰</div>
+                    <button onclick="abrirModalEditarCaixinha(${cx.id}, '${nomeSafe}', ${cx.valor}, '${cx.icone_svg}')" class="absolute top-3 right-3 text-slate-300 hover:text-theme"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                    <div class="w-10 h-10 rounded-2xl bg-white/70 flex items-center justify-center text-theme shadow-inner mb-2">💰</div>
                     <p class="font-bold text-slate-700 text-xs leading-tight w-full truncate">${cx.nome}</p>
-                    <p class="font-black text-indigo-600 text-sm mt-0.5">${formatarMoeda(cx.valor)}</p>
-                    <button onclick="abrirDepositar(${cx.id}, '${nomeSafe}')" class="mt-3 text-[9px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-50 px-3 py-1.5 rounded-lg active:scale-95 transition w-full">Depositar</button>
+                    <p class="font-black text-theme text-sm mt-0.5">${formatarMoeda(cx.valor)}</p>
+                    <button onclick="abrirDepositar(${cx.id}, '${nomeSafe}')" class="mt-3 text-[9px] font-black uppercase tracking-widest text-theme bg-theme-light px-3 py-1.5 rounded-lg active:scale-95 transition w-full">Depositar</button>
                 </div>`;
         });
     };
@@ -116,7 +114,10 @@
     
     const salvarCaixinha = async () => {
         const id = document.getElementById('cx_id_edit').value;
-        await fetch(id ? `/api/caixinhas/${id}` : '/api/caixinhas', { method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome: document.getElementById('nome_cx').value, valor: parseFloat(document.getElementById('valor_cx').value), icone_svg: document.querySelector('input[name="cx_icone"]:checked').value})});
+        const v = parseFloat(document.getElementById('valor_cx').value) || 0;
+        if(v > saldoLivreTotal && !id) return alert(`Atenção: Você tem apenas ${formatarMoeda(saldoLivreTotal)} livre para guardar!`);
+        
+        await fetch(id ? `/api/caixinhas/${id}` : '/api/caixinhas', { method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome: document.getElementById('nome_cx').value, valor: v, icone_svg: document.querySelector('input[name="cx_icone"]:checked').value})});
         fecharModalCaixinha(); carregarTudo();
     };
 
@@ -125,5 +126,6 @@
     document.addEventListener("DOMContentLoaded", carregarTudo);
 </script>
 {% endblock %}
+
 
 

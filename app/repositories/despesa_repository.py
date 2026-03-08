@@ -50,7 +50,6 @@ class DespesaRepository:
                 comp_mime = mimetype if i == 0 else None
                 status_pago = str(dados.get('pago', 'false')).lower() == 'true' if i == 0 else False
                 
-                # Se for diária e for paga na hora, já carimba a data
                 data_pagamento = datetime.date.today() if status_pago else None
                 
                 query = """
@@ -68,9 +67,7 @@ class DespesaRepository:
             conn.commit()
             cur.close()
             return True
-        except Exception as e: 
-            print(f"Erro ao criar despesa: {e}")
-            return False
+        except Exception as e: return False
         finally: conn.close()
 
     @staticmethod
@@ -99,13 +96,13 @@ class DespesaRepository:
             return resultados
         finally: conn.close()
 
-    # --- NOVO CRUD RENDAS ---
+    # --- BUG FIX: O erro nas Rendas foi solucionado aqui ---
     @staticmethod
     def listar_rendas_detalhadas(mes, ano):
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            cur.execute("SELECT id, usuario, fonte, valor FROM rendas WHERE mes=%s AND ano=%s ORDER BY id")
+            cur.execute("SELECT id, usuario, fonte, valor FROM rendas WHERE mes=%s AND ano=%s ORDER BY id", (mes, ano))
             colunas = [desc[0] for desc in cur.description]
             return [dict(zip(colunas, row)) for row in cur.fetchall()]
         finally: conn.close()
@@ -148,7 +145,6 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # --- MATEMÁTICA REAL SALDO LIVRE ---
     @staticmethod
     def obter_resumo(mes, ano):
         conn = get_db_connection()
@@ -165,22 +161,18 @@ class DespesaRepository:
             renda_thaynara = sum(rendas_detalhadas['Thaynara'].values())
             total_renda = renda_igor + renda_thaynara
             
-            # Busca Pendentes para os Cards Rápidos
             cur.execute("SELECT responsavel_pagamento, SUM(valor) FROM despesas WHERE EXTRACT(MONTH FROM data_vencimento) = %s AND EXTRACT(YEAR FROM data_vencimento) = %s AND pago = FALSE GROUP BY responsavel_pagamento", (mes, ano))
             pendentes = {row[0]: float(row[1]) for row in cur.fetchall()}
             total_pendente = pendentes.get('Igor', 0.0) + pendentes.get('Thaynara', 0.0)
             
-            # MATEMÁTICA NOVA: Pega TODAS as despesas do mês (Pagas + Pendentes + Diárias)
             cur.execute("SELECT SUM(valor) FROM despesas WHERE EXTRACT(MONTH FROM data_vencimento) = %s AND EXTRACT(YEAR FROM data_vencimento) = %s", (mes, ano))
             res_desp = cur.fetchone()
             total_todas_despesas_mes = float(res_desp[0]) if res_desp and res_desp[0] else 0.0
             
-            # MATEMÁTICA NOVA: Pega APENAS o depositado no Mês Vigente
             cur.execute("SELECT SUM(valor) FROM depositos_caixinhas WHERE mes = %s AND ano = %s", (mes, ano))
             res_cx = cur.fetchone()
             total_caixinhas_mes = float(res_cx[0]) if res_cx and res_cx[0] else 0.0
             
-            # Saldo Final Real = Renda - TUDO que gastou/vai gastar no mês - TUDO que guardou no mês
             saldo_final = total_renda - total_todas_despesas_mes - total_caixinhas_mes
             
             cur.close()
@@ -262,7 +254,6 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # --- CAIXINHAS MENSAIS ---
     @staticmethod
     def listar_caixinhas():
         conn = get_db_connection()
@@ -311,7 +302,7 @@ class DespesaRepository:
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            query = "UPDATE caixinhas SET nome = %s, icone_svg = %s WHERE id = %s" # Valor só atualiza via deposito agora!
+            query = "UPDATE caixinhas SET nome = %s, icone_svg = %s WHERE id = %s"
             cur.execute(query, (nome, icone_svg, caixinha_id))
             conn.commit()
             return True
