@@ -19,7 +19,12 @@ def manifest():
         "display": "standalone",
         "background_color": "#f4f6f9",
         "theme_color": "#4f46e5",
-        "icons": [{"src": "/static/icons/icone.png", "sizes": "512x512", "type": "image/png"}]
+        "icons": [{
+            "src": "/static/icons/icone.png", 
+            "sizes": "512x512", 
+            "type": "image/png",
+            "purpose": "any maskable"
+        }]
     })
 
 @despesas_bp.route('/sw.js')
