@@ -21,7 +21,7 @@
 <p class="text-[10px] text-slate-400 uppercase tracking-widest text-center mb-2 animate-pulse">Deslize a conta para a direita para pagar ➡</p>
 <div class="space-y-4 mb-24" id="lista-variaveis"></div>
 
-<div id="modalNovaVar" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+<div id="modalNovaVar" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
         <button onclick="document.getElementById('modalNovaVar').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-lg font-black text-slate-800 mb-6">Conta Variável</h3>
@@ -58,6 +58,48 @@
             <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Observações</label><textarea name="observacao" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm"></textarea></div>
 
             <button type="submit" id="btnSalvarVar" class="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold active:scale-95 transition shadow-lg shadow-orange-500/30">Guardar Conta</button>
+        </form>
+    </div>
+</div>
+
+<!-- ================= MODAIS DE DETALHES E EDIÇÃO ================= -->
+<div id="modalDetalhes" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="det_nome" class="text-xl font-black text-slate-800 mb-1 pr-8">--</h3>
+        <p id="det_parcela" class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-6">--</p>
+        
+        <div class="space-y-4 mb-6">
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Valor</span><span id="det_valor" class="text-sm font-black text-slate-800">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Vencimento</span><span id="det_vence" class="text-sm font-bold text-orange-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Data Prevista</span><span id="det_prev" class="text-sm font-bold text-indigo-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Responsável</span><span id="det_resp" class="text-sm font-bold text-slate-800">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Pago Com:</span><span id="det_fonte" class="text-sm font-bold text-emerald-600">--</span></div>
+            <div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1">Observações</span>
+                <p id="det_obs" class="text-xs font-medium text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed min-h-[50px]"></p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnEditarAbrir" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200">Editar</button>
+            <button id="btnExcluirAtivo" class="w-14 bg-red-50 text-red-500 flex items-center justify-center rounded-2xl hover:bg-red-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        </div>
+    </div>
+</div>
+
+<div id="modalEditar" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-4">Corrigir Conta</h3>
+        <form id="formEditar" class="space-y-3">
+            <input type="hidden" id="edit_id">
+            <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Descrição</label><input type="text" id="edit_descricao" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium" required></div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Valor</label><input type="number" step="0.01" id="edit_valor" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-bold" required></div>
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Vencimento</label><input type="date" id="edit_data" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 text-sm" required></div>
+            </div>
+            <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Responsável</label><select id="edit_responsavel" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            <button type="submit" class="w-full py-4 mt-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Alterações</button>
         </form>
     </div>
 </div>
@@ -99,11 +141,16 @@
         if(varsGlobais.length === 0) { cont.innerHTML = `<div class="text-center py-8 ultra-glass rounded-3xl"><p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Tudo em dia!</p></div>`; return; }
 
         varsGlobais.forEach(x => {
+            const descSafe = x.descricao.replace(/'/g, "\\'");
+            const obsSafe = (x.observacao || "").replace(/'/g, "\\'").replace(/\n/g, " ");
+            const fonteSafe = (x.fonte_pagamento || "Geral");
             const badgeParcela = x.total_parcelas > 1 ? `<p class="text-[10px] text-orange-600 font-black tracking-widest uppercase mt-0.5">Parcela ${x.parcela_atual}/${x.total_parcelas}</p>` : '';
+            
             cont.innerHTML += `
                 <div id="conta-card-${x.id}" class="relative rounded-[28px] shadow-sm overflow-hidden swipe-container bg-transparent">
                     <div class="swipe-bg absolute inset-0 bg-emerald-500 flex items-center pl-6 text-white font-black text-lg z-0" style="opacity: 0; transition: opacity 0.1s;">PAGO</div>
-                    <div class="swipe-card relative z-10 ultra-glass p-5 rounded-[28px] flex justify-between items-center cursor-pointer border border-white/50" data-id="${x.id}">
+                    <div class="swipe-card relative z-10 ultra-glass p-5 rounded-[28px] flex justify-between items-center cursor-pointer border border-white/50" data-id="${x.id}"
+                         onclick="if(!isSwiping) abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas})">
                         <div class="flex items-start gap-3 w-[70%] pointer-events-none">
                             <div class="w-10 h-10 mt-1 rounded-xl bg-white/70 flex items-center justify-center text-orange-500 shadow-sm border border-white">💳</div>
                             <div class="truncate flex-1">
@@ -130,14 +177,62 @@
         e.target.reset(); carregarVariaveis();
     });
 
-    // --- SWIPE TO PAY --- (Cópia exata da inteligência Fixas)
+    // --- RAIO-X DETALHES E EXCLUSÃO ---
+    const fecharModais = () => { 
+        document.querySelectorAll('[id^="modal"]').forEach(m => {
+            if(m.id !== 'modalNovaVar') m.classList.add('hidden');
+        }); 
+    };
+
+    const abrirModalDetalhes = (id, desc, valor, dataV, dataP, resp, fonte, obs, p_atual, t_parc) => {
+        document.getElementById('det_nome').innerText = desc;
+        document.getElementById('det_parcela').innerText = t_parc > 1 ? `Parcela ${p_atual} de ${t_parc}` : 'Conta Variável / Única';
+        document.getElementById('det_valor').innerText = formatarMoeda(valor);
+        document.getElementById('det_vence').innerText = formatarData(dataV);
+        document.getElementById('det_prev').innerText = dataP ? formatarData(dataP) : 'Não definida';
+        document.getElementById('det_resp').innerText = resp;
+        document.getElementById('det_fonte').innerText = fonte;
+        document.getElementById('det_obs').innerText = obs || "Sem observações adicionais.";
+        
+        document.getElementById('btnEditarAbrir').onclick = () => {
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_descricao').value = desc;
+            document.getElementById('edit_valor').value = valor;
+            document.getElementById('edit_data').value = dataV;
+            document.getElementById('edit_responsavel').value = resp;
+            document.getElementById('modalEditar').classList.remove('hidden');
+        };
+
+        document.getElementById('btnExcluirAtivo').onclick = async () => {
+            let params = '';
+            if (t_parc > 1) {
+                const excTodas = confirm("Esta é uma conta com parcelas. Deseja excluir TODAS as parcelas futuras desta conta?\n\n[OK] = Excluir TODAS as parcelas\n[Cancelar] = Excluir SÓ ESTA");
+                if (excTodas) params = '?todas=true';
+            } else {
+                if(!confirm("Confirmar exclusão desta conta?")) return;
+            }
+            
+            await fetch(`/api/despesas/${id}${params}`, { method: 'DELETE' });
+            fecharModais(); carregarVariaveis();
+        };
+
+        document.getElementById('modalDetalhes').classList.remove('hidden');
+    };
+
+    document.getElementById('formEditar').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dados = { descricao: document.getElementById('edit_descricao').value, valor: parseFloat(document.getElementById('edit_valor').value), data_vencimento: document.getElementById('edit_data').value, responsavel_pagamento: document.getElementById('edit_responsavel').value };
+        await fetch(`/api/despesas/${document.getElementById('edit_id').value}/editar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+        fecharModais(); carregarVariaveis();
+    });
+
+    // --- SWIPE TO PAY ---
     let isSwiping = false, startX = 0, currentX = 0, swipeTarget = null, swipeBg = null;
     document.addEventListener('touchstart', e => { const card = e.target.closest('.swipe-card'); if(!card) return; swipeTarget = card; swipeBg = card.previousElementSibling; startX = e.touches[0].clientX; card.style.transition = 'none'; if(swipeBg) swipeBg.style.transition = 'none'; isSwiping = false; }, {passive: true});
     document.addEventListener('touchmove', e => { if(!swipeTarget) return; currentX = e.touches[0].clientX - startX; if(currentX > 10) isSwiping = true; if(currentX > 0) { swipeTarget.style.transform = `translateX(${currentX}px)`; if (swipeBg) swipeBg.style.opacity = Math.min(currentX / 100, 1); } }, {passive: true});
     document.addEventListener('touchend', () => { if(!swipeTarget) return; swipeTarget.style.transition = 'transform 0.3s ease'; if (swipeBg) swipeBg.style.transition = 'opacity 0.3s ease'; if(currentX > 100) { swipeTarget.style.transform = `translateX(150%)`; if(swipeBg) swipeBg.style.opacity = '1'; contaEmFocoId = swipeTarget.getAttribute('data-id'); setTimeout(() => document.getElementById('modalPagamento').classList.remove('hidden'), 250); } else { reverterCard(swipeTarget.getAttribute('data-id')); } setTimeout(() => { swipeTarget = null; swipeBg = null; currentX = 0; isSwiping = false; }, 300); });
     const reverterCard = (id) => { const card = document.querySelector(`.swipe-card[data-id="${id}"]`); if(card) { card.style.transform = `translateX(0px)`; if(card.previousElementSibling) card.previousElementSibling.style.opacity = '0'; } };
     
-    const fecharModais = () => document.getElementById('modalPagamento').classList.add('hidden');
     document.getElementById('btnAnexarRecibo').onclick = () => { const input = document.getElementById('fileComprovante'); input.value = ''; input.onchange = async () => { fecharModais(); await dispararPagamento(input.files[0]); }; input.click(); };
     document.getElementById('btnApenasBaixa').onclick = async () => { fecharModais(); await dispararPagamento(null); };
     const dispararPagamento = async (file) => { const cardNode = document.getElementById(`conta-card-${contaEmFocoId}`); if(cardNode) { cardNode.style.transition = "all 0.3s"; cardNode.style.opacity = "0"; setTimeout(() => cardNode.remove(), 300); } const formData = new FormData(); if(file) formData.append('comprovante', file); await fetch(`/api/despesas/${contaEmFocoId}/pagar`, { method: 'POST', body: formData }); };
@@ -145,5 +240,6 @@
     document.addEventListener("DOMContentLoaded", carregarVariaveis);
 </script>
 {% endblock %}
+
 
 

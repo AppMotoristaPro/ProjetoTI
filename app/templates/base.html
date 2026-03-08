@@ -106,6 +106,7 @@
 
     <div id="speedDialOverlay" onclick="toggleSpeedDial()" class="fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] z-40 hidden transition-opacity opacity-0"></div>
 
+    <!-- MODAL DIA A DIA -->
     <div id="modalDiaDia" class="hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 pb-24 transition-opacity">
         <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative animate-slide-up">
             <button onclick="fecharModalDiaDia()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
@@ -114,6 +115,8 @@
             
             <form id="formDiaDia" class="space-y-4">
                 <input type="hidden" name="tipo_despesa" value="Diária">
+                <!-- Comando invisível: O gasto do dia-a-dia já entra PAGO -->
+                <input type="hidden" name="pago" value="true">
                 <input type="hidden" id="diadia_vencimento" name="data_vencimento">
                 
                 <div>
@@ -188,8 +191,10 @@
                 if (res.ok) {
                     fecharModalDiaDia();
                     e.target.reset();
+                    // Como agora ele é pago automaticamente, avisamos e recarregamos onde estivermos
                     if (typeof carregarDashboard === "function") { carregarDashboard(); } 
-                    else { window.location.href = '/'; }
+                    else if (typeof carregarH === "function") { carregarH(); }
+                    else { window.location.reload(); }
                 } else {
                     alert("Erro ao salvar o gasto diário.");
                 }
