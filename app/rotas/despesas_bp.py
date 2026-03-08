@@ -19,7 +19,7 @@ def manifest():
         "display": "standalone",
         "background_color": "#f4f6f9",
         "theme_color": "#4f46e5",
-        "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png", "sizes": "512x512", "type": "image/png"}]
+        "icons": [{"src": "/static/icons/icone.png", "sizes": "512x512", "type": "image/png"}]
     })
 
 @despesas_bp.route('/sw.js')
@@ -147,6 +147,4 @@ def deletar_despesa(despesa_id):
 def editar_despesa(despesa_id):
     if DespesaRepository.atualizar(despesa_id, request.json): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
-
-
 
