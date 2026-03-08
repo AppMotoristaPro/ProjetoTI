@@ -15,7 +15,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
     
     <script>
-        // MOTOR DE TEMA PESSOAL (Azul x Rosa) - Roda antes de renderizar para não piscar!
         const temaSalvo = localStorage.getItem('app_theme') || 'blue';
         document.documentElement.setAttribute('data-theme', temaSalvo);
     </script>
@@ -25,23 +24,23 @@
             --bg-glass: rgba(255, 255, 255, 0.4);
             --bg-header: rgba(244, 246, 249, 0.85);
             /* TEMA AZUL (Igor) */
-            --color-primary: #4f46e5; /* indigo-600 */
-            --color-primary-light: #e0e7ff; /* indigo-100 */
+            --color-primary: #4f46e5;
+            --color-primary-light: #e0e7ff;
             --color-action: #ff8c00;
             --grad-bg: radial-gradient(circle at 15% 20%, rgba(186, 155, 253, 0.4) 0%, transparent 50%), radial-gradient(circle at 85% 80%, rgba(138, 191, 255, 0.4) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(255, 179, 198, 0.3) 0%, transparent 60%);
         }
 
         [data-theme="pink"] {
             /* TEMA ROSA/ROXO (Thay) */
-            --color-primary: #db2777; /* pink-600 */
-            --color-primary-light: #fce7f3; /* pink-100 */
-            --color-action: #9333ea; /* purple-600 */
+            --color-primary: #db2777;
+            --color-primary-light: #fce7f3;
+            --color-action: #9333ea;
             --grad-bg: radial-gradient(circle at 15% 20%, rgba(244, 114, 182, 0.4) 0%, transparent 50%), radial-gradient(circle at 85% 80%, rgba(192, 132, 252, 0.4) 0%, transparent 50%), radial-gradient(circle at 50% 50%, rgba(251, 113, 133, 0.3) 0%, transparent 60%);
         }
 
-        /* Classes para alternar elementos por tema dinamicamente */
-        [data-theme="pink"] .show-on-blue { display: none !important; }
+        .show-on-blue { display: none !important; }
         [data-theme="blue"] .show-on-pink { display: none !important; }
+        [data-theme="blue"] .show-on-blue { display: block !important; }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -123,9 +122,10 @@
                         <option value="Besteira">Besteira</option>
                         <option value="Combustível">Combustível</option>
                         <option value="Farmácia">Farmácia</option>
-                        <option value="Lazer">Lazer</option>
                         <option value="Mercado">Mercado</option>
+                        <option value="Mercado Livre">Mercado Livre</option>
                         <option value="Restaurante">Restaurante</option>
+                        <option value="Shopee">Shopee</option>
                         <option value="Outros">Outros</option>
                     </select>
                 </div>
@@ -142,7 +142,6 @@
             let novo = current === 'blue' ? 'pink' : 'blue';
             localStorage.setItem('app_theme', novo);
             document.documentElement.setAttribute('data-theme', novo);
-            // Avisa os outros scripts (como o gráfico) que a cor mudou
             window.dispatchEvent(new Event('themeChanged'));
         }
 

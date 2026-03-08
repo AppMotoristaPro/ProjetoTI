@@ -214,9 +214,16 @@
                 if(abaAtual === 'Diária') {
                     const descSafe = x.descricao.replace(/'/g, "\\'");
                     
+                    // Ícones de Categorias Atualizados!
                     const icones = {
-                        'Combustível': '⛽', 'Mercado': '🛒', 'Farmácia': '💊',
-                        'Restaurante': '🍽️', 'Lazer': '🎬', 'Besteira': '🍫', 'Outros': '🏷️'
+                        'Combustível': '⛽',
+                        'Mercado': '🛒',
+                        'Farmácia': '💊',
+                        'Restaurante': '🍽️',
+                        'Shopee': '🛍️',
+                        'Mercado Livre': '📦',
+                        'Besteira': '🍫',
+                        'Outros': '🏷️'
                     };
                     const iconeCat = icones[x.categoria] || '☕'; 
 
@@ -259,7 +266,6 @@
         c.innerHTML = conteudoHtml;
     };
 
-    // --- Edição/Exclusão para Diárias ---
     const fecharModais = () => { document.getElementById('modalDetalhesDiaria').classList.add('hidden'); document.getElementById('modalEditarDiaria').classList.add('hidden'); };
     
     const abrirModalDiaria = (id, desc, valor, dataV, resp, dataExibicao) => {
