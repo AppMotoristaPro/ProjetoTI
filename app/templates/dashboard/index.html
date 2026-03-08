@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<!-- Cabeçalho & Controlo de Meses -->
 <div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
     <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-600 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
     <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
@@ -20,9 +19,7 @@
     </div>
 </div>
 
-<!-- ================= DASHBOARD DE GRÁFICOS ================= -->
 <div class="space-y-4 mb-6">
-    
     <!-- 1. Gráfico de Rosca: Pagos vs Pendentes -->
     <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50">
         <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Progresso Mensal</h3>
@@ -32,7 +29,7 @@
         </div>
     </div>
 
-    <!-- 2 e 3. Gráficos de Pizza: Rendas Detalhadas -->
+    <!-- 2 e 3. Gráficos de Pizza: Rendas -->
     <div class="grid grid-cols-2 gap-3">
         <div class="ultra-glass p-4 rounded-[28px] shadow-sm border border-white/50">
             <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center text-indigo-500">Rendas Igor</h3>
@@ -48,17 +45,25 @@
         </div>
     </div>
 
-    <!-- 4. Gráfico de Barras: Categorias -->
+    <!-- 4. Novo Gráfico: Distribuição Diário vs Fixo vs Variável -->
+    <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50">
+        <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Distribuição de Gastos</h3>
+        <div class="relative h-48 w-full flex justify-center">
+            <canvas id="chartTiposDespesa"></canvas>
+            <div id="chartTiposEmpty" class="hidden absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sem Gastos</div>
+        </div>
+    </div>
+
+    <!-- 5. Gráfico de Barras: Categorias -->
     <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50">
         <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Gastos por Categoria</h3>
         <div class="relative h-56 w-full">
             <canvas id="chartCategorias"></canvas>
         </div>
     </div>
-
 </div>
 
-<!-- ================= CALENDÁRIO INTELIGENTE ================= -->
+<!-- CALENDÁRIO INTELIGENTE -->
 <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50 mb-10">
     <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Calendário de Vencimentos</h3>
     
@@ -66,20 +71,16 @@
         <div class="text-red-400">DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div>
     </div>
     
-    <div id="calendar-grid" class="grid grid-cols-7 gap-1.5">
-        <!-- Preenchido via JS -->
-    </div>
+    <div id="calendar-grid" class="grid grid-cols-7 gap-1.5"></div>
 </div>
 
-<!-- ================= MODAL DO CALENDÁRIO ================= -->
+<!-- Modal do Calendário -->
 <div id="modalCalendarioDia" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="fecharModalCalendario()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 id="modal_cal_data" class="text-sm font-black text-indigo-600 uppercase tracking-widest mb-4">--/--/----</h3>
         
-        <div id="lista_contas_dia" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-            <!-- Preenchido via JS -->
-        </div>
+        <div id="lista_contas_dia" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1"></div>
     </div>
 </div>
 
@@ -87,16 +88,18 @@
     let currentData = new Date(); 
     let despesasGlobais = [];
     
-    // Variáveis globais dos gráficos para podermos destruí-los ao mudar o mês
+    // Objetos dos gráficos
     let chartDespesasObj = null;
     let chartRendaIgorObj = null;
     let chartRendaThayObj = null;
+    let chartTiposObj = null;
     let chartCatObj = null;
+
+    Chart.register(ChartDataLabels);
 
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
     
-    // Pega a data mais exata para o calendário e ordenação
     const getDataBase = (x) => x.data_pretensao ? x.data_pretensao : x.data_vencimento;
 
     const atualizarDisplayMes = () => {
@@ -112,29 +115,34 @@
         const ano = currentData.getFullYear();
 
         try {
-            // 1. Busca os Dados
             const resResumo = await fetch(`/api/resumo?mes=${mes}&ano=${ano}`);
             const resumo = await resResumo.json();
             
             const resDespesas = await fetch(`/api/despesas?mes=${mes}&ano=${ano}`);
             despesasGlobais = await resDespesas.json();
 
-            // 2. Atualiza Cards Rápidos
             document.getElementById('saldo_final').innerText = formatarMoeda(resumo.saldo_final);
             document.getElementById('total_pendente').innerText = formatarMoeda(resumo.total_pendente);
 
-            // 3. Renderiza a Inteligência Visual
             renderizarGraficos(resumo, despesasGlobais);
             renderizarCalendario(despesasGlobais);
 
         } catch(e) { console.error("Erro ao carregar dashboard:", e); }
     };
 
-    // ================= MOTOR DOS GRÁFICOS (CHART.JS) =================
     const renderizarGraficos = (resumo, despesas) => {
         Chart.defaults.color = '#64748b';
         Chart.defaults.font.family = "'Inter', sans-serif";
         Chart.defaults.font.weight = 'bold';
+
+        // Configuração padrão dos labels que ficarão em cima do gráfico
+        const datalabelsDefault = {
+            color: '#fff',
+            font: { weight: 'bold', size: 10 },
+            formatter: (val) => val > 0 ? 'R$ ' + Math.round(val) : '',
+            textShadowColor: 'rgba(0,0,0,0.5)',
+            textShadowBlur: 4
+        };
 
         // 1. Gráfico Rosca (Pagos vs Pendentes)
         let totalPago = despesas.filter(d => d.pago).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
@@ -161,8 +169,11 @@
                     }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '75%',
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } }
+                    responsive: true, maintainAspectRatio: false, cutout: '65%',
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } },
+                        datalabels: datalabelsDefault
+                    }
                 }
             });
         }
@@ -179,7 +190,7 @@
                     borderWidth: 0
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: datalabelsDefault } }
         });
 
         // 3. Gráficos Pizza (Rendas Thay)
@@ -194,14 +205,48 @@
                     borderWidth: 0
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: datalabelsDefault } }
         });
 
-        // 4. Gráfico Barra (Categorias)
+        // 4. NOVO: Distribuição de Despesas (Fixa vs Variável vs Dia)
+        let tFixa = despesas.filter(d => d.tipo_despesa === 'Fixa').reduce((a,c) => a + parseFloat(c.valor), 0);
+        let tVar = despesas.filter(d => d.tipo_despesa === 'Variável').reduce((a,c) => a + parseFloat(c.valor), 0);
+        let tDia = despesas.filter(d => d.tipo_despesa === 'Diária').reduce((a,c) => a + parseFloat(c.valor), 0);
+
+        if (chartTiposObj) chartTiposObj.destroy();
+        const ctxTipos = document.getElementById('chartTiposDespesa');
+        
+        if(tFixa === 0 && tVar === 0 && tDia === 0) {
+            ctxTipos.style.display = 'none';
+            document.getElementById('chartTiposEmpty').classList.remove('hidden');
+        } else {
+            ctxTipos.style.display = 'block';
+            document.getElementById('chartTiposEmpty').classList.add('hidden');
+            chartTiposObj = new Chart(ctxTipos, {
+                type: 'pie',
+                data: {
+                    labels: ['Fixas', 'Variáveis', 'Dia-a-Dia'],
+                    datasets: [{
+                        data: [tFixa, tVar, tDia],
+                        backgroundColor: ['rgba(99, 102, 241, 0.8)', 'rgba(249, 115, 22, 0.8)', 'rgba(236, 72, 153, 0.8)'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } },
+                        datalabels: datalabelsDefault
+                    }
+                }
+            });
+        }
+
+        // 5. Gráfico Barra (Categorias)
         const catMap = {};
         despesas.forEach(d => { catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); });
         
-        // Ordena do maior pro menor
         const categoriasOrdenadas = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
         const catLabels = categoriasOrdenadas.map(c => c[0]);
         const catData = categoriasOrdenadas.map(c => c[1]);
@@ -225,7 +270,16 @@
                     y: { display: false, grid: {display: false} },
                     x: { grid: {display: false}, border: {display: false} }
                 },
-                plugins: { legend: { display: false } }
+                plugins: { 
+                    legend: { display: false },
+                    datalabels: {
+                        color: '#64748b',
+                        anchor: 'end',
+                        align: 'top',
+                        font: { weight: 'bold', size: 9 },
+                        formatter: (val) => val > 0 ? 'R$ ' + Math.round(val) : ''
+                    }
+                }
             }
         });
     };
@@ -243,19 +297,19 @@
         const hojeObj = new Date();
         const isMesAtual = hojeObj.getMonth() === mes && hojeObj.getFullYear() === ano;
         
-        // Espaços vazios antes do dia 1
+        // REGRA APLICADA: Remover despesas 'Diárias' do Calendário!
+        const despesasParaCalendario = despesas.filter(d => d.tipo_despesa !== 'Diária');
+
         for (let i = 0; i < primeiroDia; i++) {
             grid.innerHTML += `<div></div>`;
         }
         
-        // Construção dos dias
         for (let dia = 1; dia <= diasNoMes; dia++) {
             const dataStr = `${ano}-${String(mes+1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
             
-            // Procura contas neste dia (Baseada na Pretensão se tiver, senão Vencimento)
-            const contasDoDia = despesas.filter(d => getDataBase(d) === dataStr);
+            const contasDoDia = despesasParaCalendario.filter(d => getDataBase(d) === dataStr);
             
-            let dotHtml = '<div class="w-1.5 h-1.5 mt-1"></div>'; // Espaço vazio pra alinhar
+            let dotHtml = '<div class="w-1.5 h-1.5 mt-1"></div>';
             if (contasDoDia.length > 0) {
                 const todasPagas = contasDoDia.every(c => c.pago);
                 const corDot = todasPagas ? 'bg-emerald-400' : 'bg-orange-500 animate-pulse';
@@ -274,9 +328,9 @@
         }
     };
 
-    // Modal do Dia Específico
     const abrirModalCalendario = (dataStr) => {
-        const contasDoDia = despesasGlobais.filter(d => getDataBase(d) === dataStr);
+        // Tira as diárias do modal também
+        const contasDoDia = despesasGlobais.filter(d => d.tipo_despesa !== 'Diária' && getDataBase(d) === dataStr);
         
         const dataFormatada = formatarData(dataStr) + '/' + dataStr.split('-')[0];
         document.getElementById('modal_cal_data').innerText = `Dia ${dataFormatada}`;
@@ -292,7 +346,7 @@
                     ? `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-emerald-100 text-emerald-700">PAGO</span>` 
                     : `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-orange-100 text-orange-700">PENDENTE</span>`;
                 
-                const iconeInfo = conta.tipo_despesa === 'Fixa' ? '🏠' : (conta.tipo_despesa === 'Diária' ? '☕' : '💳');
+                const iconeInfo = conta.tipo_despesa === 'Fixa' ? '🏠' : '💳';
 
                 container.innerHTML += `
                     <div class="p-4 bg-slate-50 border border-slate-100 rounded-[20px] flex justify-between items-center">
@@ -321,5 +375,6 @@
     document.addEventListener("DOMContentLoaded", carregarDashboard);
 </script>
 {% endblock %}
+
 
 
