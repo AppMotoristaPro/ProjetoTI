@@ -7,99 +7,106 @@
     <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-600 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
 </div>
 
-<!-- Cards Rápidos -->
+<!-- Cards Rápidos Clicáveis -->
 <div class="grid grid-cols-2 gap-3 mb-6">
-    <div class="ultra-glass p-5 rounded-[28px] shadow-sm border border-white/60">
-        <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Saldo Livre</p>
+    <div onclick="abrirExplicacaoSaldo()" class="ultra-glass p-5 rounded-[28px] shadow-sm border border-white/60 cursor-pointer active:scale-95 transition">
+        <div class="flex justify-between items-center mb-1">
+            <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Saldo Livre</p>
+            <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
         <p id="saldo_final" class="text-xl font-black text-indigo-600">R$ 0,00</p>
     </div>
-    <div class="ultra-glass p-5 rounded-[28px] shadow-sm border border-white/60">
-        <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Pendente</p>
+    <div onclick="abrirResumoPendentes()" class="ultra-glass p-5 rounded-[28px] shadow-sm border border-white/60 cursor-pointer active:scale-95 transition">
+        <div class="flex justify-between items-center mb-1">
+            <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Pendente</p>
+            <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+        </div>
         <p id="total_pendente" class="text-xl font-black text-orange-500">R$ 0,00</p>
     </div>
 </div>
 
 <div class="space-y-4 mb-6">
-    <!-- 1. Gráfico de Rosca: Pagos vs Pendentes -->
-    <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50">
-        <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Progresso Mensal</h3>
-        <div class="relative h-48 w-full flex justify-center">
-            <canvas id="chartDespesas"></canvas>
-            <div id="chartDespesasEmpty" class="hidden absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sem Despesas</div>
+    <!-- 1. Animação da Bolha de Líquido -->
+    <div class="ultra-glass p-6 rounded-[32px] shadow-sm border border-white/50 text-center">
+        <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-6">Progresso do Mês</h3>
+        <div class="liquid-wrapper">
+            <div id="liquid-wave" class="liquid-wave"></div>
+            <div class="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Restante</span>
+                <span class="text-xl font-black text-slate-800 drop-shadow-md" id="liquid-valor">R$ 0,00</span>
+            </div>
         </div>
     </div>
 
-    <!-- 2 e 3. Gráficos de Pizza: Rendas -->
+    <!-- 2 e 3. Gráficos de Pizza Neon -->
     <div class="grid grid-cols-2 gap-3">
         <div class="ultra-glass p-4 rounded-[28px] shadow-sm border border-white/50">
             <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center text-indigo-500">Rendas Igor</h3>
-            <div class="relative h-32 w-full">
-                <canvas id="chartRendaIgor"></canvas>
-            </div>
+            <div class="relative h-36 w-full"><canvas id="chartRendaIgor"></canvas></div>
         </div>
         <div class="ultra-glass p-4 rounded-[28px] shadow-sm border border-white/50">
             <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center text-pink-500">Rendas Thay</h3>
-            <div class="relative h-32 w-full">
-                <canvas id="chartRendaThay"></canvas>
-            </div>
+            <div class="relative h-36 w-full"><canvas id="chartRendaThay"></canvas></div>
         </div>
     </div>
 
-    <!-- 4. Novo Gráfico: Distribuição Diário vs Fixo vs Variável -->
+    <!-- 4. Distribuição -->
     <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50">
         <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Distribuição de Gastos</h3>
-        <div class="relative h-48 w-full flex justify-center">
-            <canvas id="chartTiposDespesa"></canvas>
-            <div id="chartTiposEmpty" class="hidden absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sem Gastos</div>
-        </div>
+        <div class="relative h-56 w-full flex justify-center"><canvas id="chartTiposDespesa"></canvas></div>
     </div>
 
-    <!-- 5. Gráfico de Barras: Categorias -->
+    <!-- 5. Categorias Horizontais -->
     <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50">
         <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Gastos por Categoria</h3>
-        <div class="relative h-56 w-full">
-            <canvas id="chartCategorias"></canvas>
-        </div>
+        <div class="relative h-64 w-full"><canvas id="chartCategorias"></canvas></div>
     </div>
 </div>
 
 <!-- CALENDÁRIO INTELIGENTE -->
 <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50 mb-10">
     <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Calendário de Vencimentos</h3>
-    
-    <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-black text-slate-400 mb-2">
-        <div class="text-red-400">DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div>
-    </div>
-    
+    <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-black text-slate-400 mb-2"><div class="text-red-400">DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div></div>
     <div id="calendar-grid" class="grid grid-cols-7 gap-1.5"></div>
 </div>
 
-<!-- Modal do Calendário -->
+<!-- ================= MODAIS DE EXPLICAÇÃO ================= -->
+<div id="modalExplicaSaldo" class="hidden fixed inset-0 z-50 flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div class="w-full max-w-sm mx-auto bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="document.getElementById('modalExplicaSaldo').classList.add('hidden')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-4">Matemática do Saldo</h3>
+        <div class="space-y-3 font-bold text-sm">
+            <div class="flex justify-between text-emerald-600"><span>(+) Renda Total do Mês</span><span id="math_renda"></span></div>
+            <div class="flex justify-between text-red-500"><span>(-) Despesas (Todas)</span><span id="math_desp"></span></div>
+            <div class="flex justify-between text-indigo-500 border-b border-slate-100 pb-3"><span>(-) Guardado nas Caixinhas</span><span id="math_cx"></span></div>
+            <div class="flex justify-between text-slate-800 pt-1 font-black text-lg"><span>= Saldo Livre</span><span id="math_saldo"></span></div>
+        </div>
+    </div>
+</div>
+
+<div id="modalPendenteLista" class="hidden fixed inset-0 z-50 flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div class="w-full max-w-sm mx-auto bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[80vh] overflow-y-auto">
+        <button onclick="document.getElementById('modalPendenteLista').classList.add('hidden')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-6">Contas Pendentes</h3>
+        <div id="lista_detalhe_pendentes" class="space-y-2"></div>
+    </div>
+</div>
+
 <div id="modalCalendarioDia" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
-        <button onclick="fecharModalCalendario()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <button onclick="document.getElementById('modalCalendarioDia').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 id="modal_cal_data" class="text-sm font-black text-indigo-600 uppercase tracking-widest mb-4">--/--/----</h3>
-        
         <div id="lista_contas_dia" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1"></div>
     </div>
 </div>
 
 <script>
-    let currentData = new Date(); 
-    let despesasGlobais = [];
-    
-    // Objetos dos gráficos
-    let chartDespesasObj = null;
-    let chartRendaIgorObj = null;
-    let chartRendaThayObj = null;
-    let chartTiposObj = null;
-    let chartCatObj = null;
-
+    let currentData = new Date(); let despesasGlobais = []; let resumoGlobal = null;
+    let chartRendaIgorObj = null; let chartRendaThayObj = null; let chartTiposObj = null; let chartCatObj = null;
     Chart.register(ChartDataLabels);
 
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
-    
     const getDataBase = (x) => x.data_pretensao ? x.data_pretensao : x.data_vencimento;
 
     const atualizarDisplayMes = () => {
@@ -111,265 +118,143 @@
 
     const carregarDashboard = async () => {
         atualizarDisplayMes();
-        const mes = currentData.getMonth() + 1;
-        const ano = currentData.getFullYear();
-
         try {
-            const resResumo = await fetch(`/api/resumo?mes=${mes}&ano=${ano}`);
-            const resumo = await resResumo.json();
-            
-            const resDespesas = await fetch(`/api/despesas?mes=${mes}&ano=${ano}`);
+            const resResumo = await fetch(`/api/resumo?mes=${currentData.getMonth()+1}&ano=${currentData.getFullYear()}`);
+            resumoGlobal = await resResumo.json();
+            const resDespesas = await fetch(`/api/despesas?mes=${currentData.getMonth()+1}&ano=${currentData.getFullYear()}`);
             despesasGlobais = await resDespesas.json();
 
-            document.getElementById('saldo_final').innerText = formatarMoeda(resumo.saldo_final);
-            document.getElementById('total_pendente').innerText = formatarMoeda(resumo.total_pendente);
+            document.getElementById('saldo_final').innerText = formatarMoeda(resumoGlobal.saldo_final);
+            document.getElementById('total_pendente').innerText = formatarMoeda(resumoGlobal.total_pendente);
 
-            renderizarGraficos(resumo, despesasGlobais);
+            renderizarLíquido(resumoGlobal, despesasGlobais);
+            renderizarGraficos(resumoGlobal, despesasGlobais);
             renderizarCalendario(despesasGlobais);
+        } catch(e) { console.error(e); }
+    };
 
-        } catch(e) { console.error("Erro ao carregar dashboard:", e); }
+    // Física da Água (Progresso)
+    const renderizarLíquido = (resumo, despesas) => {
+        const tPagas = despesas.filter(d => d.pago).reduce((a,c) => a + parseFloat(c.valor), 0);
+        const tPendentes = despesas.filter(d => !d.pago).reduce((a,c) => a + parseFloat(c.valor), 0);
+        const total = tPagas + tPendentes;
+        
+        let pctPendente = total > 0 ? (tPendentes / total) * 100 : 0;
+        // Na nossa matemática css, 100% top = vazio, 0% top = cheio.
+        // Se falta pagar muito (pctPendente alto), a água está alta (top perto de 0).
+        let topWater = 100 - (pctPendente * 0.9); // *0.9 pra água não transbordar da tela
+        if(total === 0) topWater = 100;
+        
+        document.getElementById('liquid-wave').style.setProperty('--water-level', `${topWater}%`);
+        document.getElementById('liquid-valor').innerText = formatarMoeda(tPendentes);
     };
 
     const renderizarGraficos = (resumo, despesas) => {
-        Chart.defaults.color = '#64748b';
-        Chart.defaults.font.family = "'Inter', sans-serif";
-        Chart.defaults.font.weight = 'bold';
+        Chart.defaults.color = '#64748b'; Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.font.weight = 'bold';
+        const dlOpt = { color: '#fff', font: { weight: 'bold', size: 10 }, formatter: (v) => v > 0 ? 'R$ ' + Math.round(v) : '', textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 5 };
+        const coresNeonIgor = ['#00E5FF', '#FF007F', '#00FF00', '#FFFF00'];
+        const coresNeonThay = ['#FF007F', '#00E5FF', '#FFFF00', '#00FF00'];
 
-        // Configuração padrão dos labels que ficarão em cima do gráfico
-        const datalabelsDefault = {
-            color: '#fff',
-            font: { weight: 'bold', size: 10 },
-            formatter: (val) => val > 0 ? 'R$ ' + Math.round(val) : '',
-            textShadowColor: 'rgba(0,0,0,0.5)',
-            textShadowBlur: 4
-        };
-
-        // 1. Gráfico Rosca (Pagos vs Pendentes)
-        let totalPago = despesas.filter(d => d.pago).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
-        let totalPendente = despesas.filter(d => !d.pago).reduce((acc, curr) => acc + parseFloat(curr.valor), 0);
-        
-        if (chartDespesasObj) chartDespesasObj.destroy();
-        const ctxDesp = document.getElementById('chartDespesas');
-        
-        if(totalPago === 0 && totalPendente === 0) {
-            ctxDesp.style.display = 'none';
-            document.getElementById('chartDespesasEmpty').classList.remove('hidden');
-        } else {
-            ctxDesp.style.display = 'block';
-            document.getElementById('chartDespesasEmpty').classList.add('hidden');
-            chartDespesasObj = new Chart(ctxDesp, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Pago', 'Pendente'],
-                    datasets: [{
-                        data: [totalPago, totalPendente],
-                        backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(249, 115, 22, 0.8)'],
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '65%',
-                    plugins: { 
-                        legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } },
-                        datalabels: datalabelsDefault
-                    }
-                }
-            });
-        }
-
-        // 2. Gráficos Pizza (Rendas Igor)
         if (chartRendaIgorObj) chartRendaIgorObj.destroy();
         chartRendaIgorObj = new Chart(document.getElementById('chartRendaIgor'), {
             type: 'pie',
             data: {
                 labels: Object.keys(resumo.detalhes_igor).length ? Object.keys(resumo.detalhes_igor) : ['Nenhuma'],
-                datasets: [{
-                    data: Object.values(resumo.detalhes_igor).length ? Object.values(resumo.detalhes_igor) : [1],
-                    backgroundColor: ['rgba(99, 102, 241, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(56, 189, 248, 0.8)', '#e2e8f0'],
-                    borderWidth: 0
-                }]
+                datasets: [{ data: Object.values(resumo.detalhes_igor).length ? Object.values(resumo.detalhes_igor) : [1], backgroundColor: coresNeonIgor, borderWidth: 0 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: datalabelsDefault } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: {boxWidth: 8, font: {size: 9}} }, datalabels: dlOpt } }
         });
 
-        // 3. Gráficos Pizza (Rendas Thay)
         if (chartRendaThayObj) chartRendaThayObj.destroy();
         chartRendaThayObj = new Chart(document.getElementById('chartRendaThay'), {
             type: 'pie',
             data: {
                 labels: Object.keys(resumo.detalhes_thaynara).length ? Object.keys(resumo.detalhes_thaynara) : ['Nenhuma'],
-                datasets: [{
-                    data: Object.values(resumo.detalhes_thaynara).length ? Object.values(resumo.detalhes_thaynara) : [1],
-                    backgroundColor: ['rgba(236, 72, 153, 0.8)', 'rgba(244, 63, 94, 0.8)', 'rgba(217, 70, 239, 0.8)', '#e2e8f0'],
-                    borderWidth: 0
-                }]
+                datasets: [{ data: Object.values(resumo.detalhes_thaynara).length ? Object.values(resumo.detalhes_thaynara) : [1], backgroundColor: coresNeonThay, borderWidth: 0 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: datalabelsDefault } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: {boxWidth: 8, font: {size: 9}} }, datalabels: dlOpt } }
         });
 
-        // 4. NOVO: Distribuição de Despesas (Fixa vs Variável vs Dia)
         let tFixa = despesas.filter(d => d.tipo_despesa === 'Fixa').reduce((a,c) => a + parseFloat(c.valor), 0);
         let tVar = despesas.filter(d => d.tipo_despesa === 'Variável').reduce((a,c) => a + parseFloat(c.valor), 0);
         let tDia = despesas.filter(d => d.tipo_despesa === 'Diária').reduce((a,c) => a + parseFloat(c.valor), 0);
+        let tCx = resumo.total_caixinhas_mes; // Adicionado Caixinha no Gráfico!
 
         if (chartTiposObj) chartTiposObj.destroy();
-        const ctxTipos = document.getElementById('chartTiposDespesa');
-        
-        if(tFixa === 0 && tVar === 0 && tDia === 0) {
-            ctxTipos.style.display = 'none';
-            document.getElementById('chartTiposEmpty').classList.remove('hidden');
-        } else {
-            ctxTipos.style.display = 'block';
-            document.getElementById('chartTiposEmpty').classList.add('hidden');
-            chartTiposObj = new Chart(ctxTipos, {
-                type: 'pie',
-                data: {
-                    labels: ['Fixas', 'Variáveis', 'Dia-a-Dia'],
-                    datasets: [{
-                        data: [tFixa, tVar, tDia],
-                        backgroundColor: ['rgba(99, 102, 241, 0.8)', 'rgba(249, 115, 22, 0.8)', 'rgba(236, 72, 153, 0.8)'],
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } },
-                        datalabels: datalabelsDefault
-                    }
-                }
-            });
-        }
+        chartTiposObj = new Chart(document.getElementById('chartTiposDespesa'), {
+            type: 'pie',
+            data: {
+                labels: ['Fixas', 'Variáveis', 'Dia-a-Dia', 'Cofre (Mês)'],
+                datasets: [{ data: [tFixa, tVar, tDia, tCx], backgroundColor: ['#4f46e5', '#f97316', '#ec4899', '#10b981'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } }, datalabels: dlOpt } }
+        });
 
-        // 5. Gráfico Barra (Categorias)
-        const catMap = {};
-        despesas.forEach(d => { catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); });
-        
-        const categoriasOrdenadas = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
-        const catLabels = categoriasOrdenadas.map(c => c[0]);
-        const catData = categoriasOrdenadas.map(c => c[1]);
+        // Gráfico Barra (Horizontal)
+        const catMap = {}; despesas.forEach(d => { catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); });
+        const catsOrd = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
 
         if (chartCatObj) chartCatObj.destroy();
         chartCatObj = new Chart(document.getElementById('chartCategorias'), {
             type: 'bar',
             data: {
-                labels: catLabels.length ? catLabels : ['Nenhuma'],
-                datasets: [{
-                    label: 'Gastos R$',
-                    data: catData.length ? catData : [0],
-                    backgroundColor: 'rgba(99, 102, 241, 0.6)',
-                    borderRadius: 8,
-                    barThickness: 20
-                }]
+                labels: catsOrd.map(c => c[0]).length ? catsOrd.map(c => c[0]) : ['Nenhuma'],
+                datasets: [{ data: catsOrd.map(c => c[1]).length ? catsOrd.map(c => c[1]) : [0], backgroundColor: '#8b5cf6', borderRadius: 6 }]
             },
             options: {
+                indexAxis: 'y', // BARRA DEITADA
                 responsive: true, maintainAspectRatio: false,
-                scales: { 
-                    y: { display: false, grid: {display: false} },
-                    x: { grid: {display: false}, border: {display: false} }
-                },
-                plugins: { 
-                    legend: { display: false },
-                    datalabels: {
-                        color: '#64748b',
-                        anchor: 'end',
-                        align: 'top',
-                        font: { weight: 'bold', size: 9 },
-                        formatter: (val) => val > 0 ? 'R$ ' + Math.round(val) : ''
-                    }
-                }
+                scales: { x: { display: false, grid: {display: false} }, y: { grid: {display: false}, border: {display: false} } },
+                plugins: { legend: { display: false }, datalabels: { color: '#64748b', anchor: 'end', align: 'right', formatter: (v) => v>0 ? 'R$ '+Math.round(v) : '' } }
             }
         });
     };
 
-    // ================= MOTOR DO CALENDÁRIO =================
     const renderizarCalendario = (despesas) => {
-        const grid = document.getElementById('calendar-grid');
-        grid.innerHTML = '';
+        const grid = document.getElementById('calendar-grid'); grid.innerHTML = '';
+        const ano = currentData.getFullYear(), mes = currentData.getMonth();
+        const primeiroDia = new Date(ano, mes, 1).getDay(), diasNoMes = new Date(ano, mes + 1, 0).getDate();
+        const hojeObj = new Date(); const isMesAtual = hojeObj.getMonth() === mes && hojeObj.getFullYear() === ano;
         
-        const ano = currentData.getFullYear();
-        const mes = currentData.getMonth();
-        
-        const primeiroDia = new Date(ano, mes, 1).getDay();
-        const diasNoMes = new Date(ano, mes + 1, 0).getDate();
-        const hojeObj = new Date();
-        const isMesAtual = hojeObj.getMonth() === mes && hojeObj.getFullYear() === ano;
-        
-        // REGRA APLICADA: Remover despesas 'Diárias' do Calendário!
-        const despesasParaCalendario = despesas.filter(d => d.tipo_despesa !== 'Diária');
-
-        for (let i = 0; i < primeiroDia; i++) {
-            grid.innerHTML += `<div></div>`;
-        }
-        
+        const despFiltradas = despesas.filter(d => d.tipo_despesa !== 'Diária');
+        for (let i = 0; i < primeiroDia; i++) grid.innerHTML += `<div></div>`;
         for (let dia = 1; dia <= diasNoMes; dia++) {
             const dataStr = `${ano}-${String(mes+1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-            
-            const contasDoDia = despesasParaCalendario.filter(d => getDataBase(d) === dataStr);
-            
+            const contasDoDia = despFiltradas.filter(d => getDataBase(d) === dataStr);
             let dotHtml = '<div class="w-1.5 h-1.5 mt-1"></div>';
-            if (contasDoDia.length > 0) {
-                const todasPagas = contasDoDia.every(c => c.pago);
-                const corDot = todasPagas ? 'bg-emerald-400' : 'bg-orange-500 animate-pulse';
-                dotHtml = `<div class="w-1.5 h-1.5 rounded-full ${corDot} mx-auto mt-1 shadow-sm"></div>`;
-            }
-            
-            const isHoje = isMesAtual && dia === hojeObj.getDate();
-            const bgClass = isHoje ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/40' : 'bg-white/40 text-slate-700 border border-white/50 hover:bg-white/80';
-            
-            grid.innerHTML += `
-                <div onclick="abrirModalCalendario('${dataStr}')" class="flex flex-col items-center justify-center p-2 rounded-xl cursor-pointer transition active:scale-90 ${bgClass}">
-                    <span class="text-xs font-bold">${dia}</span>
-                    ${dotHtml}
-                </div>
-            `;
+            if (contasDoDia.length > 0) dotHtml = `<div class="w-1.5 h-1.5 rounded-full ${contasDoDia.every(c => c.pago) ? 'bg-emerald-400' : 'bg-orange-500 animate-pulse'} mx-auto mt-1 shadow-sm"></div>`;
+            const bgClass = isMesAtual && dia === hojeObj.getDate() ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/40 text-slate-700 hover:bg-white/80 border border-white/50';
+            grid.innerHTML += `<div onclick="abrirModalCalendario('${dataStr}')" class="flex flex-col items-center justify-center p-2 rounded-xl cursor-pointer transition active:scale-90 ${bgClass}"><span class="text-xs font-bold">${dia}</span>${dotHtml}</div>`;
         }
     };
 
     const abrirModalCalendario = (dataStr) => {
-        // Tira as diárias do modal também
         const contasDoDia = despesasGlobais.filter(d => d.tipo_despesa !== 'Diária' && getDataBase(d) === dataStr);
-        
-        const dataFormatada = formatarData(dataStr) + '/' + dataStr.split('-')[0];
-        document.getElementById('modal_cal_data').innerText = `Dia ${dataFormatada}`;
-        
-        const container = document.getElementById('lista_contas_dia');
-        container.innerHTML = '';
-
-        if (contasDoDia.length === 0) {
-            container.innerHTML = `<div class="text-center py-6"><p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Sem compromissos</p></div>`;
-        } else {
-            contasDoDia.forEach(conta => {
-                const statusBadge = conta.pago 
-                    ? `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-emerald-100 text-emerald-700">PAGO</span>` 
-                    : `<span class="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-orange-100 text-orange-700">PENDENTE</span>`;
-                
-                const iconeInfo = conta.tipo_despesa === 'Fixa' ? '🏠' : '💳';
-
-                container.innerHTML += `
-                    <div class="p-4 bg-slate-50 border border-slate-100 rounded-[20px] flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-xs">${iconeInfo}</div>
-                            <div>
-                                <p class="text-sm font-bold text-slate-800 leading-tight">${conta.descricao}</p>
-                                <p class="text-[9px] font-semibold text-slate-500 mt-0.5">${conta.responsavel_pagamento} • ${conta.categoria}</p>
-                            </div>
-                        </div>
-                        <div class="flex flex-col items-end gap-1">
-                            <p class="font-black text-slate-800">${formatarMoeda(conta.valor)}</p>
-                            ${statusBadge}
-                        </div>
-                    </div>`;
-            });
-        }
-        
+        document.getElementById('modal_cal_data').innerText = `Dia ${formatarData(dataStr)}/${dataStr.split('-')[0]}`;
+        const cont = document.getElementById('lista_contas_dia'); cont.innerHTML = '';
+        if (contasDoDia.length === 0) cont.innerHTML = `<div class="text-center py-6"><p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Sem compromissos</p></div>`;
+        else contasDoDia.forEach(c => {
+            cont.innerHTML += `<div class="p-4 bg-slate-50 border border-slate-100 rounded-[20px] flex justify-between items-center"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-xs">${c.tipo_despesa === 'Fixa' ? '🏠' : '💳'}</div><div><p class="text-sm font-bold text-slate-800 leading-tight">${c.descricao}</p><p class="text-[9px] font-semibold text-slate-500 mt-0.5">${c.responsavel_pagamento} • ${c.categoria}</p></div></div><div class="flex flex-col items-end gap-1"><p class="font-black text-slate-800">${formatarMoeda(c.valor)}</p><span class="px-2 py-0.5 rounded text-[8px] font-black uppercase ${c.pago ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">${c.pago ? 'PAGO' : 'PENDENTE'}</span></div></div>`;
+        });
         document.getElementById('modalCalendarioDia').classList.remove('hidden');
     };
 
-    const fecharModalCalendario = () => {
-        document.getElementById('modalCalendarioDia').classList.add('hidden');
+    const abrirExplicacaoSaldo = () => {
+        document.getElementById('math_renda').innerText = formatarMoeda(resumoGlobal.total_renda);
+        document.getElementById('math_desp').innerText = formatarMoeda(resumoGlobal.total_despesas_mes);
+        document.getElementById('math_cx').innerText = formatarMoeda(resumoGlobal.total_caixinhas_mes);
+        document.getElementById('math_saldo').innerText = formatarMoeda(resumoGlobal.saldo_final);
+        document.getElementById('modalExplicaSaldo').classList.remove('hidden');
+    };
+
+    const abrirResumoPendentes = () => {
+        const cont = document.getElementById('lista_detalhe_pendentes'); cont.innerHTML = '';
+        const pendentes = despesasGlobais.filter(x => !x.pago);
+        if(pendentes.length === 0) cont.innerHTML = "<p class='text-center text-xs text-slate-400 font-bold py-4'>Tudo pago! 🎉</p>";
+        else pendentes.forEach(p => {
+            cont.innerHTML += `<div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0"><span class="text-xs font-bold text-slate-600 truncate pr-2">${p.descricao}</span><span class="text-xs font-black text-orange-500 whitespace-nowrap">${formatarMoeda(p.valor)}</span></div>`;
+        });
+        document.getElementById('modalPendenteLista').classList.remove('hidden');
     };
 
     document.addEventListener("DOMContentLoaded", carregarDashboard);

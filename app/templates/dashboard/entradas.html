@@ -2,14 +2,10 @@
 {% block content %}
 <div class="mb-8 flex items-center justify-between">
     <div class="flex items-center gap-4">
-        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-        </a>
+        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg></a>
         <h2 class="text-xl font-black text-slate-800 tracking-tight">Entradas</h2>
     </div>
-    <button onclick="abrirModalNovaEntrada()" class="btn-active w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg active:scale-95 transition">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-    </button>
+    <button onclick="abrirModalNovaEntrada()" class="btn-active w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg active:scale-95 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
 </div>
 
 <div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
@@ -18,112 +14,105 @@
     <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-emerald-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
 </div>
 
-<div class="grid grid-cols-1 gap-4 mb-24" id="lista-entradas">
-    <div class="text-center py-10"><p class="text-slate-500 font-bold animate-pulse">A carregar...</p></div>
-</div>
+<div class="grid grid-cols-1 gap-4 mb-32" id="lista-entradas"></div>
 
-<!-- Modal Nova Entrada -->
-<div id="modalNovaEntrada" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
+<!-- Modal Nova / Edição -->
+<div id="modalEntrada" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
-        <button onclick="fecharModalNovaEntrada()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <h3 class="text-lg font-black text-slate-800 mb-6">Lançar Receita</h3>
+        <button onclick="fecharModalEntrada()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="ent_titulo" class="text-lg font-black text-slate-800 mb-6">Lançar Receita</h3>
         
+        <input type="hidden" id="entrada_id">
         <div class="space-y-4 mb-6">
-            <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">De quem é?</label>
-                <select id="entrada_usuario" onchange="atualizarFontesRenda()" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-emerald-400 text-slate-700">
-                    <option value="Igor" selected>Igor</option>
-                    <option value="Thaynara">Thaynara</option>
-                </select>
-            </div>
-            <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Tipo de Entrada</label>
-                <select id="entrada_fonte" class="w-full p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 font-bold outline-none focus:border-emerald-400 text-emerald-700"></select>
-            </div>
-            <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Valor</label>
-                <input type="number" id="entrada_valor" step="0.01" placeholder="0.00" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-slate-800 outline-none focus:border-emerald-400">
-            </div>
+            <div id="box_usu"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">De quem é?</label><select id="entrada_usuario" onchange="atualizarFontesRenda()" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"><option value="Igor" selected>Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            <div id="box_fnt"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Tipo de Entrada</label><select id="entrada_fonte" class="w-full p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 font-bold outline-none text-emerald-700"></select></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Valor</label><input type="number" id="entrada_valor" step="0.01" placeholder="0.00" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl outline-none focus:border-emerald-400"></div>
         </div>
-        <button onclick="salvarEntrada()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold active:scale-95 transition shadow-lg shadow-emerald-500/30">Adicionar Entrada</button>
+        <button onclick="salvarEntrada()" class="w-full py-4 bg-emerald-500 text-white rounded-2xl font-bold active:scale-95 transition shadow-lg shadow-emerald-500/30">Salvar Entrada</button>
     </div>
 </div>
 
 <script>
     let currentData = new Date();
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const atualizarDisplayMes = () => {
-        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-        document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
-    };
     const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarEntradas(); };
 
-    const fontes = {
-        'Igor': ['Shopee', 'Uber'],
-        'Thaynara': ['Salário', 'VR', 'VA', 'Ajuda de Custo']
-    };
-
+    const fontes = { 'Igor': ['Shopee', 'Uber'], 'Thaynara': ['Salário', 'VR', 'VA', 'Ajuda de Custo'] };
     function atualizarFontesRenda() {
         const usu = document.getElementById('entrada_usuario').value;
-        const sel = document.getElementById('entrada_fonte');
-        sel.innerHTML = '';
+        const sel = document.getElementById('entrada_fonte'); sel.innerHTML = '';
         fontes[usu].forEach(f => sel.innerHTML += `<option value="${f}">${f}</option>`);
     }
 
     const carregarEntradas = async () => {
-        atualizarDisplayMes();
-        const m = currentData.getMonth() + 1, a = currentData.getFullYear();
-        const res = await fetch(`/api/resumo?mes=${m}&ano=${a}`);
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
+        
+        const res = await fetch(`/api/rendas/lista?mes=${currentData.getMonth()+1}&ano=${currentData.getFullYear()}`);
         const dados = await res.json();
+        const cont = document.getElementById('lista-entradas'); cont.innerHTML = '';
         
-        const cont = document.getElementById('lista-entradas');
-        cont.innerHTML = '';
+        if(dados.length === 0) { cont.innerHTML = `<div class="text-center py-8 ultra-glass rounded-3xl"><p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Sem receitas neste mês.</p></div>`; return; }
         
-        // Render Igor
-        Object.entries(dados.detalhes_igor).forEach(([fonte, valor]) => {
-            if(valor > 0) cont.innerHTML += criarCardEntrada('Igor', fonte, valor, 'bg-indigo-100 text-indigo-600');
+        dados.forEach(r => {
+            const bgClass = r.usuario === 'Igor' ? 'bg-indigo-100 text-indigo-600' : 'bg-pink-100 text-pink-600';
+            cont.innerHTML += `
+                <div class="p-5 ultra-glass rounded-[28px] border border-white/60 flex justify-between items-center shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl ${bgClass} flex items-center justify-center font-bold text-sm shadow-inner">${r.usuario.charAt(0)}</div>
+                        <div>
+                            <p class="font-bold text-slate-800 text-sm">${r.fonte}</p>
+                            <div class="flex gap-2 mt-0.5">
+                                <button onclick="abrirEditar(${r.id}, '${r.usuario}', '${r.fonte}', ${r.valor})" class="text-[9px] font-black uppercase text-indigo-500 hover:text-indigo-700">Editar</button>
+                                <button onclick="excluirRenda(${r.id})" class="text-[9px] font-black uppercase text-red-500 hover:text-red-700">Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="font-black text-emerald-600 text-lg">+ ${formatarMoeda(r.valor)}</p>
+                </div>`;
         });
-        // Render Thay
-        Object.entries(dados.detalhes_thaynara).forEach(([fonte, valor]) => {
-            if(valor > 0) cont.innerHTML += criarCardEntrada('Thaynara', fonte, valor, 'bg-pink-100 text-pink-600');
-        });
-        
-        if(cont.innerHTML === '') cont.innerHTML = `<div class="text-center py-8 ultra-glass rounded-3xl"><p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Sem receitas neste mês.</p></div>`;
     };
 
-    function criarCardEntrada(usu, fonte, valor, colorClass) {
-        return `
-            <div class="p-5 ultra-glass rounded-[28px] border border-white/60 flex justify-between items-center transition shadow-sm">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-2xl ${colorClass} flex items-center justify-center font-bold text-sm shadow-inner">${usu.charAt(0)}</div>
-                    <div>
-                        <p class="font-bold text-slate-800 text-sm">${fonte}</p>
-                        <p class="text-[9px] font-black text-slate-400 uppercase mt-0.5">${usu}</p>
-                    </div>
-                </div>
-                <p class="font-black text-emerald-600 text-lg">+ ${formatarMoeda(valor)}</p>
-            </div>`;
-    }
+    const abrirModalNovaEntrada = () => { 
+        document.getElementById('ent_titulo').innerText = "Lançar Receita";
+        document.getElementById('entrada_id').value = ''; document.getElementById('entrada_valor').value = '';
+        document.getElementById('box_usu').classList.remove('hidden'); document.getElementById('box_fnt').classList.remove('hidden');
+        atualizarFontesRenda(); document.getElementById('modalEntrada').classList.remove('hidden'); 
+    };
+    
+    const abrirEditar = (id, usu, fnt, val) => {
+        document.getElementById('ent_titulo').innerText = `Editar: ${fnt}`;
+        document.getElementById('entrada_id').value = id;
+        document.getElementById('entrada_valor').value = val;
+        // Esconde usuário e fonte na edição para não desorganizar o banco
+        document.getElementById('box_usu').classList.add('hidden'); document.getElementById('box_fnt').classList.add('hidden');
+        document.getElementById('modalEntrada').classList.remove('hidden');
+    };
 
-    const abrirModalNovaEntrada = () => { atualizarFontesRenda(); document.getElementById('modalNovaEntrada').classList.remove('hidden'); document.getElementById('entrada_valor').value = ''; };
-    const fecharModalNovaEntrada = () => document.getElementById('modalNovaEntrada').classList.add('hidden');
+    const fecharModalEntrada = () => document.getElementById('modalEntrada').classList.add('hidden');
 
     const salvarEntrada = async () => {
-        const v = parseFloat(document.getElementById('entrada_valor').value);
+        const id = document.getElementById('entrada_id').value; const v = parseFloat(document.getElementById('entrada_valor').value);
         if(isNaN(v) || v <= 0) return alert('Valor inválido!');
-        await fetch('/api/rendas', {
-            method:'POST', headers:{'Content-Type':'application/json'}, 
-            body:JSON.stringify({
-                usuario: document.getElementById('entrada_usuario').value,
-                fonte: document.getElementById('entrada_fonte').value,
-                mes: currentData.getMonth()+1, ano: currentData.getFullYear(), valor: v
-            })
-        });
-        fecharModalNovaEntrada(); carregarEntradas();
+        
+        if (id) {
+            await fetch(`/api/rendas/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({valor: v}) });
+        } else {
+            await fetch('/api/rendas', {
+                method:'POST', headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({usuario: document.getElementById('entrada_usuario').value, fonte: document.getElementById('entrada_fonte').value, mes: currentData.getMonth()+1, ano: currentData.getFullYear(), valor: v})
+            });
+        }
+        fecharModalEntrada(); carregarEntradas();
+    };
+
+    const excluirRenda = async (id) => {
+        if(confirm("Excluir esta entrada?")) { await fetch(`/api/rendas/${id}`, {method: 'DELETE'}); carregarEntradas(); }
     };
 
     document.addEventListener("DOMContentLoaded", carregarEntradas);
 </script>
 {% endblock %}
+
 
 

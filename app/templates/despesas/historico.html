@@ -2,9 +2,7 @@
 {% block content %}
 <div class="mb-6 flex items-center justify-between">
     <div class="flex items-center gap-4">
-        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-        </a>
+        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg></a>
         <h2 class="text-xl font-black text-slate-800 tracking-tight">Histórico</h2>
     </div>
 </div>
@@ -15,81 +13,144 @@
     <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-indigo-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
 </div>
 
-<!-- Abas Categorizadas -->
 <div class="flex p-1 bg-white/50 rounded-2xl mb-6 shadow-inner border border-white/60">
     <button onclick="setAba('Fixa')" id="aba-Fixa" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl bg-white text-indigo-600 shadow-sm transition">Fixas</button>
     <button onclick="setAba('Variável')" id="aba-Variável" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl text-slate-500 hover:bg-white/50 transition">Variáveis</button>
     <button onclick="setAba('Diária')" id="aba-Diária" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl text-slate-500 hover:bg-white/50 transition">Diário</button>
 </div>
 
-<div id="lista-historico" class="space-y-4 mb-24"></div>
+<div id="lista-historico" class="space-y-4 mb-32"></div>
+
+<!-- Modais Exclusivos da Aba Diária -->
+<div id="modalDetalhesDiaria" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 id="det_nome" class="text-xl font-black text-slate-800 mb-1 pr-8">--</h3>
+        <p class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-6">Gasto do Dia-a-Dia</p>
+        <div class="space-y-4 mb-6">
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Valor</span><span id="det_valor" class="text-sm font-black text-slate-800">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Data Pago</span><span id="det_pag" class="text-sm font-bold text-emerald-600">--</span></div>
+            <div class="flex justify-between border-b border-slate-100 pb-2"><span class="text-xs font-bold text-slate-400 uppercase">Responsável</span><span id="det_resp" class="text-sm font-bold text-slate-800">--</span></div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnEditarAbrir" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-slate-200">Editar</button>
+            <button id="btnExcluirAtivo" class="w-14 bg-red-50 text-red-500 flex items-center justify-center rounded-2xl hover:bg-red-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        </div>
+    </div>
+</div>
+
+<div id="modalEditarDiaria" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModais()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-slate-800 mb-4">Corrigir Gasto</h3>
+        <form id="formEditar" class="space-y-3">
+            <input type="hidden" id="edit_id">
+            <input type="hidden" id="edit_data">
+            <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Descrição</label><input type="text" id="edit_descricao" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 font-medium" required></div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Valor</label><input type="number" step="0.01" id="edit_valor" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold" required></div>
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Responsável</label><select id="edit_responsavel" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 font-medium"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            </div>
+            <button type="submit" class="w-full py-4 mt-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
 
 <script>
-    let dataHist = new Date();
-    let despesasPagas = [];
-    let abaAtual = 'Fixa';
-
+    let dataHist = new Date(); let despesasPagas = []; let abaAtual = 'Fixa';
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y,m,d] = ds.split('-'); return `${d}/${m}`; };
-
     const mudarMes = (d) => { dataHist.setMonth(dataHist.getMonth() + d); carregarH(); };
 
     const setAba = (tipo) => {
         abaAtual = tipo;
-        document.querySelectorAll('[id^="aba-"]').forEach(btn => {
-            btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm');
-            btn.classList.add('text-slate-500');
-        });
+        document.querySelectorAll('[id^="aba-"]').forEach(btn => { btn.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm'); btn.classList.add('text-slate-500'); });
         const activeBtn = document.getElementById(`aba-${tipo}`);
-        activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-sm');
-        activeBtn.classList.remove('text-slate-500');
+        activeBtn.classList.add('bg-white', 'text-indigo-600', 'shadow-sm'); activeBtn.classList.remove('text-slate-500');
         renderizarLista();
     };
 
     const carregarH = async () => {
         const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         document.getElementById('mesDisplayHist').innerText = `${meses[dataHist.getMonth()]} / ${dataHist.getFullYear()}`;
-        
         const r = await fetch(`/api/despesas?mes=${dataHist.getMonth()+1}&ano=${dataHist.getFullYear()}`);
-        despesasPagas = (await r.json()).filter(x => x.pago);
-        renderizarLista();
+        despesasPagas = (await r.json()).filter(x => x.pago); renderizarLista();
     };
 
     const renderizarLista = () => {
-        const c = document.getElementById('lista-historico');
-        const filtradas = despesasPagas.filter(x => x.tipo_despesa === abaAtual);
-        
+        const c = document.getElementById('lista-historico'); const filtradas = despesasPagas.filter(x => x.tipo_despesa === abaAtual);
         c.innerHTML = filtradas.length ? '' : '<p class="text-center text-slate-500 text-xs font-bold mt-10 uppercase tracking-widest">Nenhum registro.</p>';
         
         filtradas.forEach(x => {
-            const onClickAttr = x.tem_comprovante ? `onclick="window.open('/comprovante/${x.id}', '_blank')"` : `onclick="alert('Baixa sem comprovante.')"`;
-            const iconBadge = x.tem_comprovante ? `<span class="text-emerald-500">📎</span>` : `<span class="text-slate-300">📄</span>`;
-
-            c.innerHTML += `
-                <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition">
-                    <div ${onClickAttr} class="flex items-center gap-4 w-[65%] cursor-pointer hover:bg-white/40 rounded-xl p-1">
-                        <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">${iconBadge}</div>
-                        <div class="truncate">
-                            <p class="font-bold text-slate-700 text-sm leading-tight truncate pr-2">${x.descricao}</p>
-                            <p class="text-[9px] font-bold text-slate-500 mt-0.5">Venceu: ${formatarData(x.data_vencimento)}</p>
+            const dataExibicao = x.data_pagamento ? formatarData(x.data_pagamento) : formatarData(x.data_vencimento);
+            
+            if(abaAtual === 'Diária') {
+                const descSafe = x.descricao.replace(/'/g, "\\'");
+                c.innerHTML += `
+                    <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition cursor-pointer hover:bg-white/40"
+                         onclick="abrirModalDiaria(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.responsavel_pagamento}', '${dataExibicao}')">
+                        <div class="flex items-center gap-4 w-[65%]">
+                            <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">☕</div>
+                            <div class="truncate">
+                                <p class="font-bold text-slate-700 text-sm leading-tight truncate pr-2">${x.descricao}</p>
+                                <p class="text-[9px] font-bold text-emerald-500 mt-0.5">Pago dia: ${dataExibicao}</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="w-[35%] flex flex-col items-end gap-3 border-l border-white/40 pl-2">
-                        <button onclick="desfazerPagamento(${x.id})" class="text-orange-400 hover:text-orange-500 transition text-[9px] font-black uppercase bg-orange-50 px-2 py-1 rounded-md">Desfazer</button>
-                        <p class="font-black text-slate-800 text-sm">${Number(x.valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
-                    </div>
-                </div>`;
+                        <div class="w-[35%] flex flex-col items-end gap-3 border-l border-white/40 pl-2">
+                            <p class="font-black text-slate-800 text-sm mt-3">${Number(x.valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
+                        </div>
+                    </div>`;
+            } else {
+                const onClickAttr = x.tem_comprovante ? `onclick="window.open('/comprovante/${x.id}', '_blank')"` : `onclick="alert('Baixa sem comprovante.')"`;
+                const iconBadge = x.tem_comprovante ? `<span class="text-emerald-500">📎</span>` : `<span class="text-slate-300">📄</span>`;
+                c.innerHTML += `
+                    <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition">
+                        <div ${onClickAttr} class="flex items-center gap-4 w-[65%] cursor-pointer hover:bg-white/40 rounded-xl p-1">
+                            <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">${iconBadge}</div>
+                            <div class="truncate">
+                                <p class="font-bold text-slate-700 text-sm leading-tight truncate pr-2">${x.descricao}</p>
+                                <p class="text-[9px] font-bold text-emerald-500 mt-0.5">Pago dia: ${dataExibicao}</p>
+                            </div>
+                        </div>
+                        <div class="w-[35%] flex flex-col items-end gap-3 border-l border-white/40 pl-2">
+                            <button onclick="desfazerPagamento(${x.id})" class="text-orange-400 hover:text-orange-500 transition text-[9px] font-black uppercase bg-orange-50 px-2 py-1 rounded-md">Desfazer</button>
+                            <p class="font-black text-slate-800 text-sm">${Number(x.valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
+                        </div>
+                    </div>`;
+            }
         });
     };
 
-    const desfazerPagamento = async (id) => {
-        if(confirm("Marcar como PENDENTE e devolver pro painel?")) {
-            await fetch(`/api/despesas/${id}/desfazer`, { method: 'POST' });
-            carregarH();
-        }
+    // --- Edição/Exclusão para Diárias ---
+    const fecharModais = () => { document.getElementById('modalDetalhesDiaria').classList.add('hidden'); document.getElementById('modalEditarDiaria').classList.add('hidden'); };
+    
+    const abrirModalDiaria = (id, desc, valor, dataV, resp, dataExibicao) => {
+        document.getElementById('det_nome').innerText = desc; document.getElementById('det_valor').innerText = Number(valor).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        document.getElementById('det_pag').innerText = dataExibicao; document.getElementById('det_resp').innerText = resp;
+        
+        document.getElementById('btnEditarAbrir').onclick = () => {
+            document.getElementById('edit_id').value = id; document.getElementById('edit_descricao').value = desc;
+            document.getElementById('edit_valor').value = valor; document.getElementById('edit_data').value = dataV;
+            document.getElementById('edit_responsavel').value = resp;
+            document.getElementById('modalEditarDiaria').classList.remove('hidden');
+        };
+        document.getElementById('btnExcluirAtivo').onclick = async () => {
+            if(confirm("Excluir este gasto do dia a dia?")) { await fetch(`/api/despesas/${id}`, { method: 'DELETE' }); fecharModais(); carregarH(); }
+        };
+        document.getElementById('modalDetalhesDiaria').classList.remove('hidden');
     };
+
+    document.getElementById('formEditar').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dados = { descricao: document.getElementById('edit_descricao').value, valor: parseFloat(document.getElementById('edit_valor').value), data_vencimento: document.getElementById('edit_data').value, responsavel_pagamento: document.getElementById('edit_responsavel').value };
+        await fetch(`/api/despesas/${document.getElementById('edit_id').value}/editar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+        fecharModais(); carregarH();
+    });
+
+    const desfazerPagamento = async (id) => { if(confirm("Marcar como PENDENTE e devolver pro painel?")) { await fetch(`/api/despesas/${id}/desfazer`, { method: 'POST' }); carregarH(); } };
 
     document.addEventListener("DOMContentLoaded", carregarH);
 </script>
 {% endblock %}
+
 
 

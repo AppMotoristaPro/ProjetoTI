@@ -19,41 +19,47 @@
 </div>
 
 <p class="text-[10px] text-slate-400 uppercase tracking-widest text-center mb-2 animate-pulse">Deslize a conta para a direita para pagar ➡</p>
-<div class="space-y-4 mb-24" id="lista-fixas"></div>
+<div class="space-y-4 mb-32" id="lista-fixas"></div>
 
 <!-- Modal Nova Fixa -->
 <div id="modalNovaFixa" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
-    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-8">
         <button onclick="document.getElementById('modalNovaFixa').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-lg font-black text-slate-800 mb-6">Nova Conta Fixa</h3>
         
         <form id="formFixa" class="space-y-4">
             <input type="hidden" name="tipo_despesa" value="Fixa">
             
-            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Descrição</label><input type="text" name="descricao" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Descrição</label><input type="text" name="descricao" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-indigo-400"></div>
             
             <div>
                 <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Categoria</label>
-                <select name="categoria" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700">
-                    <option value="Mercado">Mercado</option><option value="Aluguel">Aluguel</option><option value="Faculdade">Faculdade</option><option value="Carro">Carro</option><option value="Vivo">Vivo</option><option value="Noh">Noh</option>
+                <select name="categoria" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700 focus:border-indigo-400">
+                    <option value="Mercado">Mercado</option>
+                    <option value="Aluguel">Aluguel</option>
+                    <option value="Faculdade">Faculdade</option>
+                    <option value="Carro">Carro</option>
+                    <option value="Vivo">Vivo</option>
+                    <option value="Noh">Noh</option>
+                    <option value="Outros">Outros</option>
                 </select>
             </div>
 
             <div class="flex gap-2">
-                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor</label><input type="number" step="0.01" name="valor" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-black outline-none"></div>
-                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Vencimento</label><input type="date" name="data_vencimento" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none"></div>
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor</label><input type="number" step="0.01" name="valor" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-black outline-none focus:border-indigo-400"></div>
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Vencimento</label><input type="date" name="data_vencimento" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none focus:border-indigo-400"></div>
             </div>
 
             <div class="flex gap-2">
-                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Previsão Pago</label><input type="date" name="data_pretensao" class="w-full p-3 rounded-xl bg-orange-50 border border-orange-100 text-sm outline-none"></div>
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Previsão Pago</label><input type="date" name="data_pretensao" class="w-full p-3 rounded-xl bg-orange-50 border border-orange-100 text-sm outline-none focus:border-orange-400"></div>
                 <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Quem Paga?</label>
-                    <select name="responsavel_pagamento" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700">
+                    <select name="responsavel_pagamento" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700 focus:border-indigo-400">
                         <option value="Igor">Igor</option><option value="Thaynara">Thaynara</option>
                     </select>
                 </div>
             </div>
             
-            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Observações</label><textarea name="observacao" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm"></textarea></div>
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Observações</label><textarea name="observacao" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm focus:border-indigo-400"></textarea></div>
 
             <button type="submit" id="btnSalvarFixa" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold active:scale-95 transition shadow-lg shadow-indigo-500/30">Guardar Conta Fixa</button>
         </form>
@@ -96,12 +102,16 @@
                 <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Valor</label><input type="number" step="0.01" id="edit_valor" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-bold" required></div>
                 <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Vencimento</label><input type="date" id="edit_data" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 text-sm" required></div>
             </div>
-            <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Responsável</label><select id="edit_responsavel" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            <div class="flex gap-2">
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Data Prevista</label><input type="date" id="edit_prev" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 text-sm"></div>
+                <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Responsável</label><select id="edit_responsavel" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
+            </div>
             <button type="submit" class="w-full py-4 mt-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition">Salvar Alterações</button>
         </form>
     </div>
 </div>
 
+<!-- Modal Pagamento -->
 <div id="modalPagamento" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl text-center relative">
         <button onclick="fecharModais(); reverterCard(contaEmFocoId);" class="absolute top-4 right-4 text-slate-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
@@ -200,6 +210,7 @@
             document.getElementById('edit_descricao').value = desc;
             document.getElementById('edit_valor').value = valor;
             document.getElementById('edit_data').value = dataV;
+            document.getElementById('edit_prev').value = dataP || '';
             document.getElementById('edit_responsavel').value = resp;
             document.getElementById('modalEditar').classList.remove('hidden');
         };
@@ -218,7 +229,7 @@
 
     document.getElementById('formEditar').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const dados = { descricao: document.getElementById('edit_descricao').value, valor: parseFloat(document.getElementById('edit_valor').value), data_vencimento: document.getElementById('edit_data').value, responsavel_pagamento: document.getElementById('edit_responsavel').value };
+        const dados = { descricao: document.getElementById('edit_descricao').value, valor: parseFloat(document.getElementById('edit_valor').value), data_vencimento: document.getElementById('edit_data').value, data_pretensao: document.getElementById('edit_prev').value, responsavel_pagamento: document.getElementById('edit_responsavel').value };
         await fetch(`/api/despesas/${document.getElementById('edit_id').value}/editar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
         fecharModais(); carregarFixas();
     });

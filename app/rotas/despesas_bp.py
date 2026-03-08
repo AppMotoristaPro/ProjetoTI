@@ -9,66 +9,52 @@ despesas_bp = Blueprint('despesas', __name__)
 def hoje_br():
     return (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).date()
 
-# --- TELAS V2.0 ---
 @despesas_bp.route('/', methods=['GET'])
-def home():
-    # Vai chamar o novo dashboard executivo depois
-    return render_template('dashboard/index.html')
-
+def home(): return render_template('dashboard/index.html')
 @despesas_bp.route('/historico', methods=['GET'])
 def tela_historico(): return render_template('despesas/historico.html')
-
 @despesas_bp.route('/caixinhas', methods=['GET'])
 def tela_caixinhas(): return render_template('dashboard/caixinhas.html')
-
 @despesas_bp.route('/entradas', methods=['GET'])
 def tela_entradas(): return render_template('dashboard/entradas.html')
-
 @despesas_bp.route('/fixas', methods=['GET'])
 def tela_fixas(): return render_template('despesas/fixas.html')
-
 @despesas_bp.route('/variaveis', methods=['GET'])
 def tela_variaveis(): return render_template('despesas/variaveis.html')
 
-@despesas_bp.route('/nova-conta', methods=['GET']) # Mantido por compatibilidade
-def tela_nova_conta(): return render_template('despesas/nova_conta.html')
-
-# --- API CORE BLINDADA ---
+# --- DESPESAS ---
 @despesas_bp.route('/api/despesas/nova', methods=['POST'])
 def nova_despesa():
     dados = request.form.to_dict()
     arquivo = request.files.get('comprovante')
     comprovante_binario = None
     mimetype = None
-    
     if arquivo and arquivo.filename and arquivo.filename != '':
-        try:
-            comprovante_binario, mimetype = comprimir_arquivo(arquivo)
-        except Exception as e:
-            print(f"Erro fatal ao comprimir anexo, lendo arquivo bruto: {e}")
-            arquivo.seek(0)
-            comprovante_binario = arquivo.read()
-            mimetype = arquivo.mimetype
+        try: comprovante_binario, mimetype = comprimir_arquivo(arquivo)
+        except Exception: arquivo.seek(0); comprovante_binario = arquivo.read(); mimetype = arquivo.mimetype
         
     dados['pago'] = True if request.form.get('pago') == 'true' else False
     sucesso = DespesaRepository.criar(dados, comprovante_binario, mimetype)
-    
-    if sucesso: return jsonify({"status": "sucesso", "mensagem": "Salvo com sucesso!"}), 201
+    if sucesso: return jsonify({"status": "sucesso"}), 201
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/despesas', methods=['GET'])
 def listar():
-    mes = request.args.get('mes')
-    ano = request.args.get('ano')
+    mes = request.args.get('mes'); ano = request.args.get('ano')
     if mes and ano: return jsonify(DespesaRepository.listar_por_mes(int(mes), int(ano))), 200
     return jsonify([]), 200
 
 @despesas_bp.route('/api/resumo', methods=['GET'])
 def resumo():
     hoje = hoje_br()
-    mes = int(request.args.get('mes', hoje.month))
-    ano = int(request.args.get('ano', hoje.year))
+    mes = int(request.args.get('mes', hoje.month)); ano = int(request.args.get('ano', hoje.year))
     return jsonify(DespesaRepository.obter_resumo(mes, ano)), 200
+
+# --- RENDAS CRUD ---
+@despesas_bp.route('/api/rendas/lista', methods=['GET'])
+def listar_rendas():
+    mes = request.args.get('mes'); ano = request.args.get('ano')
+    return jsonify(DespesaRepository.listar_rendas_detalhadas(int(mes), int(ano))), 200
 
 @despesas_bp.route('/api/rendas', methods=['POST'])
 def atualizar_renda():
@@ -77,21 +63,26 @@ def atualizar_renda():
     if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
+@despesas_bp.route('/api/rendas/<int:renda_id>', methods=['DELETE', 'PUT'])
+def alterar_renda(renda_id):
+    if request.method == 'DELETE':
+        if DespesaRepository.excluir_renda(renda_id): return jsonify({"status": "sucesso"}), 200
+    else:
+        if DespesaRepository.atualizar_renda(renda_id, request.json.get('valor')): return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+# --- CAIXINHAS E PAGAMENTOS ---
 @despesas_bp.route('/api/caixinhas', methods=['GET', 'POST'])
 def gerenciar_caixinhas():
-    if request.method == 'GET':
-        return jsonify(DespesaRepository.listar_caixinhas()), 200
+    if request.method == 'GET': return jsonify(DespesaRepository.listar_caixinhas()), 200
     else:
         dados = request.json
-        sucesso = DespesaRepository.salvar_caixinha(dados.get('nome'), dados.get('valor'), dados.get('icone_svg', 'geral'))
-        if sucesso: return jsonify({"status": "sucesso"}), 200
+        if DespesaRepository.salvar_caixinha(dados.get('nome'), dados.get('valor'), dados.get('icone_svg', 'geral')): return jsonify({"status": "sucesso"}), 200
         return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/caixinhas/<int:caixinha_id>/depositar', methods=['POST'])
 def depositar_caixinha(caixinha_id):
-    dados = request.json
-    if DespesaRepository.depositar_caixinha(caixinha_id, dados.get('valor')): 
-        return jsonify({"status": "sucesso"}), 200
+    if DespesaRepository.depositar_caixinha(caixinha_id, request.json.get('valor')): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/caixinhas/<int:caixinha_id>', methods=['DELETE', 'PUT'])
@@ -100,24 +91,16 @@ def alterar_caixinha(caixinha_id):
         if DespesaRepository.excluir_caixinha(caixinha_id): return jsonify({"status": "sucesso"}), 200
     else:
         dados = request.json
-        if DespesaRepository.atualizar_caixinha(caixinha_id, dados.get('nome'), dados.get('valor'), dados.get('icone_svg')): 
-            return jsonify({"status": "sucesso"}), 200
+        if DespesaRepository.atualizar_caixinha(caixinha_id, dados.get('nome'), dados.get('valor'), dados.get('icone_svg')): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/despesas/<int:despesa_id>/pagar', methods=['POST'])
 def pagar_despesa(despesa_id):
     arquivo = request.files.get('comprovante')
-    comprovante_binario = None
-    mimetype = None
+    comprovante_binario = None; mimetype = None
     if arquivo and arquivo.filename and arquivo.filename != '':
-        try:
-            comprovante_binario, mimetype = comprimir_arquivo(arquivo)
-        except Exception as e:
-            print(f"Erro fatal ao comprimir comprovante, lendo arquivo bruto: {e}")
-            arquivo.seek(0)
-            comprovante_binario = arquivo.read()
-            mimetype = arquivo.mimetype
-        
+        try: comprovante_binario, mimetype = comprimir_arquivo(arquivo)
+        except Exception: arquivo.seek(0); comprovante_binario = arquivo.read(); mimetype = arquivo.mimetype
     sucesso = DespesaRepository.marcar_paga(despesa_id, comprovante_binario, mimetype)
     if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
@@ -142,9 +125,7 @@ def deletar_despesa(despesa_id):
 
 @despesas_bp.route('/api/despesas/<int:despesa_id>/editar', methods=['PUT'])
 def editar_despesa(despesa_id):
-    dados = request.json
-    sucesso = DespesaRepository.atualizar(despesa_id, dados)
-    if sucesso: return jsonify({"status": "sucesso"}), 200
+    if DespesaRepository.atualizar(despesa_id, request.json): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
 
