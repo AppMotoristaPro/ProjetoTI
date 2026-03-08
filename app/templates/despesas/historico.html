@@ -19,6 +19,18 @@
     <button onclick="setAba('Diária')" id="aba-Diária" class="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl text-slate-500 hover:bg-white/50 transition">Diário</button>
 </div>
 
+<div id="filtros-diaria-container" class="hidden mb-4">
+    <div class="flex gap-2">
+        <select id="select-modo" onchange="mudarModoFiltro(this.value)" class="p-3 rounded-xl bg-white border border-white/60 text-[10px] uppercase tracking-widest font-bold text-slate-600 outline-none shadow-sm cursor-pointer">
+            <option value="mes">Mês Inteiro</option>
+            <option value="semana">Por Semana</option>
+            <option value="dia">Por Dia Específico</option>
+        </select>
+        <select id="select-param" onchange="mudarParamFiltro(this.value)" class="hidden flex-1 p-3 rounded-xl bg-theme-light border border-white/60 text-xs font-bold text-theme outline-none shadow-sm cursor-pointer">
+        </select>
+    </div>
+</div>
+
 <div id="lista-historico" class="space-y-4 mb-32"></div>
 
 <div id="modalDetalhesDiaria" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center bg-slate-900/40 backdrop-blur-md p-4 pb-24 transition-opacity">
@@ -56,9 +68,45 @@
 </div>
 
 <script>
-    let dataHist = new Date(); let despesasPagas = []; let abaAtual = 'Fixa';
+    let dataHist = new Date(); 
+    let despesasPagas = []; 
+    let abaAtual = 'Fixa';
+    
+    // Variáveis de estado do Filtro do Diário
+    let filtroModo = 'mes'; 
+    let filtroParam = '';
+
+    const pad = n => String(n).padStart(2, '0');
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y,m,d] = ds.split('-'); return `${d}/${m}`; };
-    const mudarMes = (d) => { dataHist.setMonth(dataHist.getMonth() + d); carregarH(); };
+    const toYMD = (y, m, d) => `${y}-${pad(m+1)}-${pad(d)}`;
+
+    // Lógica para quebrar o mês em semanas começando sempre no domingo
+    function gerarSemanasDoMes(ano, mes) {
+        let semanas = [];
+        let d = new Date(ano, mes, 1);
+        while (d.getMonth() === mes) {
+            let sDate = d.getDate();
+            let eD = new Date(ano, mes, sDate + (6 - d.getDay())); // Vai até o próximo sábado
+            if (eD.getMonth() !== mes) eD = new Date(ano, mes + 1, 0); // Trava no último dia do mês se vazar
+            let eDate = eD.getDate();
+            
+            let label = `${pad(sDate)}/${pad(mes+1)} até ${pad(eDate)}/${pad(mes+1)}`;
+            semanas.push({ label, start: toYMD(ano, mes, sDate), end: toYMD(ano, mes, eDate) });
+            
+            d.setDate(eDate + 1); // Pula para o próximo domingo
+        }
+        return semanas;
+    }
+
+    const mudarMes = (d) => { 
+        dataHist.setMonth(dataHist.getMonth() + d); 
+        // Reseta os filtros quando muda o mês
+        filtroModo = 'mes';
+        filtroParam = '';
+        document.getElementById('select-modo').value = 'mes';
+        document.getElementById('select-param').classList.add('hidden');
+        carregarH(); 
+    };
 
     const setAba = (tipo) => {
         abaAtual = tipo;
@@ -68,55 +116,112 @@
         renderizarLista();
     };
 
+    // Controla o menu dropdown do filtro
+    function mudarModoFiltro(modo) {
+        filtroModo = modo;
+        const selParam = document.getElementById('select-param');
+        selParam.innerHTML = '';
+        
+        if (modo === 'mes') {
+            selParam.classList.add('hidden');
+            filtroParam = '';
+        } else if (modo === 'semana') {
+            selParam.classList.remove('hidden');
+            const semanas = gerarSemanasDoMes(dataHist.getFullYear(), dataHist.getMonth());
+            semanas.forEach((s, idx) => { selParam.innerHTML += `<option value="${idx}">${s.label}</option>`; });
+            filtroParam = '0'; // Seleciona a primeira semana por padrão
+        } else if (modo === 'dia') {
+            selParam.classList.remove('hidden');
+            const diarias = despesasPagas.filter(x => x.tipo_despesa === 'Diária');
+            let dias = [...new Set(diarias.map(x => x.data_pagamento || x.data_vencimento))].sort((a,b) => b.localeCompare(a)); // Pega os dias e ordena decrescente
+            
+            if (dias.length === 0) {
+                selParam.innerHTML = `<option value="">Sem gastos no mês</option>`;
+                filtroParam = '';
+            } else {
+                dias.forEach(d => { selParam.innerHTML += `<option value="${d}">${formatarData(d)}</option>`; });
+                filtroParam = dias[0]; // Seleciona o dia mais recente
+            }
+        }
+        renderizarLista();
+    }
+
+    function mudarParamFiltro(val) {
+        filtroParam = val;
+        renderizarLista();
+    }
+
     const carregarH = async () => {
         const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         document.getElementById('mesDisplayHist').innerText = `${meses[dataHist.getMonth()]} / ${dataHist.getFullYear()}`;
         const r = await fetch(`/api/despesas?mes=${dataHist.getMonth()+1}&ano=${dataHist.getFullYear()}`);
-        despesasPagas = (await r.json()).filter(x => x.pago); renderizarLista();
+        despesasPagas = (await r.json()).filter(x => x.pago); 
+        renderizarLista();
     };
 
     const renderizarLista = () => {
         const c = document.getElementById('lista-historico'); 
-        const filtradas = despesasPagas.filter(x => x.tipo_despesa === abaAtual);
+        
+        // Exibe ou esconde o menu de filtro dependendo da aba
+        document.getElementById('filtros-diaria-container').classList.toggle('hidden', abaAtual !== 'Diária');
+
+        let filtradas = despesasPagas.filter(x => x.tipo_despesa === abaAtual);
+        
+        // APLICA O FILTRO DO DIÁRIO ANTES DE RENDERIZAR
+        if (abaAtual === 'Diária') {
+            if (filtroModo === 'semana' && filtroParam !== '') {
+                const semanas = gerarSemanasDoMes(dataHist.getFullYear(), dataHist.getMonth());
+                const s = semanas[parseInt(filtroParam)];
+                if (s) {
+                    filtradas = filtradas.filter(x => {
+                        const dStr = x.data_pagamento || x.data_vencimento;
+                        return dStr >= s.start && dStr <= s.end;
+                    });
+                }
+            } else if (filtroModo === 'dia' && filtroParam !== '') {
+                filtradas = filtradas.filter(x => {
+                    const dStr = x.data_pagamento || x.data_vencimento;
+                    return dStr === filtroParam;
+                });
+            }
+        }
+
         let conteudoHtml = '';
         
-        if (filtradas.length === 0) {
-            conteudoHtml = '<p class="text-center text-slate-500 text-xs font-bold mt-10 uppercase tracking-widest">Nenhum registro.</p>';
-        } else {
-            
-            // ADICIONADO: Card de Total Gasto no Mês para a aba Diária
-            if (abaAtual === 'Diária') {
-                const totalDiario = filtradas.reduce((soma, item) => soma + parseFloat(item.valor), 0);
-                conteudoHtml += `
-                    <div class="p-5 ultra-glass rounded-[28px] border border-white/60 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden">
-                        <div class="absolute -right-4 -top-4 w-20 h-20 bg-theme-light rounded-full opacity-50 blur-xl"></div>
-                        <div class="absolute -left-4 -bottom-4 w-16 h-16 bg-emerald-100 rounded-full opacity-50 blur-xl"></div>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 relative z-10">Total Gasto no Mês</p>
-                        <p class="text-3xl font-black text-theme relative z-10">${Number(totalDiario).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
-                    </div>
-                `;
-            }
+        // RENDERIZAÇÃO DO TOTALIZADOR DO DIÁRIO
+        if (abaAtual === 'Diária') {
+            const totalDiario = filtradas.reduce((soma, item) => soma + parseFloat(item.valor), 0);
+            let rotuloTotal = 'no Mês';
+            if (filtroModo === 'semana') rotuloTotal = 'na Semana';
+            if (filtroModo === 'dia') rotuloTotal = 'neste Dia';
 
+            conteudoHtml += `
+                <div class="p-5 ultra-glass rounded-[28px] border border-white/60 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden mb-6">
+                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-theme-light rounded-full opacity-50 blur-xl"></div>
+                    <div class="absolute -left-4 -bottom-4 w-16 h-16 bg-emerald-100 rounded-full opacity-50 blur-xl"></div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 relative z-10">Total Gasto ${rotuloTotal}</p>
+                    <p class="text-3xl font-black text-theme relative z-10">${Number(totalDiario).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</p>
+                </div>
+            `;
+        }
+
+        if (filtradas.length === 0) {
+            conteudoHtml += '<p class="text-center text-slate-500 text-xs font-bold mt-10 uppercase tracking-widest">Nenhum registro.</p>';
+        } else {
             filtradas.forEach(x => {
                 const dataExibicao = x.data_pagamento ? formatarData(x.data_pagamento) : formatarData(x.data_vencimento);
                 
                 if(abaAtual === 'Diária') {
                     const descSafe = x.descricao.replace(/'/g, "\\'");
                     
-                    // Escolhe o ícone baseado na categoria selecionada
                     const icones = {
-                        'Combustível': '⛽',
-                        'Mercado': '🛒',
-                        'Farmácia': '💊',
-                        'Restaurante': '🍽️',
-                        'Lazer': '🎬',
-                        'Besteira': '🍫',
-                        'Outros': '🏷️'
+                        'Combustível': '⛽', 'Mercado': '🛒', 'Farmácia': '💊',
+                        'Restaurante': '🍽️', 'Lazer': '🎬', 'Besteira': '🍫', 'Outros': '🏷️'
                     };
                     const iconeCat = icones[x.categoria] || '☕'; 
 
                     conteudoHtml += `
-                        <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition cursor-pointer hover:bg-white/40"
+                        <div class="p-5 mb-4 rounded-[28px] ultra-glass flex justify-between items-center transition cursor-pointer hover:bg-white/40"
                              onclick="abrirModalDiaria(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.responsavel_pagamento}', '${dataExibicao}')">
                             <div class="flex items-center gap-4 w-[65%]">
                                 <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">${iconeCat}</div>
@@ -132,8 +237,9 @@
                 } else {
                     const onClickAttr = x.tem_comprovante ? `onclick="window.open('/comprovante/${x.id}', '_blank')"` : `onclick="alert('Baixa sem comprovante.')"`;
                     const iconBadge = x.tem_comprovante ? `<span class="text-emerald-500">📎</span>` : `<span class="text-slate-300">📄</span>`;
+                    
                     conteudoHtml += `
-                        <div class="p-5 rounded-[28px] ultra-glass flex justify-between items-center transition">
+                        <div class="p-5 mb-4 rounded-[28px] ultra-glass flex justify-between items-center transition">
                             <div ${onClickAttr} class="flex items-center gap-4 w-[65%] cursor-pointer hover:bg-white/40 rounded-xl p-1">
                                 <div class="min-w-[40px] h-[40px] rounded-xl bg-white/70 flex items-center justify-center shadow-sm text-lg">${iconBadge}</div>
                                 <div class="truncate">
