@@ -14,7 +14,7 @@ def hoje_br():
 def manifest():
     return jsonify({
         "name": "Despesas T&I",
-        "short_name": "Gestão T&I",
+        "short_name": "Despesas T&I",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#f4f6f9",
