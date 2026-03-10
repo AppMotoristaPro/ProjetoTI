@@ -30,18 +30,39 @@ def manifest():
 @despesas_bp.route('/sw.js')
 def sw():
     js = """
-    self.addEventListener('install', (e) => { self.skipWaiting(); });
-    self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+    self.addEventListener('install', (e) => { 
+        console.log('🔍 [SW LOG] Service Worker Instalado!');
+        self.skipWaiting(); 
+    });
+    
+    self.addEventListener('activate', (e) => { 
+        console.log('🔍 [SW LOG] Service Worker Ativado!');
+        e.waitUntil(clients.claim()); 
+    });
+    
     self.addEventListener('push', function(e) {
-        const data = e.data ? e.data.json() : {title: 'Gestão T&I', body: 'Nova notificação'};
+        console.log('🔍 [SW LOG] EVENTO PUSH RECEBIDO NO CELULAR!');
+        
+        let data = {title: 'Gestão T&I', body: 'Nova notificação'};
+        if (e.data) {
+            try {
+                data = e.data.json();
+            } catch(err) {
+                console.log('⚠️ [SW LOG] JSON Parse error, usando texto simples.');
+                data.body = e.data.text();
+            }
+        }
+
         const options = {
             body: data.body,
             icon: '/static/icons/icone.png',
             badge: '/static/icons/icone.png',
             vibrate: [200, 100, 200, 100, 200, 100, 200]
         };
+        
         e.waitUntil(self.registration.showNotification(data.title, options));
     });
+    
     self.addEventListener('notificationclick', function(e) {
         e.notification.close();
         e.waitUntil(clients.openWindow('/'));
@@ -76,7 +97,6 @@ def nova_despesa():
     sucesso = DespesaRepository.criar(dados, comprovante_binario, mimetype)
     
     if sucesso:
-        # Lógica do "Dedo Duro" (Avisa o outro usuário)
         autor = dados.get('autor_criacao', 'Igor')
         outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
         valor_f = f"R$ {float(dados['valor']):.2f}".replace('.', ',')

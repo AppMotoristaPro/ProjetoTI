@@ -18,8 +18,6 @@
         const temaSalvo = localStorage.getItem('app_theme') || 'blue';
         document.documentElement.setAttribute('data-theme', temaSalvo);
 
-        // === MAGIA DEDO DURO (INTERCEPTADOR) ===
-        // Injeta invisivelmente o autor da criação na hora que salva qualquer conta
         const originalFetch = window.fetch;
         window.fetch = async function() {
             let [resource, config] = arguments;
@@ -164,29 +162,39 @@
         async function registerPush() {
             if ('serviceWorker' in navigator && 'PushManager' in window) {
                 try {
+                    console.log('🔍 [FRONTEND LOG] Registrando Service Worker para Push...');
                     const swReg = await navigator.serviceWorker.ready;
+                    
                     let subscription = await swReg.pushManager.getSubscription();
                     if (!subscription) {
-                        subscription = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicVapidKey) });
+                        console.log('🔍 [FRONTEND LOG] Nenhuma inscrição encontrada. Gerando nova...');
+                        subscription = await swReg.pushManager.subscribe({ 
+                            userVisibleOnly: true, 
+                            applicationServerKey: urlBase64ToUint8Array(publicVapidKey) 
+                        });
                     }
+
                     const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
+                    console.log(`🔍 [FRONTEND LOG] Enviando token para associar a: ${currentUser}`);
+                    
                     await fetch('/api/push/subscribe', {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ usuario: currentUser, subscription: subscription })
                     });
-                } catch(e) { console.error("Erro no Push", e); }
+                } catch(e) { console.error("❌ Erro no Push:", e); }
             }
         }
 
         function requestNotificationPermission() {
             if (Notification.permission === 'default') {
-                Notification.requestPermission().then(perm => { if (perm === 'granted') registerPush(); });
+                Notification.requestPermission().then(perm => { 
+                    if (perm === 'granted') registerPush(); 
+                });
             } else if (Notification.permission === 'granted') {
                 registerPush(); 
             }
         }
         
-        // Pede permissão e atualiza o usuário do BD se o tema mudar ou assim que o app abrir
         window.addEventListener('load', requestNotificationPermission);
         window.addEventListener('themeChanged', requestNotificationPermission);
         // ======================================

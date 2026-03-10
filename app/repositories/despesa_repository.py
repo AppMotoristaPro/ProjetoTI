@@ -19,14 +19,24 @@ class DespesaRepository:
         conn = get_db_connection()
         try:
             cur = conn.cursor()
+            endpoint = sub_info.get('endpoint')
             sub_str = json.dumps(sub_info)
-            cur.execute("SELECT id FROM inscricoes_push WHERE usuario=%s AND subscription_info::text = %s", (usuario, sub_str))
-            if not cur.fetchone():
+            
+            # Busca pelo endpoint isolado (muito mais seguro que comparar o JSON inteiro em texto)
+            cur.execute("SELECT id FROM inscricoes_push WHERE subscription_info->>'endpoint' = %s", (endpoint,))
+            linha = cur.fetchone()
+            
+            if linha:
+                # Atualiza o dono do celular (caso mude de azul pra rosa) e as chaves
+                cur.execute("UPDATE inscricoes_push SET usuario = %s, subscription_info = %s WHERE id = %s", (usuario, sub_str, linha[0]))
+            else:
+                # Novo aparelho
                 cur.execute("INSERT INTO inscricoes_push (usuario, subscription_info) VALUES (%s, %s)", (usuario, sub_str))
-                conn.commit()
+            
+            conn.commit()
             return True
         except Exception as e:
-            print(e)
+            print(f"Erro em salvar_inscricao_push: {e}")
             return False
         finally: conn.close()
 
@@ -70,7 +80,6 @@ class DespesaRepository:
             return []
         finally: conn.close()
 
-    # --- NOVA FUNÇÃO: Busca contas de amanhã ---
     @staticmethod
     def buscar_contas_vencendo_amanha():
         conn = get_db_connection()
