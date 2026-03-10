@@ -3,6 +3,9 @@ pg8000==1.30.5
 python-dotenv==1.0.1
 gunicorn==21.2.0
 pywebpush==1.14.0
-Pillow
+Pillow==10.2.0
 pypdf==4.0.1
+py-vapid==1.9.0
+ecdsa==0.18.0
+cryptography==42.0.5
 
