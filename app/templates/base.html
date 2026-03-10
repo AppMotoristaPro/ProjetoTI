@@ -17,6 +17,18 @@
     <script>
         const temaSalvo = localStorage.getItem('app_theme') || 'blue';
         document.documentElement.setAttribute('data-theme', temaSalvo);
+
+        // === MAGIA DEDO DURO (INTERCEPTADOR) ===
+        // Injeta invisivelmente o autor da criação na hora que salva qualquer conta
+        const originalFetch = window.fetch;
+        window.fetch = async function() {
+            let [resource, config] = arguments;
+            if (resource === '/api/despesas/nova' && config && config.body instanceof FormData) {
+                const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
+                config.body.append('autor_criacao', currentUser);
+            }
+            return originalFetch(resource, config);
+        };
     </script>
 
     <style>
@@ -136,6 +148,48 @@
 
     <script>
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+
+        // === ROTINA DE INSCRIÇÃO PUSH NATIVA ===
+        const publicVapidKey = 'BBN1tLnB8VQRegpxtWOXIcWzCKGDdI2Zvxu93Bdt64Tur25vnp_JnQw3vhN6pmyyxPMS8DBhrMuB4xajBF6b4Ps';
+        
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+            return outputArray;
+        }
+
+        async function registerPush() {
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    const swReg = await navigator.serviceWorker.ready;
+                    let subscription = await swReg.pushManager.getSubscription();
+                    if (!subscription) {
+                        subscription = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicVapidKey) });
+                    }
+                    const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
+                    await fetch('/api/push/subscribe', {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ usuario: currentUser, subscription: subscription })
+                    });
+                } catch(e) { console.error("Erro no Push", e); }
+            }
+        }
+
+        function requestNotificationPermission() {
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then(perm => { if (perm === 'granted') registerPush(); });
+            } else if (Notification.permission === 'granted') {
+                registerPush(); 
+            }
+        }
+        
+        // Pede permissão e atualiza o usuário do BD se o tema mudar ou assim que o app abrir
+        window.addEventListener('load', requestNotificationPermission);
+        window.addEventListener('themeChanged', requestNotificationPermission);
+        // ======================================
 
         function toggleTheme() {
             let current = localStorage.getItem('app_theme') || 'blue';

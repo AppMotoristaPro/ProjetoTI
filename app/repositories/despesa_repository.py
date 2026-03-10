@@ -1,5 +1,6 @@
 import datetime
 import uuid
+import json
 from app.extensions import get_db_connection
 
 class DespesaRepository:
@@ -12,6 +13,93 @@ class DespesaRepository:
         mes = mes % 12 + 1
         dia = min(data_original.day, [31, 29 if ano % 4 == 0 and (not ano % 100 == 0 or ano % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1])
         return datetime.date(ano, mes, dia)
+
+    @staticmethod
+    def salvar_inscricao_push(usuario, sub_info):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            sub_str = json.dumps(sub_info)
+            cur.execute("SELECT id FROM inscricoes_push WHERE usuario=%s AND subscription_info::text = %s", (usuario, sub_str))
+            if not cur.fetchone():
+                cur.execute("INSERT INTO inscricoes_push (usuario, subscription_info) VALUES (%s, %s)", (usuario, sub_str))
+                conn.commit()
+            return True
+        except Exception as e:
+            print(e)
+            return False
+        finally: conn.close()
+
+    @staticmethod
+    def obter_inscricoes(usuario):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT id, subscription_info FROM inscricoes_push WHERE usuario = %s", (usuario,))
+            return [{'id': r[0], 'subscription_info': r[1]} for r in cur.fetchall()]
+        except Exception: return []
+        finally: conn.close()
+
+    @staticmethod
+    def remover_inscricao_push(id_inscricao):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM inscricoes_push WHERE id = %s", (id_inscricao,))
+            conn.commit()
+        except: pass
+        finally: conn.close()
+
+    @staticmethod
+    def buscar_contas_proximos_7_dias():
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT descricao, valor, data_vencimento
+                FROM despesas
+                WHERE pago = FALSE 
+                  AND data_vencimento BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'
+                  AND tipo_despesa IN ('Fixa', 'Variável')
+                ORDER BY data_vencimento ASC
+            """)
+            colunas = [desc[0] for desc in cur.description]
+            return [dict(zip(colunas, [str(r[i]) if i==2 else r[i] for i in range(len(r))])) for r in cur.fetchall()]
+        except Exception as e: 
+            print(e)
+            return []
+        finally: conn.close()
+
+    # --- NOVA FUNÇÃO: Busca contas de amanhã ---
+    @staticmethod
+    def buscar_contas_vencendo_amanha():
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT descricao, valor, responsavel_pagamento
+                FROM despesas
+                WHERE pago = FALSE 
+                  AND data_vencimento = CURRENT_DATE + INTERVAL '1 day'
+                  AND tipo_despesa IN ('Fixa', 'Variável')
+            """)
+            colunas = [desc[0] for desc in cur.description]
+            return [dict(zip(colunas, row)) for row in cur.fetchall()]
+        except Exception as e: 
+            print(e)
+            return []
+        finally: conn.close()
+
+    @staticmethod
+    def checar_rendas_mes(mes, ano):
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(id) FROM rendas WHERE mes = %s AND ano = %s AND valor > 0", (mes, ano))
+            qtd = cur.fetchone()[0]
+            return qtd > 0
+        except Exception: return True 
+        finally: conn.close()
 
     @staticmethod
     def criar(dados, comprovante_binario, mimetype):
@@ -96,7 +184,6 @@ class DespesaRepository:
             return resultados
         finally: conn.close()
 
-    # --- BUG FIX: O erro nas Rendas foi solucionado aqui ---
     @staticmethod
     def listar_rendas_detalhadas(mes, ano):
         conn = get_db_connection()
@@ -319,6 +406,4 @@ class DespesaRepository:
             return True
         except Exception: return False
         finally: conn.close()
-
-
 

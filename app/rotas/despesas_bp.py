@@ -3,18 +3,18 @@ import datetime
 from flask import Blueprint, request, jsonify, send_file, render_template
 from app.repositories.despesa_repository import DespesaRepository
 from app.services.compressao_service import comprimir_arquivo
+from app.services.notificacao_service import NotificacaoService
 
 despesas_bp = Blueprint('despesas', __name__)
 
 def hoje_br():
     return (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).date()
 
-# --- ARQUIVOS PWA (INSTALAÇÃO APP) ---
 @despesas_bp.route('/manifest.json')
 def manifest():
     return jsonify({
         "name": "Despesas T&I",
-        "short_name": "Despesas T&I",
+        "short_name": "Gestão T&I",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#f4f6f9",
@@ -29,10 +29,26 @@ def manifest():
 
 @despesas_bp.route('/sw.js')
 def sw():
-    js = "self.addEventListener('install', (e) => { self.skipWaiting(); }); self.addEventListener('fetch', (e) => { });"
+    js = """
+    self.addEventListener('install', (e) => { self.skipWaiting(); });
+    self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+    self.addEventListener('push', function(e) {
+        const data = e.data ? e.data.json() : {title: 'Gestão T&I', body: 'Nova notificação'};
+        const options = {
+            body: data.body,
+            icon: '/static/icons/icone.png',
+            badge: '/static/icons/icone.png',
+            vibrate: [200, 100, 200, 100, 200, 100, 200]
+        };
+        e.waitUntil(self.registration.showNotification(data.title, options));
+    });
+    self.addEventListener('notificationclick', function(e) {
+        e.notification.close();
+        e.waitUntil(clients.openWindow('/'));
+    });
+    """
     return send_file(io.BytesIO(js.encode('utf-8')), mimetype='application/javascript')
 
-# --- TELAS V2.0 ---
 @despesas_bp.route('/', methods=['GET'])
 def home(): return render_template('dashboard/index.html')
 @despesas_bp.route('/historico', methods=['GET'])
@@ -46,7 +62,6 @@ def tela_fixas(): return render_template('despesas/fixas.html')
 @despesas_bp.route('/variaveis', methods=['GET'])
 def tela_variaveis(): return render_template('despesas/variaveis.html')
 
-# --- DESPESAS API ---
 @despesas_bp.route('/api/despesas/nova', methods=['POST'])
 def nova_despesa():
     dados = request.form.to_dict()
@@ -59,7 +74,19 @@ def nova_despesa():
         
     dados['pago'] = True if request.form.get('pago') == 'true' else False
     sucesso = DespesaRepository.criar(dados, comprovante_binario, mimetype)
-    if sucesso: return jsonify({"status": "sucesso"}), 201
+    
+    if sucesso:
+        # Lógica do "Dedo Duro" (Avisa o outro usuário)
+        autor = dados.get('autor_criacao', 'Igor')
+        outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
+        valor_f = f"R$ {float(dados['valor']):.2f}".replace('.', ',')
+        tipo = dados.get('tipo_despesa', 'Variável')
+        
+        msg = f"{autor} adicionou uma conta {tipo}: {dados['descricao']} ({valor_f})"
+        NotificacaoService.enviar_notificacao(outro_usuario, "💸 Nova Despesa Lançada!", msg)
+        
+        return jsonify({"status": "sucesso"}), 201
+        
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/despesas', methods=['GET'])
@@ -74,7 +101,6 @@ def resumo():
     mes = int(request.args.get('mes', hoje.month)); ano = int(request.args.get('ano', hoje.year))
     return jsonify(DespesaRepository.obter_resumo(mes, ano)), 200
 
-# --- RENDAS API ---
 @despesas_bp.route('/api/rendas/lista', methods=['GET'])
 def listar_rendas():
     mes = request.args.get('mes'); ano = request.args.get('ano')
@@ -95,7 +121,6 @@ def alterar_renda(renda_id):
         if DespesaRepository.atualizar_renda(renda_id, request.json.get('valor')): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# --- CAIXINHAS API ---
 @despesas_bp.route('/api/caixinhas', methods=['GET', 'POST'])
 def gerenciar_caixinhas():
     if request.method == 'GET': return jsonify(DespesaRepository.listar_caixinhas()), 200
@@ -118,7 +143,6 @@ def alterar_caixinha(caixinha_id):
         if DespesaRepository.atualizar_caixinha(caixinha_id, dados.get('nome'), dados.get('valor'), dados.get('icone_svg')): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# --- PAGAMENTOS API ---
 @despesas_bp.route('/api/despesas/<int:despesa_id>/pagar', methods=['POST'])
 def pagar_despesa(despesa_id):
     arquivo = request.files.get('comprovante')
