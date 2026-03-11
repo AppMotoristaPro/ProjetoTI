@@ -211,7 +211,8 @@ class DespesaRepository:
             cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s", (usuario, fonte, mes, ano))
             linha = cur.fetchone()
             if linha:
-                cur.execute("UPDATE rendas SET valor=%s WHERE id=%s", (valor, linha[0]))
+                # Aqui está a mágica: valor = valor + %s
+                cur.execute("UPDATE rendas SET valor = valor + %s WHERE id=%s", (valor, linha[0]))
             else:
                 cur.execute("INSERT INTO rendas (usuario, fonte, mes, ano, valor) VALUES (%s, %s, %s, %s, %s)", (usuario, fonte, mes, ano, valor))
             conn.commit()

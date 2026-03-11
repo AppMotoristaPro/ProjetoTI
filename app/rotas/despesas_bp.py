@@ -1,6 +1,6 @@
 import io
 import datetime
-from flask import Blueprint, request, jsonify, send_file, render_template
+from flask import Blueprint, request, jsonify, send_file, render_template, make_response
 from app.repositories.despesa_repository import DespesaRepository
 from app.services.compressao_service import comprimir_arquivo
 from app.services.notificacao_service import NotificacaoService
@@ -14,7 +14,7 @@ def hoje_br():
 def manifest():
     return jsonify({
         "name": "Despesas T&I",
-        "short_name": "Gestão T&I",
+        "short_name": "Despesas T&I", # <-- NOME CORRIGIDO AQUI!
         "start_url": "/",
         "display": "standalone",
         "background_color": "#f4f6f9",
@@ -31,19 +31,20 @@ def manifest():
 def sw():
     js = """
     self.addEventListener('install', (e) => { 
-        console.log('🔍 [SW LOG] Service Worker Instalado!');
+        console.log('🔍 [SW LOG] Service Worker Instalado (V2 - Anti-Cache)!');
         self.skipWaiting(); 
     });
     
     self.addEventListener('activate', (e) => { 
-        console.log('🔍 [SW LOG] Service Worker Ativado!');
+        console.log('🔍 [SW LOG] Service Worker Ativado (V2)!');
         e.waitUntil(clients.claim()); 
     });
     
     self.addEventListener('push', function(e) {
         console.log('🔍 [SW LOG] EVENTO PUSH RECEBIDO NO CELULAR!');
         
-        let data = {title: 'Gestão T&I', body: 'Nova notificação'};
+        let data = {title: 'Despesas T&I', body: 'Nova movimentação registrada!'};
+        
         if (e.data) {
             try {
                 data = e.data.json();
@@ -68,7 +69,14 @@ def sw():
         e.waitUntil(clients.openWindow('/'));
     });
     """
-    return send_file(io.BytesIO(js.encode('utf-8')), mimetype='application/javascript')
+    
+    # VACINA ANTI-CACHE (Impede o navegador de guardar o arquivo velho)
+    response = make_response(js)
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @despesas_bp.route('/', methods=['GET'])
 def home(): return render_template('dashboard/index.html')

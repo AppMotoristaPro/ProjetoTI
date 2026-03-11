@@ -145,9 +145,14 @@
     </div>
 
     <script>
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+        // O parâmetro ?v=2 engana o celular fazendo ele achar que é um arquivo inédito
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js?v=2').then(reg => {
+                reg.update(); // Força a atualização agressiva do Cache
+                console.log('🔍 [FRONTEND LOG] Service Worker registrado e forçado a atualizar.');
+            }).catch(err => console.error('❌ Erro no SW:', err));
+        }
 
-        // === ROTINA DE INSCRIÇÃO PUSH NATIVA ===
         const publicVapidKey = 'BBN1tLnB8VQRegpxtWOXIcWzCKGDdI2Zvxu93Bdt64Tur25vnp_JnQw3vhN6pmyyxPMS8DBhrMuB4xajBF6b4Ps';
         
         function urlBase64ToUint8Array(base64String) {
@@ -162,21 +167,18 @@
         async function registerPush() {
             if ('serviceWorker' in navigator && 'PushManager' in window) {
                 try {
-                    console.log('🔍 [FRONTEND LOG] Registrando Service Worker para Push...');
+                    console.log('🔍 [FRONTEND LOG] Tentando inscrever para Push...');
                     const swReg = await navigator.serviceWorker.ready;
-                    
                     let subscription = await swReg.pushManager.getSubscription();
                     if (!subscription) {
-                        console.log('🔍 [FRONTEND LOG] Nenhuma inscrição encontrada. Gerando nova...');
                         subscription = await swReg.pushManager.subscribe({ 
                             userVisibleOnly: true, 
                             applicationServerKey: urlBase64ToUint8Array(publicVapidKey) 
                         });
+                        console.log('✅ [FRONTEND LOG] Nova inscrição PUSH gerada!');
                     }
 
                     const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
-                    console.log(`🔍 [FRONTEND LOG] Enviando token para associar a: ${currentUser}`);
-                    
                     await fetch('/api/push/subscribe', {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ usuario: currentUser, subscription: subscription })
