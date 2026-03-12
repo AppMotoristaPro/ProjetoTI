@@ -16,26 +16,23 @@ class NotificacaoService:
         print(f"🔍 [PUSH LOG] Encontradas {len(inscricoes)} inscrições no banco para {usuario}. Preparando payload...")
         payload = json.dumps({"title": titulo, "body": mensagem})
         
-        # O DETETIVE DE DUPLICATAS 🕵️‍♂️
-        endpoints_processados = set()
+        endpoints_enviados = set()
         
         for inscricao in inscricoes:
             try:
                 sub_info = inscricao['subscription_info']
-                # Se o banco retornar string, converte pra dicionário
-                if isinstance(sub_info, str):
+                if isinstance(sub_info, str): 
                     sub_info = json.loads(sub_info)
                     
                 endpoint = sub_info.get('endpoint')
                 
-                # --- SISTEMA DE AUTO-LIMPEZA ---
-                if endpoint in endpoints_processados:
+                # Evita enviar duas vezes para o mesmo aparelho se houver duplicidade
+                if endpoint in endpoints_enviados: 
                     print(f"🧹 [PUSH LOG] Pulo de duplicata: Aparelho já recebeu. Removendo excesso (ID {inscricao['id']}) do banco.")
                     DespesaRepository.remover_inscricao_push(inscricao['id'])
                     continue
                     
-                endpoints_processados.add(endpoint)
-                # -------------------------------
+                endpoints_enviados.add(endpoint)
                 
                 print(f"🔍 [PUSH LOG] Disparando para a inscrição ID: {inscricao['id']}")
                 webpush(

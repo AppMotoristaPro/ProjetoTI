@@ -145,10 +145,9 @@
     </div>
 
     <script>
-        // O parâmetro ?v=2 engana o celular fazendo ele achar que é um arquivo inédito
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js?v=2').then(reg => {
-                reg.update(); // Força a atualização agressiva do Cache
+                reg.update();
                 console.log('🔍 [FRONTEND LOG] Service Worker registrado e forçado a atualizar.');
             }).catch(err => console.error('❌ Erro no SW:', err));
         }
@@ -179,6 +178,9 @@
                     }
 
                     const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
+                    console.log(`🔍 [FRONTEND LOG] Enviando token para associar a: ${currentUser}`);
+                    
+                    // Enviamos para o servidor sempre, para garantir que o vínculo Usuário <-> Aparelho esteja atualizado
                     await fetch('/api/push/subscribe', {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ usuario: currentUser, subscription: subscription })
@@ -199,7 +201,6 @@
         
         window.addEventListener('load', requestNotificationPermission);
         window.addEventListener('themeChanged', requestNotificationPermission);
-        // ======================================
 
         function toggleTheme() {
             let current = localStorage.getItem('app_theme') || 'blue';

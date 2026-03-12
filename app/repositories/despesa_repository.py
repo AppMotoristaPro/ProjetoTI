@@ -22,15 +22,15 @@ class DespesaRepository:
             endpoint = sub_info.get('endpoint')
             sub_str = json.dumps(sub_info)
             
-            # Busca pelo endpoint isolado (muito mais seguro que comparar o JSON inteiro em texto)
-            cur.execute("SELECT id FROM inscricoes_push WHERE subscription_info->>'endpoint' = %s", (endpoint,))
+            # Agora buscamos a combinação exata de usuário E endpoint
+            cur.execute("SELECT id FROM inscricoes_push WHERE usuario = %s AND subscription_info->>'endpoint' = %s", (usuario, endpoint))
             linha = cur.fetchone()
             
             if linha:
-                # Atualiza o dono do celular (caso mude de azul pra rosa) e as chaves
-                cur.execute("UPDATE inscricoes_push SET usuario = %s, subscription_info = %s WHERE id = %s", (usuario, sub_str, linha[0]))
+                # Atualiza apenas se houver mudança nas chaves de autenticação
+                cur.execute("UPDATE inscricoes_push SET subscription_info = %s WHERE id = %s", (sub_str, linha[0]))
             else:
-                # Novo aparelho
+                # Cria um registro novo para esse usuário nesse aparelho
                 cur.execute("INSERT INTO inscricoes_push (usuario, subscription_info) VALUES (%s, %s)", (usuario, sub_str))
             
             conn.commit()
@@ -211,7 +211,6 @@ class DespesaRepository:
             cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s", (usuario, fonte, mes, ano))
             linha = cur.fetchone()
             if linha:
-                # Aqui está a mágica: valor = valor + %s
                 cur.execute("UPDATE rendas SET valor = valor + %s WHERE id=%s", (valor, linha[0]))
             else:
                 cur.execute("INSERT INTO rendas (usuario, fonte, mes, ano, valor) VALUES (%s, %s, %s, %s, %s)", (usuario, fonte, mes, ano, valor))
