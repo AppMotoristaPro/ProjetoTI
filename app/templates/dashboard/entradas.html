@@ -36,7 +36,9 @@
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarEntradas(); };
 
-    const fontes = { 'Igor': ['Shopee', 'Uber'], 'Thaynara': ['Salário', 'VR', 'VA', 'Ajuda de Custo'] };
+    // Adicionado "Outros" para os dois usuários
+    const fontes = { 'Igor': ['Shopee', 'Uber', 'Outros'], 'Thaynara': ['Salário', 'VR', 'VA', 'Ajuda de Custo', 'Outros'] };
+    
     function atualizarFontesRenda() {
         const usu = document.getElementById('entrada_usuario').value;
         const sel = document.getElementById('entrada_fonte'); sel.innerHTML = '';
