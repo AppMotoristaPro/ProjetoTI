@@ -44,13 +44,21 @@
                 <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Previsão Pago</label><input type="date" name="data_pretensao" class="w-full p-3 rounded-xl bg-orange-50 border border-orange-100 text-sm outline-none"></div>
                 <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Quem Paga?</label><select name="responsavel_pagamento" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
             </div>
+            
             <div class="p-3 rounded-2xl bg-orange-50 border border-orange-100">
                 <div class="flex items-center gap-2 mb-2"><input type="checkbox" id="recorrente" name="recorrente" value="true" onchange="toggleParcelas()" class="w-4 h-4 accent-orange-500"><label for="recorrente" class="text-xs font-bold text-orange-800">É Parcelado?</label></div>
-                <div id="box-parcelas" class="hidden flex gap-2 pt-2 border-t border-orange-200/50">
-                    <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Parcela Atual</label><input type="number" name="parcela_atual" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
-                    <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Total Meses</label><input type="number" name="total_parcelas" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
+                <div id="box-parcelas" class="hidden flex flex-col gap-2 pt-2 border-t border-orange-200/50">
+                    <div class="flex gap-2">
+                        <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Parcela Atual</label><input type="number" name="parcela_atual" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
+                        <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Total Meses</label><input type="number" name="total_parcelas" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1 pt-2 border-t border-orange-200/50">
+                        <input type="checkbox" id="repetir_previsao_var" name="repetir_previsao" value="true" class="w-4 h-4 accent-orange-500">
+                        <label for="repetir_previsao_var" class="text-[10px] font-bold text-orange-800">Repetir previsão para as próximas parcelas?</label>
+                    </div>
                 </div>
             </div>
+            
             <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Observações</label><textarea name="observacao" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm"></textarea></div>
             <button type="submit" id="btnSalvarVar" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition shadow-lg">Guardar Conta</button>
         </form>

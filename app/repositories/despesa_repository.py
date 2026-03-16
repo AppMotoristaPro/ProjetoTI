@@ -22,15 +22,12 @@ class DespesaRepository:
             endpoint = sub_info.get('endpoint')
             sub_str = json.dumps(sub_info)
             
-            # Agora buscamos a combinação exata de usuário E endpoint
             cur.execute("SELECT id FROM inscricoes_push WHERE usuario = %s AND subscription_info->>'endpoint' = %s", (usuario, endpoint))
             linha = cur.fetchone()
             
             if linha:
-                # Atualiza apenas se houver mudança nas chaves de autenticação
                 cur.execute("UPDATE inscricoes_push SET subscription_info = %s WHERE id = %s", (sub_str, linha[0]))
             else:
-                # Cria um registro novo para esse usuário nesse aparelho
                 cur.execute("INSERT INTO inscricoes_push (usuario, subscription_info) VALUES (%s, %s)", (usuario, sub_str))
             
             conn.commit()
@@ -120,6 +117,9 @@ class DespesaRepository:
             grupo_id = str(uuid.uuid4())
             
             recorrente = str(dados.get('recorrente', 'false')).lower() == 'true'
+            # NOVO: Verifica se o botão "Repetir Previsão" foi marcado
+            repetir_previsao = str(dados.get('repetir_previsao', 'false')).lower() == 'true'
+            
             parcela_inicial = int(dados.get('parcela_atual', 1))
             total_parcelas = int(dados.get('total_parcelas', 1))
             
@@ -139,7 +139,13 @@ class DespesaRepository:
 
             for i in range(parcelas_a_criar):
                 nova_data_venc = DespesaRepository._somar_meses(data_vencimento, i)
-                nova_data_pret = DespesaRepository._somar_meses(data_pretensao, i)
+                
+                # A MÁGICA ACONTECE AQUI:
+                if i == 0 or repetir_previsao:
+                    nova_data_pret = DespesaRepository._somar_meses(data_pretensao, i)
+                else:
+                    nova_data_pret = None # Deixa as parcelas futuras em branco
+                
                 p_atual = parcela_inicial + i
                 descricao_final = dados.get('descricao')
                 
