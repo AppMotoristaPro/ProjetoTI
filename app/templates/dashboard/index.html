@@ -73,7 +73,13 @@
             <div class="flex justify-between text-emerald-600"><span>(+) Renda Total do Mês</span><span id="math_renda"></span></div>
             <div class="flex justify-between text-red-500"><span>(-) Despesas (Todas)</span><span id="math_desp"></span></div>
             <div class="flex justify-between text-theme border-b border-slate-100 pb-3"><span>(-) Guardado nas Caixinhas</span><span id="math_cx"></span></div>
-            <div class="flex justify-between text-slate-800 pt-1 font-black text-lg"><span>= Saldo Livre</span><span id="math_saldo"></span></div>
+            <div class="flex justify-between text-slate-800 pt-1 font-black text-lg"><span>= Saldo Livre Atual</span><span id="math_saldo"></span></div>
+            
+            <div class="border-t border-dashed border-slate-200 pt-3 mt-3"></div>
+            <p class="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-2">Projeção Futura (A Receber)</p>
+            <div class="flex justify-between text-indigo-500"><span id="lbl_shopee_pendente">(+) Shopee Pendente</span><span id="math_shopee_pendente"></span></div>
+            <div class="flex justify-between text-pink-500 border-b border-slate-100 pb-3"><span id="lbl_morato_pendente">(+) Reembolso Pendente</span><span id="math_morato_pendente"></span></div>
+            <div class="flex justify-between text-emerald-600 pt-1 font-black text-xl"><span>= Saldo Projetado</span><span id="math_saldo_projetado"></span></div>
         </div>
     </div>
 </div>
@@ -269,18 +275,15 @@
     window.toggleMarcacao = async (data, usuario, tipo) => {
         await fetch('/api/calendario/marcar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({data, usuario, tipo}) });
         await carregarDashboard(); 
-        abrirModalCalendario(data); // Atualiza os detalhes no modal aberto
+        abrirModalCalendario(data); 
     };
 
-    // --- NOVA LÓGICA DO MODAL DA SHOPEE ---
     window.marcarShopeeTrabalhado = (dataStr) => {
         diaTrabalhadoAtual = dataStr;
-        // Preenche o input do modal com a data de hoje como sugestão inicial
         const tzoffset = (new Date()).getTimezoneOffset() * 60000;
         const hojeISO = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
         document.getElementById('data_recebimento_shopee').value = hojeISO; 
         
-        // Esconde o modal do calendário e mostra o modal da Shopee
         document.getElementById('modalCalendarioDia').classList.add('hidden');
         document.getElementById('modalRecebimentoShopee').classList.remove('hidden');
     };
@@ -292,16 +295,10 @@
 
     window.confirmarRecebimentoShopee = async () => {
         const dataRecebimento = document.getElementById('data_recebimento_shopee').value;
+        if(!dataRecebimento) { alert('Por favor, escolha a data em que o dinheiro vai cair.'); return; }
         
-        if(!dataRecebimento) {
-            alert('Por favor, escolha a data em que o dinheiro vai cair.');
-            return;
-        }
-        
-        // Extrai o mês e ano do dia escolhido no input de data
         const [anoStr, mesStr, diaStr] = dataRecebimento.split('-');
         
-        // Lança o dinheiro para o mês/ano que o usuário indicou
         await fetch('/api/rendas', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -314,17 +311,14 @@
             })
         });
         
-        // Efetiva a marcação visual como trabalhado no dia do calendário em que ele clicou
         await toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado');
         fecharModalShopee();
     };
 
     window.apenasMarcarTrabalhado = async () => {
-        // Marca o dia visualmente, mas não lança rendas
         await toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado');
         fecharModalShopee();
     };
-    // --------------------------------------
 
     const abrirModalCalendario = (dataStr) => {
         document.getElementById('modal_cal_data').innerText = `Dia ${formatarData(dataStr)}/${dataStr.split('-')[0]}`;
@@ -373,10 +367,28 @@
     };
 
     const abrirExplicacaoSaldo = () => {
+        // Preenche os dados atuais
         document.getElementById('math_renda').innerText = formatarMoeda(resumoGlobal.total_renda);
         document.getElementById('math_desp').innerText = formatarMoeda(resumoGlobal.total_despesas_mes);
         document.getElementById('math_cx').innerText = formatarMoeda(resumoGlobal.total_caixinhas_mes);
         document.getElementById('math_saldo').innerText = formatarMoeda(resumoGlobal.saldo_final);
+
+        // LÓGICA DE PROJEÇÃO (NOVO)
+        const diasShopee = diasMarcadosGlobais.filter(m => m.tipo === 'shopee_previsto').length;
+        const diasMorato = diasMarcadosGlobais.filter(m => m.tipo === 'morato_pendente').length;
+
+        const valorShopee = diasShopee * 245.00;
+        const valorMorato = diasMorato * 139.00;
+        const saldoProjetado = resumoGlobal.saldo_final + valorShopee + valorMorato;
+
+        document.getElementById('lbl_shopee_pendente').innerText = `(+) Shopee Pendente (${diasShopee} dias)`;
+        document.getElementById('math_shopee_pendente').innerText = formatarMoeda(valorShopee);
+
+        document.getElementById('lbl_morato_pendente').innerText = `(+) Reembolso Pendente (${diasMorato} dias)`;
+        document.getElementById('math_morato_pendente').innerText = formatarMoeda(valorMorato);
+
+        document.getElementById('math_saldo_projetado').innerText = formatarMoeda(saldoProjetado);
+
         document.getElementById('modalExplicaSaldo').classList.remove('hidden');
     };
 
