@@ -227,7 +227,8 @@
             
             let markerHtml = '';
             if (marcacaoDoDia) {
-                if (marcacaoDoDia.tipo === 'shopee') markerHtml = '<div class="text-[8px] opacity-90" title="Trabalho Shopee">📦</div>';
+                if (marcacaoDoDia.tipo === 'shopee_previsto') markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Previsto">⏳📦</div>';
+                else if (marcacaoDoDia.tipo === 'shopee_trabalhado') markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Trabalhado">✅📦</div>';
                 else if (marcacaoDoDia.tipo === 'morato_pendente') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Pendente">🚆🔴</div>';
                 else if (marcacaoDoDia.tipo === 'morato_reembolsado') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Reembolsado">🚆🟢</div>';
             }
@@ -249,6 +250,30 @@
         abrirModalCalendario(data); // Atualiza os detalhes no modal aberto
     };
 
+    window.marcarShopeeTrabalhado = async (dataStr) => {
+        const [anoStr, mesStr, diaStr] = dataStr.split('-');
+        
+        // Pergunta se deseja lançar o dinheiro
+        const desejaLancar = confirm(`Trabalho concluído! Deseja lançar R$ 245,00 nas suas entradas de Shopee para o mês de ${mesStr}/${anoStr} agora?`);
+        
+        if (desejaLancar) {
+            await fetch('/api/rendas', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    usuario: 'Igor',
+                    fonte: 'Shopee',
+                    mes: parseInt(mesStr),
+                    ano: parseInt(anoStr),
+                    valor: 245.00
+                })
+            });
+        }
+        
+        // Efetiva a marcação visual como trabalhado
+        await toggleMarcacao(dataStr, 'Igor', 'shopee_trabalhado');
+    };
+
     const abrirModalCalendario = (dataStr) => {
         document.getElementById('modal_cal_data').innerText = `Dia ${formatarData(dataStr)}/${dataStr.split('-')[0]}`;
         
@@ -258,18 +283,23 @@
         const painel = document.getElementById('painel_marcacao_dia');
         
         if (currentUser === 'Igor') {
-            const isShopee = marcacao && marcacao.tipo === 'shopee';
+            const isPrevisto = marcacao && marcacao.tipo === 'shopee_previsto';
+            const isTrabalhado = marcacao && marcacao.tipo === 'shopee_trabalhado';
             painel.innerHTML = `
-                <div class="mb-5 p-3 bg-indigo-50/70 rounded-2xl border border-indigo-100 flex justify-between items-center shadow-sm">
-                    <div class="flex items-center gap-2"><span class="text-sm">📦</span><span class="text-[10px] font-black text-indigo-800 uppercase">Trabalho (Shopee)</span></div>
-                    <button onclick="toggleMarcacao('${dataStr}', 'Igor', '${isShopee ? '' : 'shopee'}')" class="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-lg transition ${isShopee ? 'bg-indigo-500 text-white shadow-md' : 'bg-white text-indigo-400 border border-indigo-200 hover:bg-indigo-50'}">${isShopee ? 'DIA MARCADO' : 'MARCAR DIA'}</button>
+                <div class="mb-5 p-3 bg-indigo-50/70 rounded-2xl border border-indigo-100 shadow-sm">
+                    <div class="flex items-center gap-2 mb-2"><span class="text-sm">📦</span><span class="text-[10px] font-black text-indigo-800 uppercase">Trabalho (Shopee)</span></div>
+                    <div class="flex gap-2">
+                        <button onclick="toggleMarcacao('${dataStr}', 'Igor', 'shopee_previsto')" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition ${isPrevisto ? 'bg-indigo-400 text-white shadow-md' : 'bg-white text-indigo-400 border border-indigo-200 hover:bg-indigo-50'}">Previsto</button>
+                        <button onclick="marcarShopeeTrabalhado('${dataStr}')" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition ${isTrabalhado ? 'bg-emerald-500 text-white shadow-md' : 'bg-white text-emerald-500 border border-emerald-200 hover:bg-emerald-50'}">Trabalhado</button>
+                        ${(isPrevisto || isTrabalhado) ? `<button onclick="toggleMarcacao('${dataStr}', 'Igor', '')" class="w-8 flex items-center justify-center bg-white text-slate-400 border border-slate-200 rounded-lg hover:bg-slate-100 transition active:scale-90">❌</button>` : ''}
+                    </div>
                 </div>`;
         } else {
             const isPend = marcacao && marcacao.tipo === 'morato_pendente';
             const isReemb = marcacao && marcacao.tipo === 'morato_reembolsado';
             painel.innerHTML = `
                 <div class="mb-5 p-3 bg-pink-50/70 rounded-2xl border border-pink-100 shadow-sm">
-                    <div class="flex items-center gap-2 mb-2"><span class="text-sm">🚆</span><span class="text-[10px] font-black text-pink-800 uppercase">Viagem para Francisco Morato</span></div>
+                    <div class="flex items-center gap-2 mb-2"><span class="text-sm">🚆</span><span class="text-[10px] font-black text-pink-800 uppercase">Viagem para Francisco Morato (Nexus)</span></div>
                     <div class="flex gap-2">
                         <button onclick="toggleMarcacao('${dataStr}', 'Thaynara', 'morato_pendente')" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition ${isPend ? 'bg-red-500 text-white shadow-md' : 'bg-white text-red-500 border border-red-200 hover:bg-red-50'}">Pendente</button>
                         <button onclick="toggleMarcacao('${dataStr}', 'Thaynara', 'morato_reembolsado')" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition ${isReemb ? 'bg-emerald-500 text-white shadow-md' : 'bg-white text-emerald-500 border border-emerald-200 hover:bg-emerald-50'}">Reembolsado</button>

@@ -48,15 +48,44 @@ class DespesaRepository:
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            # Remove marcação existente do usuário no dia, se houver
+            
+            # Busca o estado ANTERIOR dessa marcação para sabermos se houve mudança
+            cur.execute("SELECT tipo FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
+            linha = cur.fetchone()
+            tipo_anterior = linha[0] if linha else None
+            
+            # --- AUTOMAÇÃO FINANCEIRA DA THAYNARA ---
+            # Descobre qual é o mês e o ano que ela clicou no calendário
+            try:
+                data_obj = datetime.datetime.strptime(data, '%Y-%m-%d').date()
+                mes_cal = data_obj.month
+                ano_cal = data_obj.year
+            except:
+                mes_cal = datetime.date.today().month
+                ano_cal = datetime.date.today().year
+
+            if usuario == 'Thaynara':
+                # Se ela marcou como reembolsado agora (e antes não estava) -> SOMA +139
+                if tipo == 'morato_reembolsado' and tipo_anterior != 'morato_reembolsado':
+                    DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', mes_cal, ano_cal, 139.00)
+                
+                # Se ela tirou o reembolsado (voltou para pendente ou excluiu a marcação) -> SUBTRAI -139
+                elif tipo_anterior == 'morato_reembolsado' and tipo != 'morato_reembolsado':
+                    DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', mes_cal, ano_cal, -139.00)
+            # ----------------------------------------
+            
+            # Deleta a marcação visual antiga e coloca a nova
             cur.execute("DELETE FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
-            # Se o tipo não for vazio, insere a nova marcação
             if tipo:
                 cur.execute("INSERT INTO dias_marcados (data_marcada, usuario, tipo) VALUES (%s, %s, %s)", (data, usuario, tipo))
+            
             conn.commit()
             return True
-        except Exception: return False
-        finally: conn.close()
+        except Exception as e: 
+            print(f"Erro ao marcar_dia: {e}")
+            return False
+        finally: 
+            conn.close()
 
     @staticmethod
     def salvar_inscricao_push(usuario, sub_info):
@@ -76,9 +105,7 @@ class DespesaRepository:
             
             conn.commit()
             return True
-        except Exception as e:
-            print(f"Erro em salvar_inscricao_push: {e}")
-            return False
+        except Exception as e: return False
         finally: conn.close()
 
     @staticmethod
@@ -116,9 +143,7 @@ class DespesaRepository:
             """)
             colunas = [desc[0] for desc in cur.description]
             return [dict(zip(colunas, [str(r[i]) if i==2 else r[i] for i in range(len(r))])) for r in cur.fetchall()]
-        except Exception as e: 
-            print(e)
-            return []
+        except Exception: return []
         finally: conn.close()
 
     @staticmethod
@@ -135,9 +160,7 @@ class DespesaRepository:
             """)
             colunas = [desc[0] for desc in cur.description]
             return [dict(zip(colunas, row)) for row in cur.fetchall()]
-        except Exception as e: 
-            print(e)
-            return []
+        except Exception: return []
         finally: conn.close()
 
     @staticmethod
@@ -211,7 +234,7 @@ class DespesaRepository:
             conn.commit()
             cur.close()
             return True
-        except Exception as e: return False
+        except Exception: return False
         finally: conn.close()
 
     @staticmethod
