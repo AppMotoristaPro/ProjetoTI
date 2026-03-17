@@ -49,13 +49,10 @@ class DespesaRepository:
         try:
             cur = conn.cursor()
             
-            # Busca o estado ANTERIOR dessa marcação para sabermos se houve mudança
             cur.execute("SELECT tipo FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
             linha = cur.fetchone()
             tipo_anterior = linha[0] if linha else None
             
-            # --- AUTOMAÇÃO FINANCEIRA DA THAYNARA ---
-            # Descobre qual é o mês e o ano que ela clicou no calendário
             try:
                 data_obj = datetime.datetime.strptime(data, '%Y-%m-%d').date()
                 mes_cal = data_obj.month
@@ -64,17 +61,35 @@ class DespesaRepository:
                 mes_cal = datetime.date.today().month
                 ano_cal = datetime.date.today().year
 
+            # --- AUTOMAÇÃO FINANCEIRA DA THAYNARA ---
             if usuario == 'Thaynara':
-                # Se ela marcou como reembolsado agora (e antes não estava) -> SOMA +139
                 if tipo == 'morato_reembolsado' and tipo_anterior != 'morato_reembolsado':
                     DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', mes_cal, ano_cal, 139.00)
-                
-                # Se ela tirou o reembolsado (voltou para pendente ou excluiu a marcação) -> SUBTRAI -139
                 elif tipo_anterior == 'morato_reembolsado' and tipo != 'morato_reembolsado':
                     DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', mes_cal, ano_cal, -139.00)
             # ----------------------------------------
             
-            # Deleta a marcação visual antiga e coloca a nova
+            # --- AUTOMAÇÃO FINANCEIRA DO IGOR (SHOPEE) ---
+            if usuario == 'Igor':
+                # Subtrai o valor caso existisse uma marcação de trabalhado COM recebimento
+                if tipo_anterior and tipo_anterior.startswith('shopee_trabalhado|'):
+                    partes_ant = tipo_anterior.split('|')
+                    if len(partes_ant) == 2:
+                        try:
+                            dp_obj_ant = datetime.datetime.strptime(partes_ant[1], '%Y-%m-%d').date()
+                            DespesaRepository.salvar_renda('Igor', 'Shopee', dp_obj_ant.month, dp_obj_ant.year, -245.00)
+                        except: pass
+                
+                # Adiciona o valor caso a nova marcação seja trabalhado COM recebimento
+                if tipo and tipo.startswith('shopee_trabalhado|'):
+                    partes_novo = tipo.split('|')
+                    if len(partes_novo) == 2:
+                        try:
+                            dp_obj_novo = datetime.datetime.strptime(partes_novo[1], '%Y-%m-%d').date()
+                            DespesaRepository.salvar_renda('Igor', 'Shopee', dp_obj_novo.month, dp_obj_novo.year, 245.00)
+                        except: pass
+            # ----------------------------------------
+            
             cur.execute("DELETE FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
             if tipo:
                 cur.execute("INSERT INTO dias_marcados (data_marcada, usuario, tipo) VALUES (%s, %s, %s)", (data, usuario, tipo))

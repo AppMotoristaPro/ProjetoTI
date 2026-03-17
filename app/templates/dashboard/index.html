@@ -77,7 +77,8 @@
             
             <div class="border-t border-dashed border-slate-200 pt-3 mt-3"></div>
             <p class="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-2">Projeção Futura (A Receber)</p>
-            <div class="flex justify-between text-indigo-500"><span id="lbl_shopee_pendente">(+) Shopee Pendente</span><span id="math_shopee_pendente"></span></div>
+            <div class="flex justify-between text-indigo-500"><span id="lbl_shopee_pendente_este_mes">(+) Shopee (Neste Mês)</span><span id="math_shopee_pendente_este_mes"></span></div>
+            <div class="flex justify-between text-indigo-300"><span id="lbl_shopee_pendente_prox_mes">(+) Shopee (Mês Seguinte)</span><span id="math_shopee_pendente_prox_mes"></span></div>
             <div class="flex justify-between text-pink-500 border-b border-slate-100 pb-3"><span id="lbl_morato_pendente">(+) Reembolso Pendente</span><span id="math_morato_pendente"></span></div>
             <div class="flex justify-between text-emerald-600 pt-1 font-black text-xl"><span>= Saldo Projetado</span><span id="math_saldo_projetado"></span></div>
         </div>
@@ -126,13 +127,13 @@
 <script>
     let currentData = new Date(); let despesasGlobais = []; let resumoGlobal = null; let diasMarcadosGlobais = [];
     let chartDespesasObj = null; let chartRendaIgorObj = null; let chartRendaThayObj = null; let chartTiposObj = null; let chartCatObj = null;
-    let diaTrabalhadoAtual = null; // Guarda a data sendo marcada pela Shopee
+    let diaTrabalhadoAtual = null;
     
     Chart.register(ChartDataLabels);
 
     window.addEventListener('themeChanged', () => {
         if(resumoGlobal && despesasGlobais) renderizarGraficos(resumoGlobal, despesasGlobais);
-        if(despesasGlobais) renderizarCalendario(despesasGlobais); // Atualiza os ícones ao trocar o tema
+        if(despesasGlobais) renderizarCalendario(despesasGlobais);
     });
 
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -256,7 +257,7 @@
             let markerHtml = '';
             if (marcacaoDoDia) {
                 if (marcacaoDoDia.tipo === 'shopee_previsto') markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Previsto">⏳📦</div>';
-                else if (marcacaoDoDia.tipo === 'shopee_trabalhado') markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Trabalhado">✅📦</div>';
+                else if (marcacaoDoDia.tipo && marcacaoDoDia.tipo.startsWith('shopee_trabalhado')) markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Trabalhado">✅📦</div>';
                 else if (marcacaoDoDia.tipo === 'morato_pendente') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Pendente">🚆🔴</div>';
                 else if (marcacaoDoDia.tipo === 'morato_reembolsado') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Reembolsado">🚆🟢</div>';
             }
@@ -297,21 +298,9 @@
         const dataRecebimento = document.getElementById('data_recebimento_shopee').value;
         if(!dataRecebimento) { alert('Por favor, escolha a data em que o dinheiro vai cair.'); return; }
         
-        const [anoStr, mesStr, diaStr] = dataRecebimento.split('-');
-        
-        await fetch('/api/rendas', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                usuario: 'Igor',
-                fonte: 'Shopee',
-                mes: parseInt(mesStr),
-                ano: parseInt(anoStr),
-                valor: 245.00
-            })
-        });
-        
-        await toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado');
+        // Manda o status "grudado" com a data pro servidor gerenciar as contas automaticamente
+        const tipoComData = `shopee_trabalhado|${dataRecebimento}`;
+        await toggleMarcacao(diaTrabalhadoAtual, 'Igor', tipoComData);
         fecharModalShopee();
     };
 
@@ -329,7 +318,7 @@
         
         if (currentUser === 'Igor') {
             const isPrevisto = marcacao && marcacao.tipo === 'shopee_previsto';
-            const isTrabalhado = marcacao && marcacao.tipo === 'shopee_trabalhado';
+            const isTrabalhado = marcacao && marcacao.tipo && marcacao.tipo.startsWith('shopee_trabalhado');
             painel.innerHTML = `
                 <div class="mb-5 p-3 bg-indigo-50/70 rounded-2xl border border-indigo-100 shadow-sm">
                     <div class="flex items-center gap-2 mb-2"><span class="text-sm">📦</span><span class="text-[10px] font-black text-indigo-800 uppercase">Trabalho (Shopee)</span></div>
@@ -367,24 +356,49 @@
     };
 
     const abrirExplicacaoSaldo = () => {
-        // Preenche os dados atuais
         document.getElementById('math_renda').innerText = formatarMoeda(resumoGlobal.total_renda);
         document.getElementById('math_desp').innerText = formatarMoeda(resumoGlobal.total_despesas_mes);
         document.getElementById('math_cx').innerText = formatarMoeda(resumoGlobal.total_caixinhas_mes);
         document.getElementById('math_saldo').innerText = formatarMoeda(resumoGlobal.saldo_final);
 
-        // LÓGICA DE PROJEÇÃO (NOVO)
-        const diasShopee = diasMarcadosGlobais.filter(m => m.tipo === 'shopee_previsto').length;
+        const currentMonth = currentData.getMonth();
+        const currentYear = currentData.getFullYear();
+
+        let diasShopeeEsteMes = 0;
+        let diasShopeeProximoMes = 0;
+
+        diasMarcadosGlobais.forEach(m => {
+            if (m.tipo === 'shopee_previsto') {
+                const [y, mn, d] = m.data.split('-');
+                const workedDate = new Date(y, mn - 1, d);
+                
+                // Calcula dias exatos até a próxima quinta-feira
+                const dayOfWeek = workedDate.getDay() || 7; // 1=Seg, 7=Dom
+                const daysToNextThursday = 7 - dayOfWeek + 4;
+                const payDate = new Date(y, mn - 1, workedDate.getDate() + daysToNextThursday);
+                
+                if (payDate.getMonth() === currentMonth && payDate.getFullYear() === currentYear) {
+                    diasShopeeEsteMes++;
+                } else {
+                    diasShopeeProximoMes++;
+                }
+            }
+        });
+
         const diasMorato = diasMarcadosGlobais.filter(m => m.tipo === 'morato_pendente').length;
 
-        const valorShopee = diasShopee * 245.00;
+        const valorShopeeEsteMes = diasShopeeEsteMes * 245.00;
+        const valorShopeeProximoMes = diasShopeeProximoMes * 245.00;
         const valorMorato = diasMorato * 139.00;
-        const saldoProjetado = resumoGlobal.saldo_final + valorShopee + valorMorato;
+        const saldoProjetado = resumoGlobal.saldo_final + valorShopeeEsteMes + valorMorato;
 
-        document.getElementById('lbl_shopee_pendente').innerText = `(+) Shopee Pendente (${diasShopee} dias)`;
-        document.getElementById('math_shopee_pendente').innerText = formatarMoeda(valorShopee);
+        document.getElementById('lbl_shopee_pendente_este_mes').innerText = `(+) Shopee (Cai Neste Mês: ${diasShopeeEsteMes} d)`;
+        document.getElementById('math_shopee_pendente_este_mes').innerText = formatarMoeda(valorShopeeEsteMes);
 
-        document.getElementById('lbl_morato_pendente').innerText = `(+) Reembolso Pendente (${diasMorato} dias)`;
+        document.getElementById('lbl_shopee_pendente_prox_mes').innerText = `(+) Shopee (Cai Próx. Mês: ${diasShopeeProximoMes} d)`;
+        document.getElementById('math_shopee_pendente_prox_mes').innerText = formatarMoeda(valorShopeeProximoMes);
+
+        document.getElementById('lbl_morato_pendente').innerText = `(+) Reembolso Pendente (${diasMorato} d)`;
         document.getElementById('math_morato_pendente').innerText = formatarMoeda(valorMorato);
 
         document.getElementById('math_saldo_projetado').innerText = formatarMoeda(saldoProjetado);
