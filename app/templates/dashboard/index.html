@@ -262,14 +262,25 @@
             
             let dotHtml = '';
             if (contasDoDia.length > 0) {
-                const isPago = contasDoDia.every(c => c.pago);
-                // RESTAURAÇÃO DOS CORAÇÕES PARA A THAYNARA
-                if (currentUser === 'Thaynara') {
-                    const heartOpacity = isPago ? 'opacity-100' : 'opacity-50 animate-pulse';
-                    dotHtml = `<div class="text-[8px] ${heartOpacity}" title="Contas do Dia">💖</div>`;
+                // A NOVA LÓGICA DO SEMÁFORO DE CORAÇÕES DA THAYNARA E BOLINHAS DO IGOR
+                const qtdTotal = contasDoDia.length;
+                const qtdPagas = contasDoDia.filter(c => c.pago).length;
+                
+                let corStatus = '';
+                if (qtdPagas === qtdTotal) {
+                    corStatus = 'text-emerald-400 bg-emerald-400'; // Tudo pago (Verde)
+                } else if (qtdPagas > 0 && qtdPagas < qtdTotal) {
+                    corStatus = 'text-yellow-400 bg-yellow-400 animate-pulse'; // Parcialmente pago (Amarelo)
                 } else {
-                    const bgClass = isPago ? 'bg-emerald-400' : 'bg-orange-500 animate-pulse';
-                    dotHtml = `<div class="w-1.5 h-1.5 rounded-full ${bgClass} shadow-sm" title="Contas do Dia"></div>`;
+                    corStatus = 'text-red-500 bg-red-500 animate-pulse'; // Nada pago (Vermelho)
+                }
+
+                if (currentUser === 'Thaynara') {
+                    // Semáforo de Corações
+                    dotHtml = `<div class="text-[8px] ${corStatus.split(' ')[0]} ${corStatus.includes('pulse') ? 'animate-pulse' : ''}" title="Contas do Dia">💖</div>`;
+                } else {
+                    // Semáforo de Bolinhas
+                    dotHtml = `<div class="w-1.5 h-1.5 rounded-full ${corStatus.split(' ').slice(1).join(' ')} shadow-sm" title="Contas do Dia"></div>`;
                 }
             }
             
