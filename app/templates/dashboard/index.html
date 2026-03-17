@@ -97,9 +97,31 @@
     </div>
 </div>
 
+<div id="modalRecebimentoShopee" class="hidden fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
+        <button onclick="fecharModalShopee()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        
+        <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mb-4">📦</div>
+        <h3 class="text-xl font-black text-slate-800 mb-1">Trabalho Concluído!</h3>
+        <p class="text-xs font-bold text-slate-500 mb-6 leading-relaxed">Você marcou este dia como trabalhado. Para qual dia devemos lançar a entrada de <span class="text-emerald-500 font-black">R$ 245,00</span>?</p>
+        
+        <div class="space-y-3">
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Data de Recebimento</label>
+                <input type="date" id="data_recebimento_shopee" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none focus:border-indigo-400" required>
+            </div>
+            
+            <button onclick="confirmarRecebimentoShopee()" class="w-full py-4 bg-indigo-500 text-white rounded-2xl font-black active:scale-95 transition shadow-lg mt-2">LANÇAR ENTRADA</button>
+            <button onclick="apenasMarcarTrabalhado()" class="w-full py-3 bg-slate-50 text-slate-500 rounded-2xl font-bold border border-slate-100 hover:bg-slate-100 active:scale-95 transition">Apenas Marcar no Calendário</button>
+        </div>
+    </div>
+</div>
+
 <script>
     let currentData = new Date(); let despesasGlobais = []; let resumoGlobal = null; let diasMarcadosGlobais = [];
     let chartDespesasObj = null; let chartRendaIgorObj = null; let chartRendaThayObj = null; let chartTiposObj = null; let chartCatObj = null;
+    let diaTrabalhadoAtual = null; // Guarda a data sendo marcada pela Shopee
+    
     Chart.register(ChartDataLabels);
 
     window.addEventListener('themeChanged', () => {
@@ -250,34 +272,63 @@
         abrirModalCalendario(data); // Atualiza os detalhes no modal aberto
     };
 
-    window.marcarShopeeTrabalhado = async (dataStr) => {
-        const [anoStr, mesStr, diaStr] = dataStr.split('-');
+    // --- NOVA LÓGICA DO MODAL DA SHOPEE ---
+    window.marcarShopeeTrabalhado = (dataStr) => {
+        diaTrabalhadoAtual = dataStr;
+        // Preenche o input do modal com a data de hoje como sugestão inicial
+        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+        const hojeISO = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+        document.getElementById('data_recebimento_shopee').value = hojeISO; 
         
-        // Pergunta se deseja lançar o dinheiro
-        const desejaLancar = confirm(`Trabalho concluído! Deseja lançar R$ 245,00 nas suas entradas de Shopee para o mês de ${mesStr}/${anoStr} agora?`);
+        // Esconde o modal do calendário e mostra o modal da Shopee
+        document.getElementById('modalCalendarioDia').classList.add('hidden');
+        document.getElementById('modalRecebimentoShopee').classList.remove('hidden');
+    };
+
+    window.fecharModalShopee = () => {
+        document.getElementById('modalRecebimentoShopee').classList.add('hidden');
+        diaTrabalhadoAtual = null;
+    };
+
+    window.confirmarRecebimentoShopee = async () => {
+        const dataRecebimento = document.getElementById('data_recebimento_shopee').value;
         
-        if (desejaLancar) {
-            await fetch('/api/rendas', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    usuario: 'Igor',
-                    fonte: 'Shopee',
-                    mes: parseInt(mesStr),
-                    ano: parseInt(anoStr),
-                    valor: 245.00
-                })
-            });
+        if(!dataRecebimento) {
+            alert('Por favor, escolha a data em que o dinheiro vai cair.');
+            return;
         }
         
-        // Efetiva a marcação visual como trabalhado
-        await toggleMarcacao(dataStr, 'Igor', 'shopee_trabalhado');
+        // Extrai o mês e ano do dia escolhido no input de data
+        const [anoStr, mesStr, diaStr] = dataRecebimento.split('-');
+        
+        // Lança o dinheiro para o mês/ano que o usuário indicou
+        await fetch('/api/rendas', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                usuario: 'Igor',
+                fonte: 'Shopee',
+                mes: parseInt(mesStr),
+                ano: parseInt(anoStr),
+                valor: 245.00
+            })
+        });
+        
+        // Efetiva a marcação visual como trabalhado no dia do calendário em que ele clicou
+        await toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado');
+        fecharModalShopee();
     };
+
+    window.apenasMarcarTrabalhado = async () => {
+        // Marca o dia visualmente, mas não lança rendas
+        await toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado');
+        fecharModalShopee();
+    };
+    // --------------------------------------
 
     const abrirModalCalendario = (dataStr) => {
         document.getElementById('modal_cal_data').innerText = `Dia ${formatarData(dataStr)}/${dataStr.split('-')[0]}`;
         
-        // 1. Cria a caixa de controles interativos dependendo de quem está olhando o app
         const currentUser = localStorage.getItem('app_theme') === 'pink' ? 'Thaynara' : 'Igor';
         const marcacao = diasMarcadosGlobais.find(m => m.data === dataStr && m.usuario === currentUser);
         const painel = document.getElementById('painel_marcacao_dia');
@@ -308,7 +359,6 @@
                 </div>`;
         }
 
-        // 2. Renderiza a lista de contas que vencem ou têm previsão para aquele dia
         const contasDoDia = despesasGlobais.filter(d => d.tipo_despesa !== 'Diária' && getDataBase(d) === dataStr);
         const cont = document.getElementById('lista_contas_dia'); cont.innerHTML = '';
         if (contasDoDia.length === 0) {
