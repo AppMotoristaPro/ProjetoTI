@@ -71,8 +71,7 @@
         <h3 class="text-lg font-black text-theme mb-4">Matemática do Saldo</h3>
         <div class="space-y-3 font-bold text-sm">
             <div class="flex justify-between text-emerald-600"><span>(+) Renda Total do Mês</span><span id="math_renda"></span></div>
-            <div class="flex justify-between text-red-500"><span>(-) Despesas (Todas)</span><span id="math_desp"></span></div>
-            <div class="flex justify-between text-theme border-b border-slate-100 pb-3"><span>(-) Guardado nas Caixinhas</span><span id="math_cx"></span></div>
+            <div class="flex justify-between text-red-500 border-b border-slate-100 pb-3"><span>(-) Despesas (Todas)</span><span id="math_desp"></span></div>
             <div class="flex justify-between text-slate-800 pt-1 font-black text-lg"><span>= Saldo Livre Atual</span><span id="math_saldo"></span></div>
             
             <div class="border-t border-dashed border-slate-200 pt-3 mt-3"></div>
@@ -97,9 +96,7 @@
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="document.getElementById('modalCalendarioDia').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 id="modal_cal_data" class="text-sm font-black text-theme uppercase tracking-widest mb-4">--/--/----</h3>
-        
         <div id="painel_marcacao_dia"></div>
-        
         <div id="lista_contas_dia" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1"></div>
     </div>
 </div>
@@ -225,12 +222,11 @@
         let tFixa = despesas.filter(d => d.tipo_despesa === 'Fixa').reduce((a,c) => a + parseFloat(c.valor), 0);
         let tVar = despesas.filter(d => d.tipo_despesa === 'Variável').reduce((a,c) => a + parseFloat(c.valor), 0);
         let tDia = despesas.filter(d => d.tipo_despesa === 'Diária').reduce((a,c) => a + parseFloat(c.valor), 0);
-        let tCx = resumo.total_caixinhas_mes; 
 
         if (chartTiposObj) chartTiposObj.destroy();
         chartTiposObj = new Chart(document.getElementById('chartTiposDespesa'), {
             type: 'pie',
-            data: { labels: ['Fixas', 'Variáveis', 'Dia-a-Dia', 'Caixinha'], datasets: [{ data: [tFixa, tVar, tDia, tCx], backgroundColor: ['#4f46e5', '#f97316', '#ec4899', '#10b981'], borderWidth: 0 }] },
+            data: { labels: ['Fixas', 'Variáveis', 'Dia-a-Dia'], datasets: [{ data: [tFixa, tVar, tDia], backgroundColor: ['#4f46e5', '#f97316', '#ec4899'], borderWidth: 0 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font:{size:10} } }, datalabels: dlOpt } }
         });
 
@@ -262,24 +258,17 @@
             
             let dotHtml = '';
             if (contasDoDia.length > 0) {
-                // A NOVA LÓGICA DO SEMÁFORO DE CORAÇÕES DA THAYNARA E BOLINHAS DO IGOR
                 const qtdTotal = contasDoDia.length;
                 const qtdPagas = contasDoDia.filter(c => c.pago).length;
                 
                 let corStatus = '';
-                if (qtdPagas === qtdTotal) {
-                    corStatus = 'text-emerald-400 bg-emerald-400'; // Tudo pago (Verde)
-                } else if (qtdPagas > 0 && qtdPagas < qtdTotal) {
-                    corStatus = 'text-yellow-400 bg-yellow-400 animate-pulse'; // Parcialmente pago (Amarelo)
-                } else {
-                    corStatus = 'text-red-500 bg-red-500 animate-pulse'; // Nada pago (Vermelho)
-                }
+                if (qtdPagas === qtdTotal) { corStatus = 'text-emerald-400 bg-emerald-400'; } 
+                else if (qtdPagas > 0 && qtdPagas < qtdTotal) { corStatus = 'text-yellow-400 bg-yellow-400 animate-pulse'; } 
+                else { corStatus = 'text-red-500 bg-red-500 animate-pulse'; }
 
                 if (currentUser === 'Thaynara') {
-                    // Semáforo de Corações
                     dotHtml = `<div class="text-[8px] ${corStatus.split(' ')[0]} ${corStatus.includes('pulse') ? 'animate-pulse' : ''}" title="Contas do Dia">💖</div>`;
                 } else {
-                    // Semáforo de Bolinhas
                     dotHtml = `<div class="w-1.5 h-1.5 rounded-full ${corStatus.split(' ').slice(1).join(' ')} shadow-sm" title="Contas do Dia"></div>`;
                 }
             }
@@ -291,6 +280,8 @@
                 else if (marcacaoDoDia.tipo === 'morato_pendente') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Pendente">🚆🔴</div>';
                 else if (marcacaoDoDia.tipo === 'morato_reembolsado') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Reembolsado">🚆🟢</div>';
                 else if (marcacaoDoDia.tipo === 'coracao') markerHtml = '<div class="text-[8px] opacity-90 animate-pulse" title="Dia Especial">❤️</div>';
+                else if (marcacaoDoDia.tipo === 'carro_previsao') markerHtml = '<div class="text-[8px] opacity-90" title="Carro: Previsão de Oficina">🔧🟡</div>';
+                else if (marcacaoDoDia.tipo === 'carro_parado') markerHtml = '<div class="text-[8px] opacity-90 animate-pulse" title="Carro: Parado na Oficina">🚨🚗</div>';
             }
             
             const gapClass = (dotHtml && markerHtml) ? 'gap-1' : '';
@@ -349,6 +340,7 @@
         if (currentUser === 'Igor') {
             const isPrevisto = marcacao && marcacao.tipo === 'shopee_previsto';
             const isTrabalhado = marcacao && marcacao.tipo && marcacao.tipo.startsWith('shopee_trabalhado');
+            
             painel.innerHTML = `
                 <div class="mb-5 p-3 bg-indigo-50/70 rounded-2xl border border-indigo-100 shadow-sm">
                     <div class="flex items-center gap-2 mb-2"><span class="text-sm">📦</span><span class="text-[10px] font-black text-indigo-800 uppercase">Trabalho (Shopee)</span></div>
@@ -394,7 +386,6 @@
     const abrirExplicacaoSaldo = () => {
         document.getElementById('math_renda').innerText = formatarMoeda(resumoGlobal.total_renda);
         document.getElementById('math_desp').innerText = formatarMoeda(resumoGlobal.total_despesas_mes);
-        document.getElementById('math_cx').innerText = formatarMoeda(resumoGlobal.total_caixinhas_mes);
         document.getElementById('math_saldo').innerText = formatarMoeda(resumoGlobal.saldo_final);
 
         const currentMonth = currentData.getMonth();

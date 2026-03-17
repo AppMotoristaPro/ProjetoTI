@@ -30,59 +30,29 @@ def manifest():
 @despesas_bp.route('/sw.js')
 def sw():
     js = """
-    self.addEventListener('install', (e) => { 
-        console.log('🔍 [SW LOG] Service Worker Instalado (V2 - Anti-Cache)!');
-        self.skipWaiting(); 
-    });
-    
-    self.addEventListener('activate', (e) => { 
-        console.log('🔍 [SW LOG] Service Worker Ativado (V2)!');
-        e.waitUntil(clients.claim()); 
-    });
-    
+    self.addEventListener('install', (e) => { self.skipWaiting(); });
+    self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
     self.addEventListener('push', function(e) {
-        console.log('🔍 [SW LOG] EVENTO PUSH RECEBIDO NO CELULAR!');
-        
         let data = {title: 'Despesas T&I', body: 'Nova movimentação registrada!'};
-        
-        if (e.data) {
-            try {
-                data = e.data.json();
-            } catch(err) {
-                console.log('⚠️ [SW LOG] JSON Parse error, usando texto simples.');
-                data.body = e.data.text();
-            }
-        }
-
-        const options = {
-            body: data.body,
-            icon: '/static/icons/icone.png',
-            badge: '/static/icons/icone.png',
-            vibrate: [200, 100, 200, 100, 200, 100, 200]
-        };
-        
+        if (e.data) { try { data = e.data.json(); } catch(err) { data.body = e.data.text(); } }
+        const options = { body: data.body, icon: '/static/icons/icone.png', badge: '/static/icons/icone.png', vibrate: [200, 100, 200] };
         e.waitUntil(self.registration.showNotification(data.title, options));
     });
-    
     self.addEventListener('notificationclick', function(e) {
-        e.notification.close();
-        e.waitUntil(clients.openWindow('/'));
+        e.notification.close(); e.waitUntil(clients.openWindow('/'));
     });
     """
-    
     response = make_response(js)
     response.headers['Content-Type'] = 'application/javascript'
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
     return response
 
 @despesas_bp.route('/', methods=['GET'])
 def home(): return render_template('dashboard/index.html')
 @despesas_bp.route('/historico', methods=['GET'])
 def tela_historico(): return render_template('despesas/historico.html')
-@despesas_bp.route('/caixinhas', methods=['GET'])
-def tela_caixinhas(): return render_template('dashboard/caixinhas.html')
+@despesas_bp.route('/carro', methods=['GET'])
+def tela_carro(): return render_template('dashboard/carro.html')
 @despesas_bp.route('/entradas', methods=['GET'])
 def tela_entradas(): return render_template('dashboard/entradas.html')
 @despesas_bp.route('/fixas', methods=['GET'])
@@ -102,18 +72,13 @@ def nova_despesa():
         
     dados['pago'] = True if request.form.get('pago') == 'true' else False
     sucesso = DespesaRepository.criar(dados, comprovante_binario, mimetype)
-    
     if sucesso:
         autor = dados.get('autor_criacao', 'Igor')
         outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
         valor_f = f"R$ {float(dados['valor']):.2f}".replace('.', ',')
-        tipo = dados.get('tipo_despesa', 'Variável')
-        
-        msg = f"{autor} adicionou uma conta {tipo}: {dados['descricao']} ({valor_f})"
+        msg = f"{autor} adicionou uma conta {dados.get('tipo_despesa', 'Variável')}: {dados['descricao']} ({valor_f})"
         NotificacaoService.enviar_notificacao(outro_usuario, "💸 Nova Despesa Lançada!", msg)
-        
         return jsonify({"status": "sucesso"}), 201
-        
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/despesas', methods=['GET'])
@@ -146,28 +111,6 @@ def alterar_renda(renda_id):
         if DespesaRepository.excluir_renda(renda_id): return jsonify({"status": "sucesso"}), 200
     else:
         if DespesaRepository.atualizar_renda(renda_id, request.json.get('valor')): return jsonify({"status": "sucesso"}), 200
-    return jsonify({"status": "erro"}), 500
-
-@despesas_bp.route('/api/caixinhas', methods=['GET', 'POST'])
-def gerenciar_caixinhas():
-    if request.method == 'GET': return jsonify(DespesaRepository.listar_caixinhas()), 200
-    else:
-        dados = request.json
-        if DespesaRepository.salvar_caixinha(dados.get('nome'), dados.get('valor'), dados.get('icone_svg', 'geral')): return jsonify({"status": "sucesso"}), 200
-        return jsonify({"status": "erro"}), 500
-
-@despesas_bp.route('/api/caixinhas/<int:caixinha_id>/depositar', methods=['POST'])
-def depositar_caixinha(caixinha_id):
-    if DespesaRepository.depositar_caixinha(caixinha_id, request.json.get('valor')): return jsonify({"status": "sucesso"}), 200
-    return jsonify({"status": "erro"}), 500
-
-@despesas_bp.route('/api/caixinhas/<int:caixinha_id>', methods=['DELETE', 'PUT'])
-def alterar_caixinha(caixinha_id):
-    if request.method == 'DELETE':
-        if DespesaRepository.excluir_caixinha(caixinha_id): return jsonify({"status": "sucesso"}), 200
-    else:
-        dados = request.json
-        if DespesaRepository.atualizar_caixinha(caixinha_id, dados.get('nome'), dados.get('valor'), dados.get('icone_svg')): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/despesas/<int:despesa_id>/pagar', methods=['POST'])
@@ -204,7 +147,6 @@ def editar_despesa(despesa_id):
     if DespesaRepository.atualizar(despesa_id, request.json): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# NOVAS ROTAS PARA AS MARCAÇÕES DO CALENDÁRIO
 @despesas_bp.route('/api/calendario/marcacoes', methods=['GET'])
 def listar_marcacoes():
     mes = request.args.get('mes'); ano = request.args.get('ano')
@@ -217,4 +159,22 @@ def marcar_dia():
     sucesso = DespesaRepository.marcar_dia(dados.get('data'), dados.get('usuario'), dados.get('tipo'))
     if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
+
+# ROTAS DO SANDERO
+@despesas_bp.route('/api/sandero/config', methods=['GET', 'POST'])
+def gerenciar_sandero_config():
+    if request.method == 'GET':
+        return jsonify(DespesaRepository.obter_sandero_config()), 200
+    else:
+        sucesso = DespesaRepository.salvar_sandero_config(request.json)
+        return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
+
+@despesas_bp.route('/api/sandero/diario', methods=['GET', 'POST'])
+def gerenciar_sandero_diario():
+    if request.method == 'GET':
+        mes = request.args.get('mes'); ano = request.args.get('ano')
+        return jsonify(DespesaRepository.listar_sandero_diario(int(mes), int(ano))), 200
+    else:
+        sucesso = DespesaRepository.salvar_sandero_diario(request.json)
+        return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
 

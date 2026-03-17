@@ -33,7 +33,6 @@
         :root {
             --bg-glass: rgba(255, 255, 255, 0.4);
             --bg-header: rgba(244, 246, 249, 0.85);
-            /* TEMA AZUL (Igor) */
             --color-primary: #4f46e5;
             --color-primary-light: #e0e7ff;
             --color-action: #ff8c00;
@@ -41,7 +40,6 @@
         }
 
         [data-theme="pink"] {
-            /* TEMA ROSA/ROXO (Thay) */
             --color-primary: #db2777;
             --color-primary-light: #fce7f3;
             --color-action: #9333ea;
@@ -98,13 +96,14 @@
                 <a href="/entradas" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">💰</span> Entradas</a>
                 <a href="/fixas" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-theme-light flex items-center justify-center">🏠</span> Contas Fixas</a>
                 <a href="/variaveis" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">💳</span> Variáveis</a>
+                <a href="/carro" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center">🚘</span> Meu Sandero</a>
             </div>
             <button onclick="toggleSpeedDial()" class="p-2 rounded-xl transition-all active:scale-90 text-slate-500 hover:text-theme focus:outline-none"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg></button>
         </div>
 
         <button onclick="abrirModalDiaDia()" class="flex flex-col items-center relative z-50 active:scale-95 transition-transform focus:outline-none"><div class="btn-active w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white -mt-5"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div></button>
 
-        <a href="/caixinhas" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div></a>
+        <a href="/carro" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></div></a>
         <a href="/historico" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div></a>
     </nav>
 
@@ -130,6 +129,7 @@
                     <label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Categoria</label>
                     <select name="categoria" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required>
                         <option value="Besteira">Besteira</option>
+                        <option value="Carro">Carro</option>
                         <option value="Combustível">Combustível</option>
                         <option value="Farmácia">Farmácia</option>
                         <option value="Mercado">Mercado</option>
@@ -148,7 +148,6 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js?v=2').then(reg => {
                 reg.update();
-                console.log('🔍 [FRONTEND LOG] Service Worker registrado e forçado a atualizar.');
             }).catch(err => console.error('❌ Erro no SW:', err));
         }
 
@@ -166,7 +165,6 @@
         async function registerPush() {
             if ('serviceWorker' in navigator && 'PushManager' in window) {
                 try {
-                    console.log('🔍 [FRONTEND LOG] Tentando inscrever para Push...');
                     const swReg = await navigator.serviceWorker.ready;
                     let subscription = await swReg.pushManager.getSubscription();
                     if (!subscription) {
@@ -174,13 +172,9 @@
                             userVisibleOnly: true, 
                             applicationServerKey: urlBase64ToUint8Array(publicVapidKey) 
                         });
-                        console.log('✅ [FRONTEND LOG] Nova inscrição PUSH gerada!');
                     }
 
                     const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
-                    console.log(`🔍 [FRONTEND LOG] Enviando token para associar a: ${currentUser}`);
-                    
-                    // Enviamos para o servidor sempre, para garantir que o vínculo Usuário <-> Aparelho esteja atualizado
                     await fetch('/api/push/subscribe', {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ usuario: currentUser, subscription: subscription })
@@ -239,6 +233,7 @@
                     fecharModalDiaDia(); e.target.reset();
                     if (typeof carregarDashboard === "function") { carregarDashboard(); } 
                     else if (typeof carregarH === "function") { carregarH(); }
+                    else if (typeof carregarCarro === "function") { carregarCarro(); }
                     else { window.location.reload(); }
                 } else { alert("Erro ao salvar o gasto diário."); }
             } catch (error) { alert("Erro de rede."); } finally { btn.innerText = 'LANÇAR GASTO'; btn.disabled = false; }
