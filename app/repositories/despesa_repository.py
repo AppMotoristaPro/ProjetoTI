@@ -15,6 +15,50 @@ class DespesaRepository:
         return datetime.date(ano, mes, dia)
 
     @staticmethod
+    def _garantir_tabela_marcacoes():
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS dias_marcados (
+                    id SERIAL PRIMARY KEY,
+                    data_marcada DATE,
+                    usuario VARCHAR(50),
+                    tipo VARCHAR(50)
+                )
+            """)
+            conn.commit()
+        except Exception: pass
+        finally: conn.close()
+
+    @staticmethod
+    def listar_dias_marcados(mes, ano):
+        DespesaRepository._garantir_tabela_marcacoes()
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT data_marcada, usuario, tipo FROM dias_marcados WHERE EXTRACT(MONTH FROM data_marcada) = %s AND EXTRACT(YEAR FROM data_marcada) = %s", (mes, ano))
+            return [{"data": d[0].strftime('%Y-%m-%d'), "usuario": d[1], "tipo": d[2]} for d in cur.fetchall()]
+        except Exception: return []
+        finally: conn.close()
+
+    @staticmethod
+    def marcar_dia(data, usuario, tipo):
+        DespesaRepository._garantir_tabela_marcacoes()
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            # Remove marcação existente do usuário no dia, se houver
+            cur.execute("DELETE FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
+            # Se o tipo não for vazio, insere a nova marcação
+            if tipo:
+                cur.execute("INSERT INTO dias_marcados (data_marcada, usuario, tipo) VALUES (%s, %s, %s)", (data, usuario, tipo))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+    @staticmethod
     def salvar_inscricao_push(usuario, sub_info):
         conn = get_db_connection()
         try:
@@ -117,7 +161,6 @@ class DespesaRepository:
             grupo_id = str(uuid.uuid4())
             
             recorrente = str(dados.get('recorrente', 'false')).lower() == 'true'
-            # NOVO: Verifica se o botão "Repetir Previsão" foi marcado
             repetir_previsao = str(dados.get('repetir_previsao', 'false')).lower() == 'true'
             
             parcela_inicial = int(dados.get('parcela_atual', 1))
@@ -139,12 +182,10 @@ class DespesaRepository:
 
             for i in range(parcelas_a_criar):
                 nova_data_venc = DespesaRepository._somar_meses(data_vencimento, i)
-                
-                # A MÁGICA ACONTECE AQUI:
                 if i == 0 or repetir_previsao:
                     nova_data_pret = DespesaRepository._somar_meses(data_pretensao, i)
                 else:
-                    nova_data_pret = None # Deixa as parcelas futuras em branco
+                    nova_data_pret = None
                 
                 p_atual = parcela_inicial + i
                 descricao_final = dados.get('descricao')

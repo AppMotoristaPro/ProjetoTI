@@ -14,7 +14,7 @@ def hoje_br():
 def manifest():
     return jsonify({
         "name": "Despesas T&I",
-        "short_name": "Despesas T&I", # <-- NOME CORRIGIDO AQUI!
+        "short_name": "Despesas T&I",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#f4f6f9",
@@ -70,7 +70,6 @@ def sw():
     });
     """
     
-    # VACINA ANTI-CACHE (Impede o navegador de guardar o arquivo velho)
     response = make_response(js)
     response.headers['Content-Type'] = 'application/javascript'
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -203,5 +202,19 @@ def deletar_despesa(despesa_id):
 @despesas_bp.route('/api/despesas/<int:despesa_id>/editar', methods=['PUT'])
 def editar_despesa(despesa_id):
     if DespesaRepository.atualizar(despesa_id, request.json): return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
+# NOVAS ROTAS PARA AS MARCAÇÕES DO CALENDÁRIO
+@despesas_bp.route('/api/calendario/marcacoes', methods=['GET'])
+def listar_marcacoes():
+    mes = request.args.get('mes'); ano = request.args.get('ano')
+    if mes and ano: return jsonify(DespesaRepository.listar_dias_marcados(int(mes), int(ano))), 200
+    return jsonify([]), 200
+
+@despesas_bp.route('/api/calendario/marcar', methods=['POST'])
+def marcar_dia():
+    dados = request.json
+    sucesso = DespesaRepository.marcar_dia(dados.get('data'), dados.get('usuario'), dados.get('tipo'))
+    if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
