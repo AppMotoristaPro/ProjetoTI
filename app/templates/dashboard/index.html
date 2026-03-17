@@ -150,7 +150,6 @@
     const carregarDashboard = async () => {
         atualizarDisplayMes();
         try {
-            // A Mágica do Retrovisor: Calcula o mês atual e o mês anterior
             const mAtual = currentData.getMonth() + 1;
             const aAtual = currentData.getFullYear();
             
@@ -158,7 +157,6 @@
             let aAnt = aAtual;
             if (mAnt === 0) { mAnt = 12; aAnt--; }
 
-            // Dispara as buscas de forma simultânea e super rápida (Promise.all)
             const [resResumo, resDespesas, resMarcAtual, resMarcAnt] = await Promise.all([
                 fetch(`/api/resumo?mes=${mAtual}&ano=${aAtual}`),
                 fetch(`/api/despesas?mes=${mAtual}&ano=${aAtual}`),
@@ -172,7 +170,6 @@
             const marcAtual = await resMarcAtual.json();
             const marcAnt = await resMarcAnt.json();
             
-            // Junta as marcações do mês atual e do mês anterior numa lista só!
             diasMarcadosGlobais = [...marcAnt, ...marcAtual];
 
             document.getElementById('saldo_final').innerText = formatarMoeda(resumoGlobal.saldo_final);
@@ -266,8 +263,14 @@
             let dotHtml = '';
             if (contasDoDia.length > 0) {
                 const isPago = contasDoDia.every(c => c.pago);
-                const bgClass = isPago ? 'bg-emerald-400' : 'bg-orange-500 animate-pulse';
-                dotHtml = `<div class="w-1.5 h-1.5 rounded-full ${bgClass} shadow-sm"></div>`;
+                // RESTAURAÇÃO DOS CORAÇÕES PARA A THAYNARA
+                if (currentUser === 'Thaynara') {
+                    const heartOpacity = isPago ? 'opacity-100' : 'opacity-50 animate-pulse';
+                    dotHtml = `<div class="text-[8px] ${heartOpacity}" title="Contas do Dia">💖</div>`;
+                } else {
+                    const bgClass = isPago ? 'bg-emerald-400' : 'bg-orange-500 animate-pulse';
+                    dotHtml = `<div class="w-1.5 h-1.5 rounded-full ${bgClass} shadow-sm" title="Contas do Dia"></div>`;
+                }
             }
             
             let markerHtml = '';
@@ -276,6 +279,7 @@
                 else if (marcacaoDoDia.tipo && marcacaoDoDia.tipo.startsWith('shopee_trabalhado')) markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Trabalhado">✅📦</div>';
                 else if (marcacaoDoDia.tipo === 'morato_pendente') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Pendente">🚆🔴</div>';
                 else if (marcacaoDoDia.tipo === 'morato_reembolsado') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Reembolsado">🚆🟢</div>';
+                else if (marcacaoDoDia.tipo === 'coracao') markerHtml = '<div class="text-[8px] opacity-90 animate-pulse" title="Dia Especial">❤️</div>';
             }
             
             const gapClass = (dotHtml && markerHtml) ? 'gap-1' : '';
@@ -346,13 +350,19 @@
         } else {
             const isPend = marcacao && marcacao.tipo === 'morato_pendente';
             const isReemb = marcacao && marcacao.tipo === 'morato_reembolsado';
+            const isCoracao = marcacao && marcacao.tipo === 'coracao';
+            
             painel.innerHTML = `
                 <div class="mb-5 p-3 bg-pink-50/70 rounded-2xl border border-pink-100 shadow-sm">
-                    <div class="flex items-center gap-2 mb-2"><span class="text-sm">🚆</span><span class="text-[10px] font-black text-pink-800 uppercase">Viagem para Francisco Morato (Nexus)</span></div>
+                    <div class="flex items-center justify-between mb-3 border-b border-pink-100/50 pb-2">
+                        <div class="flex items-center gap-2"><span class="text-sm">❤️</span><span class="text-[10px] font-black text-pink-800 uppercase">Dia Especial</span></div>
+                        <button onclick="toggleMarcacao('${dataStr}', 'Thaynara', 'coracao')" class="px-3 py-1 text-[9px] font-black uppercase rounded-lg transition ${isCoracao ? 'bg-pink-500 text-white shadow-md' : 'bg-white text-pink-400 border border-pink-200 hover:bg-pink-50'}">${isCoracao ? 'MARCADO' : 'MARCAR ❤️'}</button>
+                    </div>
+                    <div class="flex items-center gap-2 mb-2"><span class="text-sm">🚆</span><span class="text-[10px] font-black text-pink-800 uppercase">Francisco Morato (Nexus)</span></div>
                     <div class="flex gap-2">
                         <button onclick="toggleMarcacao('${dataStr}', 'Thaynara', 'morato_pendente')" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition ${isPend ? 'bg-red-500 text-white shadow-md' : 'bg-white text-red-500 border border-red-200 hover:bg-red-50'}">Pendente</button>
                         <button onclick="toggleMarcacao('${dataStr}', 'Thaynara', 'morato_reembolsado')" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition ${isReemb ? 'bg-emerald-500 text-white shadow-md' : 'bg-white text-emerald-500 border border-emerald-200 hover:bg-emerald-50'}">Reembolsado</button>
-                        ${(isPend || isReemb) ? `<button onclick="toggleMarcacao('${dataStr}', 'Thaynara', '')" class="w-8 flex items-center justify-center bg-white text-slate-400 border border-slate-200 rounded-lg hover:bg-slate-100 transition active:scale-90">❌</button>` : ''}
+                        ${(isPend || isReemb || isCoracao) ? `<button onclick="toggleMarcacao('${dataStr}', 'Thaynara', '')" class="w-8 flex items-center justify-center bg-white text-slate-400 border border-slate-200 rounded-lg hover:bg-slate-100 transition active:scale-90">❌</button>` : ''}
                     </div>
                 </div>`;
         }
@@ -382,7 +392,6 @@
         let diasShopeeEsteMes = 0;
         let diasShopeeProximoMes = 0;
 
-        // O Funil da Quinta-Feira: processa os dias previstos de março e abril juntos
         diasMarcadosGlobais.forEach(m => {
             if (m.tipo === 'shopee_previsto') {
                 const [y, mn, d] = m.data.split('-');
@@ -392,18 +401,15 @@
                 const daysToNextThursday = 7 - dayOfWeek + 4;
                 const payDate = new Date(y, mn - 1, workedDate.getDate() + daysToNextThursday);
                 
-                // Pagamento cai no mês visualizado (ex: trabalho final de março pagando início de abril)
                 if (payDate.getMonth() === currentMonth && payDate.getFullYear() === currentYear) {
                     diasShopeeEsteMes++;
                 } 
-                // Trabalho no mês visualizado, mas pagamento escorrega pro próximo mês (ex: trabalho final de abril pagando em maio)
                 else if (workedDate.getMonth() === currentMonth && workedDate.getFullYear() === currentYear && (payDate.getMonth() > currentMonth || payDate.getFullYear() > currentYear)) {
                     diasShopeeProximoMes++;
                 }
             }
         });
 
-        // O Filtro de Morato: Pega apenas os dias de Morato que ocorreram DENTRO do mês visualizado
         const diasMorato = diasMarcadosGlobais.filter(m => {
             if (m.tipo !== 'morato_pendente') return false;
             const [y, mn, d] = m.data.split('-');
