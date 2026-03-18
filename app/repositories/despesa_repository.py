@@ -354,7 +354,7 @@ class DespesaRepository:
             else: cur.execute("UPDATE despesas SET descricao=%s, valor=%s, data_vencimento=%s, data_pretensao=NULL, responsavel_pagamento=%s, fonte_pagamento=%s WHERE id=%s", (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('responsavel_pagamento'), dados.get('fonte_pagamento'), despesa_id))
             conn.commit()
             return True
-        except Exception: return False
+        except Exception as e: print(e); return False
         finally: conn.close()
 
     @staticmethod
