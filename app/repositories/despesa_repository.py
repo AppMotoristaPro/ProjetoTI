@@ -433,3 +433,31 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
+    @staticmethod
+    def excluir_sandero_diario(diario_id):
+        DespesaRepository._garantir_tabelas()
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM sandero_diario WHERE id = %s", (diario_id,))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+
+    @staticmethod
+    def atualizar_sandero_diario(diario_id, dados):
+        DespesaRepository._garantir_tabelas()
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE sandero_diario
+                SET data_registro = %s, km_rodado = %s, ganho = %s, custo_calculado = %s, lucro_real = %s
+                WHERE id = %s
+            """, (dados.get('data_registro'), dados.get('km_rodado'), dados.get('ganho'), dados.get('custo_calculado'), dados.get('lucro_real'), diario_id))
+            conn.commit()
+            return True
+        except Exception: return False
+        finally: conn.close()
+

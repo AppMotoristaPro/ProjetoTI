@@ -11,18 +11,50 @@
     </button>
 </div>
 
-<div class="ultra-glass p-6 rounded-[32px] shadow-sm border border-white/60 mb-6 flex flex-col items-center justify-center">
-    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Custo por KM (Mês Selecionado)</p>
-    <p id="lbl_custo_km" class="text-3xl font-black text-theme">R$ 0,00</p>
-    <p class="text-[9px] text-slate-400 mt-2 font-bold text-center">Calculado com base em Combustível, Pneus e Revisão.</p>
+<div class="p-6 bg-slate-800 rounded-[32px] shadow-lg mb-6 relative overflow-hidden text-white border border-slate-700">
+    <div class="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none"></div>
+    <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+    <div class="flex justify-between items-center mb-4 relative z-10">
+        <h3 class="text-[10px] font-black text-slate-300 uppercase tracking-widest text-center">Raio-X do Mês</h3>
+        <div class="flex items-center bg-slate-700/50 rounded-full p-1 border border-slate-600">
+            <button onclick="mudarMesCarro(-1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+            <span id="mesDisplayCarro" class="text-[9px] font-bold px-2 text-indigo-300 uppercase tracking-widest">Carregando...</span>
+            <button onclick="mudarMesCarro(1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+        </div>
+    </div>
+
+    <div class="flex justify-between items-center bg-slate-700/50 p-4 rounded-2xl mb-5 border border-slate-600/50 relative z-10">
+        <div class="text-center w-1/2">
+            <p class="text-[9px] uppercase font-bold text-slate-400">Fat. Bruto</p>
+            <p id="rx_mes_ganho" class="font-black text-emerald-400 text-xl">R$ 0,00</p>
+        </div>
+        <div class="w-px h-8 bg-slate-600"></div>
+        <div class="text-center w-1/2">
+            <p class="text-[9px] uppercase font-bold text-slate-400">Total Rodado</p>
+            <p id="rx_mes_km" class="font-black text-slate-200 text-xl">0 km</p>
+        </div>
+    </div>
+
+    <div class="space-y-3 mb-5 px-1 relative z-10">
+        <div class="flex justify-between text-xs font-bold text-slate-300">
+            <span class="flex items-center gap-1.5"><span class="text-orange-400">⛽</span> Desgaste Variável</span>
+            <span id="rx_mes_var" class="text-red-300"></span>
+        </div>
+        <div class="flex justify-between text-xs font-bold text-slate-300 border-b border-slate-600/50 pb-3">
+            <span class="flex items-center gap-1.5"><span class="text-indigo-400">🏦</span> Custo Fixo do Mês</span>
+            <span id="rx_mes_fixo" class="text-red-300"></span>
+        </div>
+    </div>
+
+    <div class="flex justify-between items-center px-1 relative z-10">
+        <span class="text-[11px] uppercase font-black text-emerald-400 tracking-widest">Lucro Limpo Mês</span>
+        <span id="rx_mes_lucro" class="text-3xl font-black text-white">R$ 0,00</span>
+    </div>
 </div>
 
 <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50 mb-6">
-    <div class="flex justify-between items-center mb-4">
-        <button onclick="mudarMesCarro(-1)" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
-        <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest text-center leading-tight">Agenda da Oficina<br><span id="mesDisplayCarro" class="text-[10px] text-indigo-500">Carregando...</span></h3>
-        <button onclick="mudarMesCarro(1)" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
-    </div>
+    <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest text-center leading-tight mb-4">Agenda da Oficina</h3>
     <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-black text-slate-400 mb-2"><div class="text-red-400">DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div></div>
     <div id="calendar-grid-carro" class="grid grid-cols-7 gap-1.5"></div>
     <div class="flex justify-center gap-4 mt-4 text-[9px] font-bold text-slate-500 uppercase">
@@ -54,7 +86,8 @@
 </div>
 
 <div id="modalConfigSandero" class="hidden fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 transition-opacity">
-    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-28"> <button onclick="fecharModalConfig()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-28"> 
+        <button onclick="fecharModalConfig()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-lg font-black text-slate-800 mb-1">Métricas do Sandero</h3>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-3">Configure os custos do veículo</p>
         
@@ -93,9 +126,11 @@
 <div id="modalLancarDia" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="fecharModalLancarDia()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <h3 class="text-xl font-black text-slate-800 mb-1">Dia Trabalhado</h3>
+        <h3 id="tituloLancarDia" class="text-xl font-black text-slate-800 mb-1">Dia Trabalhado</h3>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Lançamento de Faturamento</p>
         
+        <input type="hidden" id="dia_data_oculta">
+
         <div class="flex gap-2 mb-4">
             <div class="w-1/2"><label class="text-[9px] font-black text-slate-500 uppercase ml-1">KM Rodados</label><input type="number" id="dia_km" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl text-center text-slate-800 outline-none focus:border-indigo-400" placeholder="0"></div>
             <div class="w-1/2"><label class="text-[9px] font-black text-slate-500 uppercase ml-1">Ganho Bruto (R$)</label><input type="number" step="0.01" id="dia_ganho" class="w-full p-4 rounded-xl bg-emerald-50 border border-emerald-100 font-black text-xl text-center text-emerald-600 outline-none focus:border-emerald-400" placeholder="0.00"></div>
@@ -137,10 +172,15 @@
             <div class="flex justify-between text-sm font-bold text-slate-600"><span class="text-xs">💰 Reserva</span><span id="rx_reserva" class="text-red-400"></span></div>
         </div>
 
-        <div class="p-5 bg-slate-800 rounded-[24px] flex justify-between items-center shadow-inner relative overflow-hidden">
+        <div class="p-5 bg-slate-800 rounded-[24px] flex justify-between items-center shadow-inner relative overflow-hidden mb-6">
             <div class="absolute -right-4 -top-4 w-20 h-20 bg-white/5 rounded-full blur-xl pointer-events-none"></div>
             <span class="text-[10px] uppercase font-black text-emerald-400 tracking-widest">Lucro Real Limpo</span>
             <span id="rx_lucro" class="text-2xl font-black text-white z-10 relative">R$ 0,00</span>
+        </div>
+
+        <div class="flex gap-3">
+            <button onclick="editarDiaTrabalhado()" class="w-1/2 py-3 bg-indigo-50 text-indigo-600 rounded-2xl font-black text-xs active:scale-95 transition border border-indigo-100 flex items-center justify-center gap-2">✏️ EDITAR</button>
+            <button onclick="excluirDiaTrabalhado()" id="btnExcluirDia" class="w-1/2 py-3 bg-red-50 text-red-500 rounded-2xl font-black text-xs active:scale-95 transition border border-red-100 flex items-center justify-center gap-2">🗑️ EXCLUIR</button>
         </div>
     </div>
 </div>
@@ -190,9 +230,14 @@
     let configCarro = {};
     let marcacoesGerais = [];
     let despesasTotais = [];
-    let diarioCarro = []; // Guarda a lista de dias trabalhados
+    let diarioCarro = [];
     let dataCalendarioAtual = null;
     let custoVariavelKM = 0;
+    let custoFixoMes = 0;
+    
+    // Controles de Edição
+    let visualizandoDiarioId = null;
+    let editandoDiarioId = null;
 
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
@@ -227,7 +272,7 @@
             despesasTotais = await resDesp.json();
             diarioCarro = await resDiario.json();
 
-            // Matemática do Carro (Custo Variável)
+            // Matemática Variável (Por KM)
             const cons = parseFloat(configCarro.consumo) || 1;
             const valComb = parseFloat(configCarro.preco_combustivel) || 0;
             const valPneu = parseFloat(configCarro.pneus_valor) || 0;
@@ -239,7 +284,33 @@
             const custoRevKM = valRev / 10000;
             
             custoVariavelKM = custoCombKM + custoPneuKM + custoRevKM;
-            document.getElementById('lbl_custo_km').innerText = formatarMoeda(custoVariavelKM);
+
+            // Matemática Fixa (Mensal)
+            const fixoFin = parseFloat(configCarro.financiamento) || 0;
+            const fixoSeg = parseFloat(configCarro.seguro) || 0;
+            const fixoIpva = parseFloat(configCarro.ipva) || 0;
+            const fixoRes = parseFloat(configCarro.reserva) || 0;
+            custoFixoMes = fixoFin + fixoSeg + (fixoIpva / 12) + fixoRes;
+
+            // O GRANDE RAIO-X MENSAL 
+            let totalKmMes = 0;
+            let totalGanhoMes = 0;
+            diarioCarro.forEach(d => {
+                totalKmMes += parseFloat(d.km_rodado);
+                totalGanhoMes += parseFloat(d.ganho);
+            });
+
+            const totalCustoVarMes = totalKmMes * custoVariavelKM;
+            const lucroLimpoMes = totalGanhoMes - totalCustoVarMes - custoFixoMes;
+
+            document.getElementById('rx_mes_km').innerText = `${totalKmMes} km`;
+            document.getElementById('rx_mes_ganho').innerText = formatarMoeda(totalGanhoMes);
+            document.getElementById('rx_mes_var').innerText = `- ${formatarMoeda(totalCustoVarMes)}`;
+            document.getElementById('rx_mes_fixo').innerText = `- ${formatarMoeda(custoFixoMes)}`;
+            document.getElementById('rx_mes_lucro').innerText = formatarMoeda(lucroLimpoMes);
+
+            if (lucroLimpoMes < 0) { document.getElementById('rx_mes_lucro').classList.replace('text-white', 'text-red-400'); } 
+            else { document.getElementById('rx_mes_lucro').classList.replace('text-red-400', 'text-white'); }
 
             renderizarCalendarioCarro();
             renderizarDiarioCarro();
@@ -328,8 +399,8 @@
         });
     };
 
-    // Abre o Raio-X com todos os cálculos picotados
     const abrirRaioX = (id) => {
+        visualizandoDiarioId = id;
         const d = diarioCarro.find(x => x.id === id);
         if(!d) return;
 
@@ -340,7 +411,6 @@
         const km = parseFloat(d.km_rodado);
         const ganho = parseFloat(d.ganho);
 
-        // Despesas Variáveis
         const cons = parseFloat(configCarro.consumo) || 1;
         const valComb = parseFloat(configCarro.preco_combustivel) || 0;
         const valPneu = parseFloat(configCarro.pneus_valor) || 0;
@@ -351,7 +421,6 @@
         const custoPneu = km * (valPneu / kmPneu);
         const custoRev = km * (valRev / 10000);
 
-        // Despesas Fixas (Divididas pelo dia)
         const fixoFin = (parseFloat(configCarro.financiamento) || 0) / 30;
         const fixoSeg = (parseFloat(configCarro.seguro) || 0) / 30;
         const fixoIpva = (parseFloat(configCarro.ipva) || 0) / 365;
@@ -366,7 +435,6 @@
         document.getElementById('rx_ipva').innerText = `- ${formatarMoeda(fixoIpva)}`;
         document.getElementById('rx_reserva').innerText = `- ${formatarMoeda(fixoRes)}`;
 
-        // Lucro Limpo
         const lucroReal = ganho - (custoComb + custoPneu + custoRev + fixoFin + fixoSeg + fixoIpva + fixoRes);
         document.getElementById('rx_lucro').innerText = formatarMoeda(lucroReal);
         
@@ -376,8 +444,84 @@
         document.getElementById('modalRaioX').classList.remove('hidden');
     };
 
+    // EXCLUIR DIA TRABALHADO
+    const excluirDiaTrabalhado = async () => {
+        if(!visualizandoDiarioId) return;
+        if(confirm("Tem certeza que deseja excluir os registros deste dia trabalhado?")) {
+            const btn = document.getElementById('btnExcluirDia'); btn.innerText = "⏳"; btn.disabled = true;
+            await fetch(`/api/sandero/diario/${visualizandoDiarioId}`, { method: 'DELETE' });
+            document.getElementById('modalRaioX').classList.add('hidden');
+            btn.innerHTML = "🗑️ EXCLUIR"; btn.disabled = false;
+            carregarCarro();
+        }
+    };
+
+    // EDITAR DIA TRABALHADO
+    const editarDiaTrabalhado = () => {
+        if(!visualizandoDiarioId) return;
+        const d = diarioCarro.find(x => x.id === visualizandoDiarioId);
+        if(!d) return;
+
+        document.getElementById('modalRaioX').classList.add('hidden');
+        
+        editandoDiarioId = d.id;
+        document.getElementById('dia_data_oculta').value = d.data_registro; // Guarda a data original
+        document.getElementById('dia_km').value = d.km_rodado;
+        document.getElementById('dia_ganho').value = d.ganho;
+        
+        document.getElementById('tituloLancarDia').innerText = "Editar Corrida";
+        document.getElementById('btnSalvarDiaSandero').innerText = "ATUALIZAR HISTÓRICO";
+
+        document.getElementById('modalLancarDia').classList.remove('hidden');
+    };
+
+    const abrirModalLancarDia = () => {
+        editandoDiarioId = null;
+        document.getElementById('dia_data_oculta').value = '';
+        document.getElementById('dia_km').value = '';
+        document.getElementById('dia_ganho').value = '';
+        document.getElementById('tituloLancarDia').innerText = "Dia Trabalhado";
+        document.getElementById('btnSalvarDiaSandero').innerText = "SALVAR NO HISTÓRICO";
+
+        document.getElementById('modalLancarDia').classList.remove('hidden');
+        if(!document.getElementById('fab-menu-carro').classList.contains('hidden')) toggleFabCarro();
+    };
+    const fecharModalLancarDia = () => { document.getElementById('modalLancarDia').classList.add('hidden'); };
+
+    const salvarDiaTrabalhado = async () => {
+        const km = parseFloat(document.getElementById('dia_km').value) || 0;
+        const ganho = parseFloat(document.getElementById('dia_ganho').value) || 0;
+        if(km === 0 || ganho === 0) return alert("Preencha KM e Ganho!");
+        
+        const custoVariavelDia = km * custoVariavelKM;
+        const lucroReal = ganho - custoVariavelDia;
+
+        // Verifica se está editando (mantém data) ou lançando novo (usa data de hoje)
+        let dataRegistro = document.getElementById('dia_data_oculta').value;
+        if (!dataRegistro) {
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            dataRegistro = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+        }
+
+        const btn = document.getElementById('btnSalvarDiaSandero'); btn.innerText = "SALVANDO..."; btn.disabled = true;
+        
+        const payload = { data_registro: dataRegistro, km_rodado: km, ganho: ganho, custo_calculado: custoVariavelDia, lucro_real: lucroReal };
+
+        if (editandoDiarioId) {
+            await fetch(`/api/sandero/diario/${editandoDiarioId}`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+            });
+        } else {
+            await fetch('/api/sandero/diario', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+            });
+        }
+        
+        fecharModalLancarDia(); 
+        carregarCarro(); // Atualiza a lista e o Raio-X Mensal na hora!
+    };
+
     const abrirModalConfig = () => {
-        // Correção: Agora puxamos o "pneus_valor", "pneus_km" e "revisao_valor" corretamente da API
         document.getElementById('cfg_consumo').value = configCarro.consumo || '';
         document.getElementById('cfg_preco_combustivel').value = configCarro.preco_combustivel || '';
         document.getElementById('cfg_pneus').value = configCarro.pneus_valor || '';
@@ -408,35 +552,6 @@
         await fetch('/api/sandero/config', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
         fecharModalConfig(); carregarCarro();
     });
-
-    const abrirModalLancarDia = () => {
-        document.getElementById('dia_km').value = '';
-        document.getElementById('dia_ganho').value = '';
-        document.getElementById('modalLancarDia').classList.remove('hidden');
-        if(!document.getElementById('fab-menu-carro').classList.contains('hidden')) toggleFabCarro();
-    };
-    const fecharModalLancarDia = () => { document.getElementById('modalLancarDia').classList.add('hidden'); };
-
-    const salvarDiaTrabalhado = async () => {
-        const km = parseFloat(document.getElementById('dia_km').value) || 0;
-        const ganho = parseFloat(document.getElementById('dia_ganho').value) || 0;
-        if(km === 0 || ganho === 0) return alert("Preencha KM e Ganho!");
-        
-        const custoVariavelDia = km * custoVariavelKM;
-        const lucroReal = ganho - custoVariavelDia; // Somente o variável salva no DB para fins de busca rápida
-        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-        const dataHj = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
-
-        const btn = document.getElementById('btnSalvarDiaSandero'); btn.innerText = "SALVANDO..."; btn.disabled = true;
-        
-        await fetch('/api/sandero/diario', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ data_registro: dataHj, km_rodado: km, ganho: ganho, custo_calculado: custoVariavelDia, lucro_real: lucroReal })
-        });
-        
-        fecharModalLancarDia(); btn.innerText = "SALVAR NO HISTÓRICO"; btn.disabled = false;
-        carregarCarro(); // Atualiza a lista na hora!
-    };
 
     const abrirModalDespesaCarro = () => {
         const tzoffset = (new Date()).getTimezoneOffset() * 60000;

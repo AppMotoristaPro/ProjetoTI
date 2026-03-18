@@ -178,3 +178,12 @@ def gerenciar_sandero_diario():
         sucesso = DespesaRepository.salvar_sandero_diario(request.json)
         return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
 
+@despesas_bp.route('/api/sandero/diario/<int:diario_id>', methods=['PUT', 'DELETE'])
+def alterar_sandero_diario(diario_id):
+    if request.method == 'DELETE':
+        sucesso = DespesaRepository.excluir_sandero_diario(diario_id)
+        return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
+    else:
+        sucesso = DespesaRepository.atualizar_sandero_diario(diario_id, request.json)
+        return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
+
