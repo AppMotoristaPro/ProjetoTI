@@ -37,17 +37,19 @@
     </div>
 
     <div class="space-y-3 mb-5 px-1 relative z-10">
-        <div class="flex justify-between text-xs font-bold text-slate-300">
-            <span class="flex items-center gap-1.5"><span class="text-orange-400">⛽</span> Desgaste Variável</span>
-            <span id="rx_mes_var" class="text-red-300"></span>
-        </div>
-        <div class="flex justify-between text-xs font-bold text-slate-300 border-b border-slate-600/50 pb-3">
-            <span class="flex items-center gap-1.5"><span class="text-indigo-400">🏦</span> Custo Fixo do Mês</span>
-            <span id="rx_mes_fixo" class="text-red-300"></span>
-        </div>
+        <p class="text-[10px] uppercase font-black text-orange-400 tracking-widest border-b border-slate-600/50 pb-1">Desgaste Variável (Gasto no asfalto)</p>
+        <div class="flex justify-between text-xs font-bold text-slate-300"><span class="flex items-center gap-1.5">⛽ Combustível</span><span id="rx_mes_combustivel" class="text-red-300"></span></div>
+        <div class="flex justify-between text-xs font-bold text-slate-300"><span class="flex items-center gap-1.5">🛞 Pneus</span><span id="rx_mes_pneus" class="text-red-300"></span></div>
+        <div class="flex justify-between text-xs font-bold text-slate-300"><span class="flex items-center gap-1.5">🔧 Revisão Base</span><span id="rx_mes_revisao" class="text-red-300"></span></div>
+
+        <p class="text-[10px] uppercase font-black text-indigo-400 tracking-widest border-b border-slate-600/50 pb-1 mt-4">Custos Fixos (Mês Integral)</p>
+        <div class="flex justify-between text-xs font-bold text-slate-300"><span class="flex items-center gap-1.5">🏦 Financiamento</span><span id="rx_mes_financiamento" class="text-red-300"></span></div>
+        <div class="flex justify-between text-xs font-bold text-slate-300"><span class="flex items-center gap-1.5">🛡️ Seguro</span><span id="rx_mes_seguro" class="text-red-300"></span></div>
+        <div class="flex justify-between text-xs font-bold text-slate-300"><span class="flex items-center gap-1.5">📄 IPVA (Fração Mensal)</span><span id="rx_mes_ipva" class="text-red-300"></span></div>
+        <div class="flex justify-between text-xs font-bold text-slate-300 border-b border-slate-600/50 pb-3"><span class="flex items-center gap-1.5">💰 Reserva</span><span id="rx_mes_reserva" class="text-red-300"></span></div>
     </div>
 
-    <div class="flex justify-between items-center px-1 relative z-10">
+    <div class="flex justify-between items-center px-1 relative z-10 pt-2">
         <span class="text-[11px] uppercase font-black text-emerald-400 tracking-widest">Lucro Limpo Mês</span>
         <span id="rx_mes_lucro" class="text-3xl font-black text-white">R$ 0,00</span>
     </div>
@@ -233,9 +235,7 @@
     let diarioCarro = [];
     let dataCalendarioAtual = null;
     let custoVariavelKM = 0;
-    let custoFixoMes = 0;
     
-    // Controles de Edição
     let visualizandoDiarioId = null;
     let editandoDiarioId = null;
 
@@ -272,27 +272,23 @@
             despesasTotais = await resDesp.json();
             diarioCarro = await resDiario.json();
 
-            // Matemática Variável (Por KM)
+            // Matemática Variável Base
             const cons = parseFloat(configCarro.consumo) || 1;
             const valComb = parseFloat(configCarro.preco_combustivel) || 0;
             const valPneu = parseFloat(configCarro.pneus_valor) || 0;
             const kmPneu = parseFloat(configCarro.pneus_km) || 1;
             const valRev = parseFloat(configCarro.revisao_valor) || 0;
-
-            const custoCombKM = valComb / cons;
-            const custoPneuKM = valPneu / kmPneu;
-            const custoRevKM = valRev / 10000;
             
-            custoVariavelKM = custoCombKM + custoPneuKM + custoRevKM;
+            custoVariavelKM = (valComb / cons) + (valPneu / kmPneu) + (valRev / 10000);
 
-            // Matemática Fixa (Mensal)
+            // Matemática Fixa Base (Mensal)
             const fixoFin = parseFloat(configCarro.financiamento) || 0;
             const fixoSeg = parseFloat(configCarro.seguro) || 0;
-            const fixoIpva = parseFloat(configCarro.ipva) || 0;
+            const fixoIpva = (parseFloat(configCarro.ipva) || 0) / 12; // IPVA mensalizado para o painel
             const fixoRes = parseFloat(configCarro.reserva) || 0;
-            custoFixoMes = fixoFin + fixoSeg + (fixoIpva / 12) + fixoRes;
+            const custoFixoMes = fixoFin + fixoSeg + fixoIpva + fixoRes;
 
-            // O GRANDE RAIO-X MENSAL 
+            // O GRANDE RAIO-X MENSAL (Lógica de cruzamento)
             let totalKmMes = 0;
             let totalGanhoMes = 0;
             diarioCarro.forEach(d => {
@@ -300,13 +296,27 @@
                 totalGanhoMes += parseFloat(d.ganho);
             });
 
-            const totalCustoVarMes = totalKmMes * custoVariavelKM;
+            // Gastos Variáveis do mês inteiro baseados na KM
+            const totalComb = totalKmMes * (valComb / cons);
+            const totalPneu = totalKmMes * (valPneu / kmPneu);
+            const totalRev = totalKmMes * (valRev / 10000);
+            const totalCustoVarMes = totalComb + totalPneu + totalRev;
+
             const lucroLimpoMes = totalGanhoMes - totalCustoVarMes - custoFixoMes;
 
+            // Renderizando valores do Raio-X Mensal
             document.getElementById('rx_mes_km').innerText = `${totalKmMes} km`;
             document.getElementById('rx_mes_ganho').innerText = formatarMoeda(totalGanhoMes);
-            document.getElementById('rx_mes_var').innerText = `- ${formatarMoeda(totalCustoVarMes)}`;
-            document.getElementById('rx_mes_fixo').innerText = `- ${formatarMoeda(custoFixoMes)}`;
+            
+            document.getElementById('rx_mes_combustivel').innerText = `- ${formatarMoeda(totalComb)}`;
+            document.getElementById('rx_mes_pneus').innerText = `- ${formatarMoeda(totalPneu)}`;
+            document.getElementById('rx_mes_revisao').innerText = `- ${formatarMoeda(totalRev)}`;
+
+            document.getElementById('rx_mes_financiamento').innerText = `- ${formatarMoeda(fixoFin)}`;
+            document.getElementById('rx_mes_seguro').innerText = `- ${formatarMoeda(fixoSeg)}`;
+            document.getElementById('rx_mes_ipva').innerText = `- ${formatarMoeda(fixoIpva)}`;
+            document.getElementById('rx_mes_reserva').innerText = `- ${formatarMoeda(fixoRes)}`;
+
             document.getElementById('rx_mes_lucro').innerText = formatarMoeda(lucroLimpoMes);
 
             if (lucroLimpoMes < 0) { document.getElementById('rx_mes_lucro').classList.replace('text-white', 'text-red-400'); } 
@@ -444,7 +454,6 @@
         document.getElementById('modalRaioX').classList.remove('hidden');
     };
 
-    // EXCLUIR DIA TRABALHADO
     const excluirDiaTrabalhado = async () => {
         if(!visualizandoDiarioId) return;
         if(confirm("Tem certeza que deseja excluir os registros deste dia trabalhado?")) {
@@ -456,7 +465,6 @@
         }
     };
 
-    // EDITAR DIA TRABALHADO
     const editarDiaTrabalhado = () => {
         if(!visualizandoDiarioId) return;
         const d = diarioCarro.find(x => x.id === visualizandoDiarioId);
@@ -465,7 +473,7 @@
         document.getElementById('modalRaioX').classList.add('hidden');
         
         editandoDiarioId = d.id;
-        document.getElementById('dia_data_oculta').value = d.data_registro; // Guarda a data original
+        document.getElementById('dia_data_oculta').value = d.data_registro; 
         document.getElementById('dia_km').value = d.km_rodado;
         document.getElementById('dia_ganho').value = d.ganho;
         
@@ -496,7 +504,6 @@
         const custoVariavelDia = km * custoVariavelKM;
         const lucroReal = ganho - custoVariavelDia;
 
-        // Verifica se está editando (mantém data) ou lançando novo (usa data de hoje)
         let dataRegistro = document.getElementById('dia_data_oculta').value;
         if (!dataRegistro) {
             const tzoffset = (new Date()).getTimezoneOffset() * 60000;
@@ -518,7 +525,7 @@
         }
         
         fecharModalLancarDia(); 
-        carregarCarro(); // Atualiza a lista e o Raio-X Mensal na hora!
+        carregarCarro();
     };
 
     const abrirModalConfig = () => {
