@@ -1,10 +1,21 @@
 import io
 import datetime
 import json
+from decimal import Decimal
 from flask import Blueprint, request, jsonify, send_file, render_template, make_response
 from app.repositories.despesa_repository import DespesaRepository
 from app.services.compressao_service import comprimir_arquivo
 from app.services.notificacao_service import NotificacaoService
+
+# --- ENSINANDO O PYTHON A LER DINHEIRO ANTES DE EMPACOTAR ---
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, datetime.date):
+            return obj.isoformat()
+        return super(DecimalEncoder, self).default(obj)
+# ------------------------------------------------------------
 
 despesas_bp = Blueprint('despesas', __name__)
 
@@ -48,7 +59,7 @@ def sw():
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
 
-# --- MAGICA DA INJEÇÃO DIRETA (SSR) ---
+# --- MAGICA DA INJEÇÃO DIRETA (SSR) COM O ENCODER CORRETO ---
 @despesas_bp.route('/', methods=['GET'])
 def home(): 
     hoje = hoje_br()
@@ -65,9 +76,10 @@ def home():
     pacotao['mes_atual'] = mes_atual
     pacotao['ano_atual'] = ano_atual
     
-    # Passa o pacotão como JSON para o HTML
-    return render_template('dashboard/index.html', pacotao_inicial=json.dumps(pacotao))
-# --------------------------------------
+    # Passa o pacotão como JSON (usando o DecimalEncoder que criamos)
+    pacotao_json = json.dumps(pacotao, cls=DecimalEncoder)
+    return render_template('dashboard/index.html', pacotao_inicial=pacotao_json)
+# ------------------------------------------------------------
 
 @despesas_bp.route('/historico', methods=['GET'])
 def tela_historico(): return render_template('despesas/historico.html')
