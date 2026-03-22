@@ -3,9 +3,9 @@ import urllib.parse
 import ssl
 import queue
 import threading
+import socket
 from config import Config
 
-# --- MÁGICA: CONNECTION POOL COM PRÉ-PING (À PROVA DE TRAVAMENTOS) ---
 class PooledConnection:
     def __init__(self, pool, conn):
         self._pool = pool
@@ -14,13 +14,8 @@ class PooledConnection:
     def cursor(self): return self._conn.cursor()
     def commit(self): self._conn.commit()
     def rollback(self): self._conn.rollback()
-    
-    # Devolve a conexão viva para a piscina!
-    def close(self):
-        self._pool.put_conn(self._conn)
-
-    def __getattr__(self, name):
-        return getattr(self._conn, name)
+    def close(self): self._pool.put_conn(self._conn)
+    def __getattr__(self, name): return getattr(self._conn, name)
 
 class DbPool:
     def __init__(self, minconn=2, maxconn=15):
@@ -37,24 +32,26 @@ class DbPool:
         parsed = urllib.parse.urlparse(Config.DATABASE_URL)
         try:
             context = ssl.create_default_context()
-            # Adicionado timeout direto na conexão para evitar travamento de rede
+            # Adicionado timeout de socket para evitar que a leitura fique travada eternamente
             conn = pg8000.dbapi.connect(
                 user=parsed.username, password=parsed.password,
                 host=parsed.hostname, port=parsed.port or 5432,
                 database=parsed.path.lstrip('/'), ssl_context=context,
-                timeout=15 
+                timeout=10 # Tempo máximo para tentar conectar
             )
+            # Configura o timeout de leitura/escrita direto no socket do banco
+            conn._context.sock.settimeout(10.0) 
+            
             cur = conn.cursor()
             cur.execute("SET TIME ZONE 'America/Sao_Paulo';")
             cur.close()
             with self.lock: self.current_conns += 1
             return conn
         except Exception as e:
-            print(f"❌ Erro ao criar conexão no pool: {e}")
+            print(f"❌ Erro ao criar conexão: {e}")
             return None
 
     def get_conn(self):
-        # SEM LOOP INFINITO: Tenta pegar uma, se estiver morta, cria uma nova e vai embora.
         real_conn = None
         try:
             real_conn = self.pool.get(block=False)
@@ -66,27 +63,19 @@ class DbPool:
             try:
                 real_conn = self.pool.get(block=True, timeout=5)
             except queue.Empty:
-                print("⚠️ Pool de conexões esgotado!")
                 return None
         
-        # O PULO DO GATO (PRÉ-PING): Testa se a conexão ainda está viva
         try:
             cur = real_conn.cursor()
             cur.execute("SELECT 1")
             cur.close()
             return PooledConnection(self, real_conn)
         except Exception:
-            # A linha foi cortada pelo Supabase! Joga a velha fora...
             try: real_conn.close()
             except: pass
-            
             with self.lock: self.current_conns -= 1
-            
-            # ...E cria uma nova imediatamente na mesma hora (sem loop).
             new_conn = self._create_conn()
-            if new_conn:
-                return PooledConnection(self, new_conn)
-            return None
+            return PooledConnection(self, new_conn) if new_conn else None
 
     def put_conn(self, conn):
         try:
@@ -103,14 +92,11 @@ def get_db_connection():
     if not _db_pool:
         _db_pool = DbPool(minconn=2, maxconn=15)
     return _db_pool.get_conn()
-# --- FIM DO CONNECTION POOL ---
-
 
 def init_db():
     conn = get_db_connection()
-    if not conn:
-        return
-
+    if not conn: return
+    
     query_usuarios = "CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, nome VARCHAR(50) UNIQUE NOT NULL, senha_hash VARCHAR(255) NOT NULL, criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
     query_despesas = """
     CREATE TABLE IF NOT EXISTS despesas (
@@ -168,9 +154,7 @@ def init_db():
         
         conn.commit()
         cur.close()
-    except Exception as e:
-        print(f"❌ Erro ao inicializar o banco: {e}")
+    except Exception as e: print(f"❌ Erro: {e}")
     finally:
-        if conn:
-            conn.close()
+        if conn: conn.close()
 
