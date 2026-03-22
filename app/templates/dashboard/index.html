@@ -172,21 +172,29 @@
         document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
     };
 
+    // A MÁGICA RECRIADA: A função que o JavaScript estava procurando!
+    const carregarDashboard = async () => {
+        atualizarDisplayMes();
+        try {
+            const mAtual = currentData.getMonth() + 1;
+            const aAtual = currentData.getFullYear();
+            const response = await fetch(`/api/dashboard/iniciar?mes=${mAtual}&ano=${aAtual}`);
+            if (response.ok) {
+                const pacotao = await response.json();
+                processarPacotao(pacotao);
+            }
+        } catch(e) { console.error("Erro ao carregar os dados:", e); }
+    };
+
     const mudarMes = async (d) => { 
         currentData.setMonth(currentData.getMonth() + d); 
-        atualizarDisplayMes();
         
         // MÊS GLOBAL: Salva a escolha do usuário
         const mesGlobal = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear() };
         localStorage.setItem('mesGlobalData', JSON.stringify(mesGlobal));
 
-        try {
-            const mAtual = currentData.getMonth() + 1;
-            const aAtual = currentData.getFullYear();
-            const response = await fetch(`/api/dashboard/iniciar?mes=${mAtual}&ano=${aAtual}`);
-            const pacotao = await response.json();
-            processarPacotao(pacotao);
-        } catch(e) { console.error(e); }
+        // Chama a função recriada para buscar os novos dados sem travar
+        carregarDashboard();
     };
 
     const processarPacotao = (pacotao) => {
@@ -544,8 +552,10 @@
         // MÊS GLOBAL: Ao carregar a tela, verifica se tem um mês salvo no LocalStorage
         const mesGlobalStr = localStorage.getItem('mesGlobalData');
         if (mesGlobalStr) {
-            const mesGlobal = JSON.parse(mesGlobalStr);
-            currentData = new Date(mesGlobal.ano, mesGlobal.mes - 1, 1);
+            try {
+                const mesGlobal = JSON.parse(mesGlobalStr);
+                currentData = new Date(mesGlobal.ano, mesGlobal.mes - 1, 1);
+            } catch (e) {}
         }
 
         atualizarDisplayMes();
