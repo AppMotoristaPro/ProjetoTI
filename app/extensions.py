@@ -5,7 +5,7 @@ import queue
 import threading
 from config import Config
 
-# --- MÁGICA: CONNECTION POOL COM PRÉ-PING ---
+# --- MÁGICA: CONNECTION POOL COM PRÉ-PING (À PROVA DE TRAVAMENTOS) ---
 class PooledConnection:
     def __init__(self, pool, conn):
         self._pool = pool
@@ -37,10 +37,12 @@ class DbPool:
         parsed = urllib.parse.urlparse(Config.DATABASE_URL)
         try:
             context = ssl.create_default_context()
+            # Adicionado timeout direto na conexão para evitar travamento de rede
             conn = pg8000.dbapi.connect(
                 user=parsed.username, password=parsed.password,
                 host=parsed.hostname, port=parsed.port or 5432,
-                database=parsed.path.lstrip('/'), ssl_context=context
+                database=parsed.path.lstrip('/'), ssl_context=context,
+                timeout=15 
             )
             cur = conn.cursor()
             cur.execute("SET TIME ZONE 'America/Sao_Paulo';")
@@ -52,38 +54,42 @@ class DbPool:
             return None
 
     def get_conn(self):
-        while True:
+        # SEM LOOP INFINITO: Tenta pegar uma, se estiver morta, cria uma nova e vai embora.
+        real_conn = None
+        try:
+            real_conn = self.pool.get(block=False)
+        except queue.Empty:
+            with self.lock:
+                if self.current_conns < self.maxconn:
+                    new_conn = self._create_conn()
+                    if new_conn: return PooledConnection(self, new_conn)
             try:
-                # Tenta pegar uma conexão que já está na piscina
-                real_conn = self.pool.get(block=False)
+                real_conn = self.pool.get(block=True, timeout=5)
             except queue.Empty:
-                # Se não tem nenhuma, cria uma nova
-                with self.lock:
-                    if self.current_conns < self.maxconn:
-                        new_conn = self._create_conn()
-                        if new_conn: return PooledConnection(self, new_conn)
-                try:
-                    real_conn = self.pool.get(block=True, timeout=10)
-                except queue.Empty:
-                    print("⚠️ Pool de conexões esgotado!")
-                    return None
+                print("⚠️ Pool de conexões esgotado!")
+                return None
+        
+        # O PULO DO GATO (PRÉ-PING): Testa se a conexão ainda está viva
+        try:
+            cur = real_conn.cursor()
+            cur.execute("SELECT 1")
+            cur.close()
+            return PooledConnection(self, real_conn)
+        except Exception:
+            # A linha foi cortada pelo Supabase! Joga a velha fora...
+            try: real_conn.close()
+            except: pass
             
-            # O PULO DO GATO (PRÉ-PING): Testa se a conexão ainda está viva!
-            try:
-                cur = real_conn.cursor()
-                cur.execute("SELECT 1")
-                cur.close()
-                return PooledConnection(self, real_conn)
-            except Exception:
-                # Se o Supabase cortou a linha por inatividade, joga fora e tenta outra
-                try: real_conn.close()
-                except: pass
-                with self.lock: self.current_conns -= 1
-                continue
+            with self.lock: self.current_conns -= 1
+            
+            # ...E cria uma nova imediatamente na mesma hora (sem loop).
+            new_conn = self._create_conn()
+            if new_conn:
+                return PooledConnection(self, new_conn)
+            return None
 
     def put_conn(self, conn):
         try:
-            # Devolve imediatamente para a fila sem testar (o teste agora é na saída)
             self.pool.put(conn, block=False)
         except queue.Full:
             try: conn.close()
@@ -165,5 +171,6 @@ def init_db():
     except Exception as e:
         print(f"❌ Erro ao inicializar o banco: {e}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
