@@ -63,10 +63,26 @@
     </div>
 </div>
 
-<div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50 mb-10">
+<div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50 mb-6">
     <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Calendário de Vencimentos</h3>
     <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-black text-slate-400 mb-2"><div class="text-red-400">DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div></div>
     <div id="calendar-grid" class="grid grid-cols-7 gap-1.5"></div>
+</div>
+
+<div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50 mb-10">
+    <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Projeção & Faltas (Shopee/Nexus)</h3>
+    <div class="space-y-3 font-bold text-xs">
+        <p class="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-2 border-b border-slate-200 pb-1">Valores a Receber</p>
+        <div class="flex justify-between text-indigo-500"><span id="lbl_shopee_pendente_este_mes">(+) Shopee (Neste Mês)</span><span id="math_shopee_pendente_este_mes">R$ 0,00</span></div>
+        <div class="flex justify-between text-indigo-400"><span id="lbl_shopee_pendente_prox_mes">(+) Shopee (Próx. Mês)</span><span id="math_shopee_pendente_prox_mes">R$ 0,00</span></div>
+        <div class="flex justify-between text-pink-500"><span id="lbl_morato_pendente">(+) Reembolso Pendente</span><span id="math_morato_pendente">R$ 0,00</span></div>
+        
+        <div class="flex justify-between text-emerald-600 pt-2 pb-3 font-black text-base border-b border-slate-200"><span>= Saldo Projetado (Total)</span><span id="math_saldo_projetado">R$ 0,00</span></div>
+
+        <p class="text-[10px] uppercase font-black text-red-400 tracking-widest mb-2 pt-2 border-b border-red-100 pb-1">Dinheiro na Mesa (Faltas)</p>
+        <div class="flex justify-between text-red-500"><span id="lbl_shopee_falta_este_mes">(-) Impacto Neste Mês</span><span id="math_shopee_falta_este_mes">R$ 0,00</span></div>
+        <div class="flex justify-between text-red-400"><span id="lbl_shopee_falta_prox_mes">(-) Impacto Próx. Mês</span><span id="math_shopee_falta_prox_mes">R$ 0,00</span></div>
+    </div>
 </div>
 
 <div id="modalExplicaSaldo" class="hidden fixed inset-0 z-[70] flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
@@ -77,13 +93,6 @@
             <div class="flex justify-between text-emerald-600"><span>(+) Renda Total do Mês</span><span id="math_renda"></span></div>
             <div class="flex justify-between text-red-500 border-b border-slate-100 pb-3"><span>(-) Despesas (Todas)</span><span id="math_desp"></span></div>
             <div class="flex justify-between text-slate-800 pt-1 font-black text-lg"><span>= Saldo Livre Atual</span><span id="math_saldo"></span></div>
-            
-            <div class="border-t border-dashed border-slate-200 pt-3 mt-3"></div>
-            <p class="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-2">Projeção Futura (A Receber)</p>
-            <div class="flex justify-between text-indigo-500"><span id="lbl_shopee_pendente_este_mes">(+) Shopee (Neste Mês)</span><span id="math_shopee_pendente_este_mes"></span></div>
-            <div class="flex justify-between text-indigo-300"><span id="lbl_shopee_pendente_prox_mes">(+) Shopee (Mês Seguinte)</span><span id="math_shopee_pendente_prox_mes"></span></div>
-            <div class="flex justify-between text-pink-500 border-b border-slate-100 pb-3"><span id="lbl_morato_pendente">(+) Reembolso Pendente</span><span id="math_morato_pendente"></span></div>
-            <div class="flex justify-between text-emerald-600 pt-1 font-black text-xl"><span>= Saldo Projetado</span><span id="math_saldo_projetado"></span></div>
         </div>
     </div>
 </div>
@@ -178,6 +187,7 @@
 
             renderizarGraficos(resumoGlobal, despesasGlobais);
             renderizarCalendario(despesasGlobais);
+            calcularProjecao(); // Adicionado para calcular faltas e projeções ao carregar
         } catch(e) { console.error(e); }
     };
 
@@ -192,11 +202,9 @@
         const coresNeonIgor = ['#0ea5e9', '#8b5cf6', '#14b8a6', '#f59e0b'];
         const coresNeonThay = ['#ec4899', '#d946ef', '#f43f5e', '#8b5cf6'];
 
-        // Filtrando para ignorar as despesas "Diárias" no card de Contas do Mês
         const tPagas = despesas.filter(d => d.pago && d.tipo_despesa !== 'Diária').reduce((a,c) => a + parseFloat(c.valor), 0);
         const tPendentes = despesas.filter(d => !d.pago && d.tipo_despesa !== 'Diária').reduce((a,c) => a + parseFloat(c.valor), 0);
         
-        // Atualiza a interface com os valores de pago e pendente
         document.getElementById('gauge-valor').innerText = formatarMoeda(tPendentes);
         document.getElementById('valor-pago').innerText = formatarMoeda(tPagas);
 
@@ -285,6 +293,7 @@
             if (marcacaoDoDia) {
                 if (marcacaoDoDia.tipo === 'shopee_previsto') markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Previsto">⏳📦</div>';
                 else if (marcacaoDoDia.tipo && marcacaoDoDia.tipo.startsWith('shopee_trabalhado')) markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Trabalhado">✅📦</div>';
+                else if (marcacaoDoDia.tipo === 'shopee_nao_trabalhado') markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Não Trabalhado">❌📦</div>';
                 else if (marcacaoDoDia.tipo === 'morato_pendente') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Pendente">🚆🔴</div>';
                 else if (marcacaoDoDia.tipo === 'morato_reembolsado') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Reembolsado">🚆🟢</div>';
                 else if (marcacaoDoDia.tipo === 'coracao') markerHtml = '<div class="text-[8px] opacity-90 animate-pulse" title="Dia Especial">❤️</div>';
@@ -301,6 +310,71 @@
                     <div class="flex justify-center items-center h-2.5 mt-0.5 ${gapClass}">${dotHtml}${markerHtml}</div>
                 </div>`;
         }
+    };
+
+    // Nova função de cálculo de Projeção e Faltas
+    const calcularProjecao = () => {
+        const currentMonth = currentData.getMonth();
+        const currentYear = currentData.getFullYear();
+
+        let diasShopeeEsteMes = 0;
+        let diasShopeeProximoMes = 0;
+        let faltasEsteMes = 0;
+        let faltasProximoMes = 0;
+
+        diasMarcadosGlobais.forEach(m => {
+            if (m.tipo === 'shopee_previsto' || m.tipo === 'shopee_nao_trabalhado') {
+                const [y, mn, d] = m.data.split('-');
+                const workedDate = new Date(y, mn - 1, d);
+                
+                const dayOfWeek = workedDate.getDay() || 7; 
+                const daysToNextThursday = 7 - dayOfWeek + 4;
+                const payDate = new Date(y, mn - 1, workedDate.getDate() + daysToNextThursday);
+                
+                const isEsteMes = (payDate.getMonth() === currentMonth && payDate.getFullYear() === currentYear);
+                const isProxMes = (workedDate.getMonth() === currentMonth && workedDate.getFullYear() === currentYear && (payDate.getMonth() > currentMonth || payDate.getFullYear() > currentYear));
+
+                if (m.tipo === 'shopee_previsto') {
+                    if (isEsteMes) diasShopeeEsteMes++;
+                    else if (isProxMes) diasShopeeProximoMes++;
+                } else if (m.tipo === 'shopee_nao_trabalhado') {
+                    if (isEsteMes) faltasEsteMes++;
+                    else if (isProxMes) faltasProximoMes++;
+                }
+            }
+        });
+
+        const diasMorato = diasMarcadosGlobais.filter(m => {
+            if (m.tipo !== 'morato_pendente') return false;
+            const [y, mn, d] = m.data.split('-');
+            return parseInt(mn) === currentMonth + 1 && parseInt(y) === currentYear;
+        }).length;
+
+        const valorShopeeEsteMes = diasShopeeEsteMes * 245.00;
+        const valorShopeeProximoMes = diasShopeeProximoMes * 245.00;
+        const valorFaltasEsteMes = faltasEsteMes * 245.00;
+        const valorFaltasProximoMes = faltasProximoMes * 245.00;
+        const valorMorato = diasMorato * 139.00;
+        
+        // O Saldo Projetado não subtrai a falta, pois a falta é dinheiro que não existe.
+        const saldoProjetado = resumoGlobal.saldo_final + valorShopeeEsteMes + valorMorato;
+
+        document.getElementById('lbl_shopee_pendente_este_mes').innerText = `(+) Shopee (Cai Neste Mês: ${diasShopeeEsteMes} d)`;
+        document.getElementById('math_shopee_pendente_este_mes').innerText = formatarMoeda(valorShopeeEsteMes);
+
+        document.getElementById('lbl_shopee_pendente_prox_mes').innerText = `(+) Shopee (Cai Próx. Mês: ${diasShopeeProximoMes} d)`;
+        document.getElementById('math_shopee_pendente_prox_mes').innerText = formatarMoeda(valorShopeeProximoMes);
+
+        document.getElementById('lbl_morato_pendente').innerText = `(+) Reembolso Pendente (${diasMorato} d)`;
+        document.getElementById('math_morato_pendente').innerText = formatarMoeda(valorMorato);
+
+        document.getElementById('lbl_shopee_falta_este_mes').innerText = `(-) Impacto Neste Mês (${faltasEsteMes} d)`;
+        document.getElementById('math_shopee_falta_este_mes').innerText = formatarMoeda(valorFaltasEsteMes);
+
+        document.getElementById('lbl_shopee_falta_prox_mes').innerText = `(-) Impacto Próx. Mês (${faltasProximoMes} d)`;
+        document.getElementById('math_shopee_falta_prox_mes').innerText = formatarMoeda(valorFaltasProximoMes);
+
+        document.getElementById('math_saldo_projetado').innerText = formatarMoeda(saldoProjetado);
     };
 
     window.toggleMarcacao = async (data, usuario, tipo) => {
@@ -348,14 +422,16 @@
         if (currentUser === 'Igor') {
             const isPrevisto = marcacao && marcacao.tipo === 'shopee_previsto';
             const isTrabalhado = marcacao && marcacao.tipo && marcacao.tipo.startsWith('shopee_trabalhado');
+            const isFalta = marcacao && marcacao.tipo === 'shopee_nao_trabalhado';
             
             painel.innerHTML = `
                 <div class="mb-5 p-3 bg-indigo-50/70 rounded-2xl border border-indigo-100 shadow-sm">
                     <div class="flex items-center gap-2 mb-2"><span class="text-sm">📦</span><span class="text-[10px] font-black text-indigo-800 uppercase">Trabalho (Shopee)</span></div>
-                    <div class="flex gap-2">
-                        <button onclick="toggleMarcacao('${dataStr}', 'Igor', 'shopee_previsto')" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition ${isPrevisto ? 'bg-indigo-400 text-white shadow-md' : 'bg-white text-indigo-400 border border-indigo-200 hover:bg-indigo-50'}">Previsto</button>
-                        <button onclick="marcarShopeeTrabalhado('${dataStr}')" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition ${isTrabalhado ? 'bg-emerald-500 text-white shadow-md' : 'bg-white text-emerald-500 border border-emerald-200 hover:bg-emerald-50'}">Trabalhado</button>
-                        ${(isPrevisto || isTrabalhado) ? `<button onclick="toggleMarcacao('${dataStr}', 'Igor', '')" class="w-8 flex items-center justify-center bg-white text-slate-400 border border-slate-200 rounded-lg hover:bg-slate-100 transition active:scale-90">❌</button>` : ''}
+                    <div class="flex gap-1.5">
+                        <button onclick="toggleMarcacao('${dataStr}', 'Igor', 'shopee_previsto')" class="flex-1 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg transition ${isPrevisto ? 'bg-indigo-400 text-white shadow-md' : 'bg-white text-indigo-400 border border-indigo-200 hover:bg-indigo-50'}">Previsto</button>
+                        <button onclick="marcarShopeeTrabalhado('${dataStr}')" class="flex-1 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg transition ${isTrabalhado ? 'bg-emerald-500 text-white shadow-md' : 'bg-white text-emerald-500 border border-emerald-200 hover:bg-emerald-50'}">Fui</button>
+                        <button onclick="toggleMarcacao('${dataStr}', 'Igor', 'shopee_nao_trabalhado')" class="flex-1 py-1 text-[8px] font-black uppercase tracking-wider rounded-lg transition ${isFalta ? 'bg-red-500 text-white shadow-md' : 'bg-white text-red-500 border border-red-200 hover:bg-red-50'}">Não Fui</button>
+                        ${(isPrevisto || isTrabalhado || isFalta) ? `<button onclick="toggleMarcacao('${dataStr}', 'Igor', '')" class="w-6 flex items-center justify-center bg-white text-slate-400 border border-slate-200 rounded-lg hover:bg-slate-100 transition active:scale-90">❌</button>` : ''}
                     </div>
                 </div>`;
         } else {
@@ -395,53 +471,6 @@
         document.getElementById('math_renda').innerText = formatarMoeda(resumoGlobal.total_renda);
         document.getElementById('math_desp').innerText = formatarMoeda(resumoGlobal.total_despesas_mes);
         document.getElementById('math_saldo').innerText = formatarMoeda(resumoGlobal.saldo_final);
-
-        const currentMonth = currentData.getMonth();
-        const currentYear = currentData.getFullYear();
-
-        let diasShopeeEsteMes = 0;
-        let diasShopeeProximoMes = 0;
-
-        diasMarcadosGlobais.forEach(m => {
-            if (m.tipo === 'shopee_previsto') {
-                const [y, mn, d] = m.data.split('-');
-                const workedDate = new Date(y, mn - 1, d);
-                
-                const dayOfWeek = workedDate.getDay() || 7; 
-                const daysToNextThursday = 7 - dayOfWeek + 4;
-                const payDate = new Date(y, mn - 1, workedDate.getDate() + daysToNextThursday);
-                
-                if (payDate.getMonth() === currentMonth && payDate.getFullYear() === currentYear) {
-                    diasShopeeEsteMes++;
-                } 
-                else if (workedDate.getMonth() === currentMonth && workedDate.getFullYear() === currentYear && (payDate.getMonth() > currentMonth || payDate.getFullYear() > currentYear)) {
-                    diasShopeeProximoMes++;
-                }
-            }
-        });
-
-        const diasMorato = diasMarcadosGlobais.filter(m => {
-            if (m.tipo !== 'morato_pendente') return false;
-            const [y, mn, d] = m.data.split('-');
-            return parseInt(mn) === currentMonth + 1 && parseInt(y) === currentYear;
-        }).length;
-
-        const valorShopeeEsteMes = diasShopeeEsteMes * 245.00;
-        const valorShopeeProximoMes = diasShopeeProximoMes * 245.00;
-        const valorMorato = diasMorato * 139.00;
-        const saldoProjetado = resumoGlobal.saldo_final + valorShopeeEsteMes + valorMorato;
-
-        document.getElementById('lbl_shopee_pendente_este_mes').innerText = `(+) Shopee (Cai Neste Mês: ${diasShopeeEsteMes} d)`;
-        document.getElementById('math_shopee_pendente_este_mes').innerText = formatarMoeda(valorShopeeEsteMes);
-
-        document.getElementById('lbl_shopee_pendente_prox_mes').innerText = `(+) Shopee (Cai Próx. Mês: ${diasShopeeProximoMes} d)`;
-        document.getElementById('math_shopee_pendente_prox_mes').innerText = formatarMoeda(valorShopeeProximoMes);
-
-        document.getElementById('lbl_morato_pendente').innerText = `(+) Reembolso Pendente (${diasMorato} d)`;
-        document.getElementById('math_morato_pendente').innerText = formatarMoeda(valorMorato);
-
-        document.getElementById('math_saldo_projetado').innerText = formatarMoeda(saldoProjetado);
-
         document.getElementById('modalExplicaSaldo').classList.remove('hidden');
     };
 
