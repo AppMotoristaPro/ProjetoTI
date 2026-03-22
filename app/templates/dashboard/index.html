@@ -192,8 +192,9 @@
         const coresNeonIgor = ['#0ea5e9', '#8b5cf6', '#14b8a6', '#f59e0b'];
         const coresNeonThay = ['#ec4899', '#d946ef', '#f43f5e', '#8b5cf6'];
 
-        const tPagas = despesas.filter(d => d.pago).reduce((a,c) => a + parseFloat(c.valor), 0);
-        const tPendentes = despesas.filter(d => !d.pago).reduce((a,c) => a + parseFloat(c.valor), 0);
+        // Filtrando para ignorar as despesas "Diárias" no card de Contas do Mês
+        const tPagas = despesas.filter(d => d.pago && d.tipo_despesa !== 'Diária').reduce((a,c) => a + parseFloat(c.valor), 0);
+        const tPendentes = despesas.filter(d => !d.pago && d.tipo_despesa !== 'Diária').reduce((a,c) => a + parseFloat(c.valor), 0);
         
         // Atualiza a interface com os valores de pago e pendente
         document.getElementById('gauge-valor').innerText = formatarMoeda(tPendentes);
