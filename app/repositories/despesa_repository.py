@@ -88,7 +88,6 @@ class DespesaRepository:
                     DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', mes_cal, ano_cal, -139.00)
             
             if usuario == 'Igor':
-                # Remove Renda se desfazer shopee ou se marcar carro parado
                 if tipo_anterior and tipo_anterior.startswith('shopee_trabalhado|'):
                     if not tipo or tipo == 'carro_parado' or not tipo.startswith('shopee_trabalhado|'):
                         partes_ant = tipo_anterior.split('|')
@@ -98,7 +97,6 @@ class DespesaRepository:
                                 DespesaRepository.salvar_renda('Igor', 'Shopee', dp_obj_ant.month, dp_obj_ant.year, -245.00)
                             except: pass
                 
-                # Adiciona Renda se nova marcação for Shopee
                 if tipo and tipo.startswith('shopee_trabalhado|'):
                     partes_novo = tipo.split('|')
                     if len(partes_novo) == 2:
@@ -173,6 +171,22 @@ class DespesaRepository:
             return [dict(zip(colunas, row)) for row in cur.fetchall()]
         except Exception: return []
         finally: conn.close()
+
+    # --- NOVO: Lê os dados da conta antes de editar, pagar ou excluir ---
+    @staticmethod
+    def obter_por_id(despesa_id):
+        conn = get_db_connection()
+        if not conn: return None
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT descricao, valor, responsavel_pagamento FROM despesas WHERE id = %s", (despesa_id,))
+            linha = cur.fetchone()
+            if linha:
+                return {"descricao": linha[0], "valor": float(linha[1]), "responsavel_pagamento": linha[2]}
+            return None
+        except Exception: return None
+        finally: conn.close()
+    # --------------------------------------------------------------------
 
     @staticmethod
     def criar(dados, comprovante_binario, mimetype):
@@ -371,11 +385,8 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # --- MÉTODOS DO PACOTÃO (OTIMIZAÇÃO DE REDE) ---
     @staticmethod
     def obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant):
-        # Chama as funções existentes. Como temos o Connection Pool, 
-        # as conexões abrem em 0.001 segundos sem gargalo.
         return {
             "resumo": DespesaRepository.obter_resumo(mes, ano),
             "despesas": DespesaRepository.listar_por_mes(mes, ano),
@@ -391,7 +402,6 @@ class DespesaRepository:
             "diario": DespesaRepository.listar_sandero_diario(mes, ano)
         }
 
-    # --- MÉTODOS DO SANDERO ---
     @staticmethod
     def obter_sandero_config():
         DespesaRepository._garantir_tabelas()

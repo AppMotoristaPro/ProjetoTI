@@ -7,7 +7,6 @@ from app.repositories.despesa_repository import DespesaRepository
 from app.services.compressao_service import comprimir_arquivo
 from app.services.notificacao_service import NotificacaoService
 
-# --- ENSINANDO O PYTHON A LER DINHEIRO ANTES DE EMPACOTAR ---
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
@@ -15,7 +14,6 @@ class DecimalEncoder(json.JSONEncoder):
         if isinstance(obj, datetime.date):
             return obj.isoformat()
         return super(DecimalEncoder, self).default(obj)
-# ------------------------------------------------------------
 
 despesas_bp = Blueprint('despesas', __name__)
 
@@ -39,6 +37,7 @@ def manifest():
         }]
     })
 
+# --- ATUALIZAÇÃO DOS ÍCONES NATIVOS (BADGE CIFRÃO) ---
 @despesas_bp.route('/sw.js')
 def sw():
     js = """
@@ -47,7 +46,12 @@ def sw():
     self.addEventListener('push', function(e) {
         let data = {title: 'Despesas T&I', body: 'Nova movimentação registrada!'};
         if (e.data) { try { data = e.data.json(); } catch(err) { data.body = e.data.text(); } }
-        const options = { body: data.body, icon: '/static/icons/icone.png', badge: '/static/icons/icone.png', vibrate: [200, 100, 200] };
+        const options = { 
+            body: data.body, 
+            icon: '/static/icons/icone.png', 
+            badge: '/static/icons/badge_cifrao.png', 
+            vibrate: [200, 100, 200] 
+        };
         e.waitUntil(self.registration.showNotification(data.title, options));
     });
     self.addEventListener('notificationclick', function(e) {
@@ -59,7 +63,6 @@ def sw():
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
 
-# --- MAGICA DA INJEÇÃO DIRETA (SSR) COM O ENCODER CORRETO ---
 @despesas_bp.route('/', methods=['GET'])
 def home(): 
     hoje = hoje_br()
@@ -71,15 +74,12 @@ def home():
         mes_ant = 12
         ano_ant -= 1
     
-    # Prepara o pacotão no backend antes de entregar a tela
     pacotao = DespesaRepository.obter_pacotao_dashboard(mes_atual, ano_atual, mes_ant, ano_ant)
     pacotao['mes_atual'] = mes_atual
     pacotao['ano_atual'] = ano_atual
     
-    # Passa o pacotão como JSON (usando o DecimalEncoder que criamos)
     pacotao_json = json.dumps(pacotao, cls=DecimalEncoder)
     return render_template('dashboard/index.html', pacotao_inicial=pacotao_json)
-# ------------------------------------------------------------
 
 @despesas_bp.route('/historico', methods=['GET'])
 def tela_historico(): return render_template('despesas/historico.html')
@@ -130,11 +130,18 @@ def listar_rendas():
     mes = request.args.get('mes'); ano = request.args.get('ano')
     return jsonify(DespesaRepository.listar_rendas_detalhadas(int(mes), int(ano))), 200
 
+# --- NOVO GATILHO: Renda Lançada ---
 @despesas_bp.route('/api/rendas', methods=['POST'])
 def atualizar_renda():
     dados = request.json
     sucesso = DespesaRepository.salvar_renda(dados.get('usuario'), dados.get('fonte', 'Geral'), dados.get('mes'), dados.get('ano'), dados.get('valor'))
-    if sucesso: return jsonify({"status": "sucesso"}), 200
+    if sucesso:
+        autor = dados.get('usuario')
+        outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
+        valor_f = f"R$ {float(dados.get('valor', 0)):.2f}".replace('.', ',')
+        msg = f"💰 Dinheiro na conta! {autor} lançou: {dados.get('fonte', 'Geral')} ({valor_f})"
+        NotificacaoService.enviar_notificacao(outro_usuario, "💰 Nova Entrada Registrada!", msg)
+        return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/rendas/<int:renda_id>', methods=['DELETE', 'PUT'])
@@ -145,6 +152,7 @@ def alterar_renda(renda_id):
         if DespesaRepository.atualizar_renda(renda_id, request.json.get('valor')): return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
+# --- NOVO GATILHO: Conta Paga ---
 @despesas_bp.route('/api/despesas/<int:despesa_id>/pagar', methods=['POST'])
 def pagar_despesa(despesa_id):
     arquivo = request.files.get('comprovante')
@@ -152,8 +160,18 @@ def pagar_despesa(despesa_id):
     if arquivo and arquivo.filename and arquivo.filename != '':
         try: comprovante_binario, mimetype = comprimir_arquivo(arquivo)
         except Exception: arquivo.seek(0); comprovante_binario = arquivo.read(); mimetype = arquivo.mimetype
+    
+    despesa = DespesaRepository.obter_por_id(despesa_id)
     sucesso = DespesaRepository.marcar_paga(despesa_id, comprovante_binario, mimetype)
-    if sucesso: return jsonify({"status": "sucesso"}), 200
+    
+    if sucesso:
+        if despesa:
+            autor = despesa['responsavel_pagamento']
+            outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
+            valor_f = f"R$ {float(despesa['valor']):.2f}".replace('.', ',')
+            msg = f"✅ {autor} pagou a conta: {despesa['descricao']} ({valor_f})"
+            NotificacaoService.enviar_notificacao(outro_usuario, "✅ Conta Paga!", msg)
+        return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/despesas/<int:despesa_id>/desfazer', methods=['POST'])
@@ -167,16 +185,36 @@ def ver_comprovante(despesa_id):
     if not bytes_dados: return "Não encontrado", 404
     return send_file(io.BytesIO(bytes_dados), mimetype=mimetype, as_attachment=False)
 
+# --- NOVO GATILHO: Conta Apagada ---
 @despesas_bp.route('/api/despesas/<int:despesa_id>', methods=['DELETE'])
 def deletar_despesa(despesa_id):
     lote = request.args.get('todas') == 'true'
+    despesa = DespesaRepository.obter_por_id(despesa_id)
     sucesso = DespesaRepository.excluir(despesa_id, excluir_todas=lote)
-    if sucesso: return jsonify({"status": "sucesso"}), 200
+    
+    if sucesso:
+        if despesa:
+            autor = despesa['responsavel_pagamento']
+            outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
+            valor_f = f"R$ {float(despesa['valor']):.2f}".replace('.', ',')
+            msg = f"🗑️ {autor} excluiu a conta: {despesa['descricao']} ({valor_f})"
+            NotificacaoService.enviar_notificacao(outro_usuario, "🗑️ Conta Excluída", msg)
+        return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
+# --- NOVO GATILHO: Conta Editada ---
 @despesas_bp.route('/api/despesas/<int:despesa_id>/editar', methods=['PUT'])
 def editar_despesa(despesa_id):
-    if DespesaRepository.atualizar(despesa_id, request.json): return jsonify({"status": "sucesso"}), 200
+    despesa_antiga = DespesaRepository.obter_por_id(despesa_id)
+    sucesso = DespesaRepository.atualizar(despesa_id, request.json)
+    
+    if sucesso:
+        if despesa_antiga:
+            autor = request.json.get('responsavel_pagamento', despesa_antiga['responsavel_pagamento'])
+            outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
+            msg = f"✏️ {autor} alterou a conta: {despesa_antiga['descricao']}"
+            NotificacaoService.enviar_notificacao(outro_usuario, "✏️ Conta Alterada", msg)
+        return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/calendario/marcacoes', methods=['GET'])
