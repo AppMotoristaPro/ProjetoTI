@@ -1,5 +1,6 @@
 import io
 import datetime
+import json
 from flask import Blueprint, request, jsonify, send_file, render_template, make_response
 from app.repositories.despesa_repository import DespesaRepository
 from app.services.compressao_service import comprimir_arquivo
@@ -47,8 +48,27 @@ def sw():
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
 
+# --- MAGICA DA INJEÇÃO DIRETA (SSR) ---
 @despesas_bp.route('/', methods=['GET'])
-def home(): return render_template('dashboard/index.html')
+def home(): 
+    hoje = hoje_br()
+    mes_atual = hoje.month
+    ano_atual = hoje.year
+    mes_ant = mes_atual - 1
+    ano_ant = ano_atual
+    if mes_ant == 0:
+        mes_ant = 12
+        ano_ant -= 1
+    
+    # Prepara o pacotão no backend antes de entregar a tela
+    pacotao = DespesaRepository.obter_pacotao_dashboard(mes_atual, ano_atual, mes_ant, ano_ant)
+    pacotao['mes_atual'] = mes_atual
+    pacotao['ano_atual'] = ano_atual
+    
+    # Passa o pacotão como JSON para o HTML
+    return render_template('dashboard/index.html', pacotao_inicial=json.dumps(pacotao))
+# --------------------------------------
+
 @despesas_bp.route('/historico', methods=['GET'])
 def tela_historico(): return render_template('despesas/historico.html')
 @despesas_bp.route('/carro', methods=['GET'])
@@ -160,7 +180,6 @@ def marcar_dia():
     if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# --- NOVAS ROTAS DE PACOTÃO (OTIMIZAÇÃO DE REDE) ---
 @despesas_bp.route('/api/dashboard/iniciar', methods=['GET'])
 def iniciar_dashboard():
     hoje = hoje_br()
@@ -182,7 +201,6 @@ def iniciar_carro():
     pacotao = DespesaRepository.obter_pacotao_carro(mes, ano)
     return jsonify(pacotao), 200
 
-# --- ROTAS DO SANDERO ---
 @despesas_bp.route('/api/sandero/config', methods=['GET', 'POST'])
 def gerenciar_sandero_config():
     if request.method == 'GET':

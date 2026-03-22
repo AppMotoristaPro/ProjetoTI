@@ -1,6 +1,10 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<script>
+    const PACOTAO_INICIAL = {{ pacotao_inicial | safe }};
+</script>
+
 <div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full mt-2">
     <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
     <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
@@ -155,30 +159,32 @@
         document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
     };
 
-    const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarDashboard(); };
-
-    // --- MAGICA 1: ROTA PACOTÃO ÚNICA ---
-    const carregarDashboard = async () => {
+    const mudarMes = async (d) => { 
+        currentData.setMonth(currentData.getMonth() + d); 
+        
+        // Se não for o mês inicial, aí sim ele precisa ir na internet buscar
         atualizarDisplayMes();
         try {
             const mAtual = currentData.getMonth() + 1;
             const aAtual = currentData.getFullYear();
-            
             const response = await fetch(`/api/dashboard/iniciar?mes=${mAtual}&ano=${aAtual}`);
             const pacotao = await response.json();
-
-            resumoGlobal = pacotao.resumo;
-            despesasGlobais = pacotao.despesas;
-            diasMarcadosGlobais = pacotao.marcacoes;
-
-            document.getElementById('saldo_final').innerText = formatarMoeda(resumoGlobal.saldo_final);
-            document.getElementById('total_pendente').innerText = formatarMoeda(resumoGlobal.total_pendente);
-
-            renderizarGraficos(resumoGlobal, despesasGlobais);
-            renderizarCalendario(despesasGlobais);
-            calcularProjecao();
+            processarPacotao(pacotao);
         } catch(e) { console.error(e); }
     };
+
+    const processarPacotao = (pacotao) => {
+        resumoGlobal = pacotao.resumo;
+        despesasGlobais = pacotao.despesas;
+        diasMarcadosGlobais = pacotao.marcacoes;
+
+        document.getElementById('saldo_final').innerText = formatarMoeda(resumoGlobal.saldo_final);
+        document.getElementById('total_pendente').innerText = formatarMoeda(resumoGlobal.total_pendente);
+
+        renderizarGraficos(resumoGlobal, despesasGlobais);
+        renderizarCalendario(despesasGlobais);
+        calcularProjecao();
+    }
 
     const renderizarGraficos = (resumo, despesas) => {
         Chart.defaults.color = '#64748b'; Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.font.weight = 'bold';
@@ -364,9 +370,7 @@
         document.getElementById('math_saldo_projetado').innerText = formatarMoeda(saldoProjetado);
     };
 
-    // --- MAGICA 2: ATUALIZAÇÃO OTIMISTA DO CALENDÁRIO ---
     window.toggleMarcacao = (data, usuario, tipo) => {
-        // Passo 1: Atualiza a interface imediatamente para o usuário (0 delay)
         diasMarcadosGlobais = diasMarcadosGlobais.filter(m => !(m.data === data && m.usuario === usuario));
         if (tipo !== '') diasMarcadosGlobais.push({ data, usuario, tipo });
         
@@ -374,11 +378,9 @@
         calcularProjecao();
         abrirModalCalendario(data);
         
-        // Passo 2: Sincroniza em segundo plano com o servidor
         fetch('/api/calendario/marcar', { 
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({data, usuario, tipo}) 
         }).then(() => {
-            // Passo 3: Puxa o pacotão novo em silêncio para garantir que as rendas e o Saldo Livre estão corretos
             const mAtual = currentData.getMonth() + 1;
             const aAtual = currentData.getFullYear();
             fetch(`/api/dashboard/iniciar?mes=${mAtual}&ano=${aAtual}`)
@@ -493,7 +495,19 @@
         document.getElementById('modalPendenteLista').classList.remove('hidden');
     };
 
-    document.addEventListener("DOMContentLoaded", carregarDashboard);
+    // --- MAGICA DA INJEÇÃO DIRETA: Lê a variável injetada na largada ---
+    document.addEventListener("DOMContentLoaded", () => {
+        atualizarDisplayMes();
+        if (typeof PACOTAO_INICIAL !== 'undefined' && PACOTAO_INICIAL) {
+            // Se o pacotão foi injetado pelo servidor (primeiro carregamento), usa ele direto!
+            currentData = new Date(PACOTAO_INICIAL.ano_atual, PACOTAO_INICIAL.mes_atual - 1, 1);
+            atualizarDisplayMes();
+            processarPacotao(PACOTAO_INICIAL);
+        } else {
+            // Fallback (caso a injeção falhe por algum motivo)
+            carregarDashboard();
+        }
+    });
 </script>
 {% endblock %}
 
