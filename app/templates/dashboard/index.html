@@ -39,20 +39,25 @@
                 <span class="text-2xl font-black text-slate-800" id="gauge-valor">R$ 0,00</span>
             </div>
         </div>
-        <div class="flex justify-between items-center mt-3 pt-3 border-t border-white/40">
+        <div onclick="abrirModalPagosLista()" class="flex justify-between items-center mt-3 pt-3 border-t border-white/40 cursor-pointer hover:bg-white/30 rounded-xl px-2 -mx-2 transition active:scale-95">
             <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Já Pago</span>
-            <span class="text-sm font-black text-emerald-500" id="valor-pago">R$ 0,00</span>
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-black text-emerald-500" id="valor-pago">R$ 0,00</span>
+                <svg class="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </div>
         </div>
     </div>
 
     <div class="grid grid-cols-2 gap-3">
-        <div class="ultra-glass p-4 rounded-[28px] shadow-sm border border-white/50">
+        <div class="ultra-glass p-4 rounded-[28px] shadow-sm border border-white/50 flex flex-col justify-between">
             <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center text-indigo-500">Rendas Igor</h3>
             <div class="relative h-40 w-full"><canvas id="chartRendaIgor"></canvas></div>
+            <div class="text-center mt-3 pt-2 border-t border-indigo-100/50"><span class="text-[10px] font-bold text-slate-400 block mb-0.5">Total Recebido</span><span id="totRendaIgor" class="text-sm font-black text-indigo-600">R$ 0,00</span></div>
         </div>
-        <div class="ultra-glass p-4 rounded-[28px] shadow-sm border border-white/50">
+        <div class="ultra-glass p-4 rounded-[28px] shadow-sm border border-white/50 flex flex-col justify-between">
             <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center text-pink-500">Rendas Thay</h3>
             <div class="relative h-40 w-full"><canvas id="chartRendaThay"></canvas></div>
+            <div class="text-center mt-3 pt-2 border-t border-pink-100/50"><span class="text-[10px] font-bold text-slate-400 block mb-0.5">Total Recebido</span><span id="totRendaThay" class="text-sm font-black text-pink-600">R$ 0,00</span></div>
         </div>
     </div>
 
@@ -68,7 +73,7 @@
 </div>
 
 <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50 mb-6">
-    <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Calendário de Vencimentos</h3>
+    <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Calendário</h3>
     <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-black text-slate-400 mb-2"><div class="text-red-400">DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div></div>
     <div id="calendar-grid" class="grid grid-cols-7 gap-1.5"></div>
 </div>
@@ -83,7 +88,7 @@
         
         <div class="flex justify-between text-emerald-600 pt-2 pb-3 font-black text-base border-b border-slate-200"><span>= Saldo Projetado (Total)</span><span id="math_saldo_projetado">R$ 0,00</span></div>
 
-        <p class="text-[10px] uppercase font-black text-red-400 tracking-widest mb-2 pt-2 border-b border-red-100 pb-1">Dinheiro na Mesa (Faltas)</p>
+        <p class="text-[10px] uppercase font-black text-red-400 tracking-widest mb-2 pt-2 border-b border-red-100 pb-1">Dinheiro Perdido</p>
         <div class="flex justify-between text-red-500"><span id="lbl_shopee_falta_este_mes">(-) Impacto Neste Mês</span><span id="math_shopee_falta_este_mes">R$ 0,00</span></div>
         <div class="flex justify-between text-red-400"><span id="lbl_shopee_falta_prox_mes">(-) Impacto Próx. Mês</span><span id="math_shopee_falta_prox_mes">R$ 0,00</span></div>
     </div>
@@ -101,11 +106,20 @@
     </div>
 </div>
 
+<div id="modalPagosLista" class="hidden fixed inset-0 z-[70] flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
+    <div class="w-full max-w-sm mx-auto bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[80vh] overflow-y-auto">
+        <button onclick="document.getElementById('modalPagosLista').classList.add('hidden')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-lg font-black text-emerald-500 mb-2">Contas Pagas 🎉</h3>
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Detalhes de pagamento</p>
+        <div id="lista_detalhe_pagos" class="space-y-2"></div>
+    </div>
+</div>
+
 <div id="modalPendenteLista" class="hidden fixed inset-0 z-[70] flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
     <div class="w-full max-w-sm mx-auto bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[80vh] overflow-y-auto">
         <button onclick="document.getElementById('modalPendenteLista').classList.add('hidden')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-lg font-black text-theme mb-6">Contas Pendentes</h3>
-        <div id="lista_detalhe_pendentes" class="space-y-2"></div>
+        <div id="lista_detalhe_pendentes" class="space-y-3"></div>
     </div>
 </div>
 
@@ -131,7 +145,6 @@
                 <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Data de Recebimento</label>
                 <input type="date" id="data_recebimento_shopee" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none focus:border-indigo-400" required>
             </div>
-            
             <button onclick="confirmarRecebimentoShopee()" class="w-full py-4 bg-indigo-500 text-white rounded-2xl font-black active:scale-95 transition shadow-lg mt-2">LANÇAR ENTRADA</button>
             <button onclick="apenasMarcarTrabalhado()" class="w-full py-3 bg-slate-50 text-slate-500 rounded-2xl font-bold border border-slate-100 hover:bg-slate-100 active:scale-95 transition">Apenas Marcar no Calendário</button>
         </div>
@@ -161,9 +174,12 @@
 
     const mudarMes = async (d) => { 
         currentData.setMonth(currentData.getMonth() + d); 
-        
-        // Se não for o mês inicial, aí sim ele precisa ir na internet buscar
         atualizarDisplayMes();
+        
+        // MÊS GLOBAL: Salva a escolha do usuário
+        const mesGlobal = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear() };
+        localStorage.setItem('mesGlobalData', JSON.stringify(mesGlobal));
+
         try {
             const mAtual = currentData.getMonth() + 1;
             const aAtual = currentData.getFullYear();
@@ -193,7 +209,6 @@
         const style = getComputedStyle(document.body);
         const themeColor = style.getPropertyValue('--color-primary').trim() || '#4f46e5';
         const themeLight = style.getPropertyValue('--color-primary-light').trim() || '#e0e7ff';
-
         const coresNeonIgor = ['#0ea5e9', '#8b5cf6', '#14b8a6', '#f59e0b'];
         const coresNeonThay = ['#ec4899', '#d946ef', '#f43f5e', '#8b5cf6'];
 
@@ -203,7 +218,8 @@
         document.getElementById('gauge-valor').innerText = formatarMoeda(tPendentes);
         document.getElementById('valor-pago').innerText = formatarMoeda(tPagas);
 
-        if (chartDespesasObj) chartDespesasObj.destroy();
+        // GRÁFICO RECALCULADO CORRETAMENTE: Destruir e recriar sempre que há dados novos
+        if (chartDespesasObj) { chartDespesasObj.destroy(); chartDespesasObj = null; }
         const ctxDesp = document.getElementById('chartDespesas');
         if(tPagas === 0 && tPendentes === 0) {
             ctxDesp.style.display = 'none'; document.getElementById('chartDespesasEmpty').classList.remove('hidden');
@@ -212,9 +228,13 @@
             chartDespesasObj = new Chart(ctxDesp, {
                 type: 'doughnut',
                 data: { labels: ['Pagas', 'Pendentes'], datasets: [{ data: [tPagas, tPendentes], backgroundColor: [themeColor, themeLight], borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, circumference: 180, rotation: 270, cutout: '80%', plugins: { legend: { display: false }, datalabels: { display: false } } }
+                options: { responsive: true, maintainAspectRatio: false, circumference: 180, rotation: 270, cutout: '80%', plugins: { legend: { display: false }, datalabels: { display: false } }, animation: { duration: 800 } }
             });
         }
+
+        // Totais das Rendas (Embaixo das Pizzas)
+        document.getElementById('totRendaIgor').innerText = formatarMoeda(resumo.renda_igor);
+        document.getElementById('totRendaThay').innerText = formatarMoeda(resumo.renda_thaynara);
 
         if (chartRendaIgorObj) chartRendaIgorObj.destroy();
         chartRendaIgorObj = new Chart(document.getElementById('chartRendaIgor'), {
@@ -268,20 +288,21 @@
             const marcacaoDoDia = diasMarcadosGlobais.find(m => m.data === dataStr && m.usuario === currentUser);
             
             let dotHtml = '';
+            let corFundoIgor = ''; // O NOVO QUADRADINHO DO IGOR
+
             if (contasDoDia.length > 0) {
                 const qtdTotal = contasDoDia.length;
                 const qtdPagas = contasDoDia.filter(c => c.pago).length;
                 
                 let corStatus = '';
-                if (qtdPagas === qtdTotal) { corStatus = 'text-emerald-400 bg-emerald-400'; } 
-                else if (qtdPagas > 0 && qtdPagas < qtdTotal) { corStatus = 'text-yellow-400 bg-yellow-400 animate-pulse'; } 
-                else { corStatus = 'text-red-500 bg-red-500 animate-pulse'; }
+                if (qtdPagas === qtdTotal) { corStatus = 'text-emerald-400 bg-emerald-400'; corFundoIgor = 'bg-emerald-100 border-emerald-300'; } 
+                else if (qtdPagas > 0 && qtdPagas < qtdTotal) { corStatus = 'text-yellow-400 bg-yellow-400 animate-pulse'; corFundoIgor = 'bg-yellow-100 border-yellow-300'; } 
+                else { corStatus = 'text-red-500 bg-red-500 animate-pulse'; corFundoIgor = 'bg-red-100 border-red-300'; }
 
                 if (currentUser === 'Thaynara') {
                     dotHtml = `<div class="text-[8px] ${corStatus.split(' ')[0]} ${corStatus.includes('pulse') ? 'animate-pulse' : ''}" title="Contas do Dia">💖</div>`;
-                } else {
-                    dotHtml = `<div class="w-1.5 h-1.5 rounded-full ${corStatus.split(' ').slice(1).join(' ')} shadow-sm" title="Contas do Dia"></div>`;
-                }
+                } 
+                // Para o Igor, não usamos mais dotHtml. A cor vai pro quadrado principal!
             }
             
             let markerHtml = '';
@@ -297,8 +318,15 @@
             }
             
             const gapClass = (dotHtml && markerHtml) ? 'gap-1' : '';
-            const bgClassCard = isMesAtual && dia === hojeObj.getDate() ? 'bg-theme-light shadow-lg' : 'bg-white/40 text-slate-700 hover:bg-white/80 border border-white/50';
+            let bgClassCard = isMesAtual && dia === hojeObj.getDate() ? 'bg-theme-light shadow-lg border-theme/50' : 'bg-white/40 text-slate-700 hover:bg-white/80 border-white/50';
             
+            // Aplica o quadrado colorido pro Igor (se tiver cor) e ignora a borda padrão
+            if (currentUser === 'Igor' && corFundoIgor !== '') {
+                bgClassCard = `${corFundoIgor} text-slate-800 shadow-sm border`;
+            } else {
+                bgClassCard += ' border'; // Adiciona a borda padrão se não for colorido
+            }
+
             grid.innerHTML += `
                 <div onclick="abrirModalCalendario('${dataStr}')" class="flex flex-col items-center justify-center p-2 rounded-xl cursor-pointer transition active:scale-90 ${bgClassCard}">
                     <span class="text-xs font-bold">${dia}</span>
@@ -311,16 +339,13 @@
         const currentMonth = currentData.getMonth();
         const currentYear = currentData.getFullYear();
 
-        let diasShopeeEsteMes = 0;
-        let diasShopeeProximoMes = 0;
-        let faltasEsteMes = 0;
-        let faltasProximoMes = 0;
+        let diasShopeeEsteMes = 0; let diasShopeeProximoMes = 0;
+        let faltasEsteMes = 0; let faltasProximoMes = 0;
 
         diasMarcadosGlobais.forEach(m => {
             if (m.tipo === 'shopee_previsto' || m.tipo === 'shopee_nao_trabalhado') {
                 const [y, mn, d] = m.data.split('-');
                 const workedDate = new Date(y, mn - 1, d);
-                
                 const dayOfWeek = workedDate.getDay() || 7; 
                 const daysToNextThursday = 7 - dayOfWeek + 4;
                 const payDate = new Date(y, mn - 1, workedDate.getDate() + daysToNextThursday);
@@ -329,11 +354,9 @@
                 const isProxMes = (workedDate.getMonth() === currentMonth && workedDate.getFullYear() === currentYear && (payDate.getMonth() > currentMonth || payDate.getFullYear() > currentYear));
 
                 if (m.tipo === 'shopee_previsto') {
-                    if (isEsteMes) diasShopeeEsteMes++;
-                    else if (isProxMes) diasShopeeProximoMes++;
+                    if (isEsteMes) diasShopeeEsteMes++; else if (isProxMes) diasShopeeProximoMes++;
                 } else if (m.tipo === 'shopee_nao_trabalhado') {
-                    if (isEsteMes) faltasEsteMes++;
-                    else if (isProxMes) faltasProximoMes++;
+                    if (isEsteMes) faltasEsteMes++; else if (isProxMes) faltasProximoMes++;
                 }
             }
         });
@@ -354,19 +377,14 @@
 
         document.getElementById('lbl_shopee_pendente_este_mes').innerText = `(+) Shopee (Cai Neste Mês: ${diasShopeeEsteMes} d)`;
         document.getElementById('math_shopee_pendente_este_mes').innerText = formatarMoeda(valorShopeeEsteMes);
-
         document.getElementById('lbl_shopee_pendente_prox_mes').innerText = `(+) Shopee (Cai Próx. Mês: ${diasShopeeProximoMes} d)`;
         document.getElementById('math_shopee_pendente_prox_mes').innerText = formatarMoeda(valorShopeeProximoMes);
-
         document.getElementById('lbl_morato_pendente').innerText = `(+) Reembolso Pendente (${diasMorato} d)`;
         document.getElementById('math_morato_pendente').innerText = formatarMoeda(valorMorato);
-
         document.getElementById('lbl_shopee_falta_este_mes').innerText = `(-) Impacto Neste Mês (${faltasEsteMes} d)`;
         document.getElementById('math_shopee_falta_este_mes').innerText = formatarMoeda(valorFaltasEsteMes);
-
         document.getElementById('lbl_shopee_falta_prox_mes').innerText = `(-) Impacto Próx. Mês (${faltasProximoMes} d)`;
         document.getElementById('math_shopee_falta_prox_mes').innerText = formatarMoeda(valorFaltasProximoMes);
-
         document.getElementById('math_saldo_projetado').innerText = formatarMoeda(saldoProjetado);
     };
 
@@ -399,29 +417,21 @@
         const tzoffset = (new Date()).getTimezoneOffset() * 60000;
         const hojeISO = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
         document.getElementById('data_recebimento_shopee').value = hojeISO; 
-        
         document.getElementById('modalCalendarioDia').classList.add('hidden');
         document.getElementById('modalRecebimentoShopee').classList.remove('hidden');
     };
 
-    window.fecharModalShopee = () => {
-        document.getElementById('modalRecebimentoShopee').classList.add('hidden');
-        diaTrabalhadoAtual = null;
-    };
+    window.fecharModalShopee = () => { document.getElementById('modalRecebimentoShopee').classList.add('hidden'); diaTrabalhadoAtual = null; };
 
     window.confirmarRecebimentoShopee = async () => {
         const dataRecebimento = document.getElementById('data_recebimento_shopee').value;
         if(!dataRecebimento) { alert('Por favor, escolha a data em que o dinheiro vai cair.'); return; }
-        
         const tipoComData = `shopee_trabalhado|${dataRecebimento}`;
         toggleMarcacao(diaTrabalhadoAtual, 'Igor', tipoComData);
         fecharModalShopee();
     };
 
-    window.apenasMarcarTrabalhado = async () => {
-        toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado');
-        fecharModalShopee();
-    };
+    window.apenasMarcarTrabalhado = async () => { toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado'); fecharModalShopee(); };
 
     const abrirModalCalendario = (dataStr) => {
         document.getElementById('modal_cal_data').innerText = `Dia ${formatarData(dataStr)}/${dataStr.split('-')[0]}`;
@@ -485,26 +495,70 @@
         document.getElementById('modalExplicaSaldo').classList.remove('hidden');
     };
 
+    // Modal de Pendentes (Agora exibe a Data de Vencimento)
     const abrirResumoPendentes = () => {
         const cont = document.getElementById('lista_detalhe_pendentes'); cont.innerHTML = '';
         const pendentes = despesasGlobais.filter(x => !x.pago);
         if(pendentes.length === 0) cont.innerHTML = "<p class='text-center text-xs text-slate-400 font-bold py-4'>Tudo pago! 🎉</p>";
         else pendentes.forEach(p => {
-            cont.innerHTML += `<div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0"><span class="text-xs font-bold text-slate-600 truncate pr-2">${p.descricao}</span><span class="text-xs font-black text-orange-500 whitespace-nowrap">${formatarMoeda(p.valor)}</span></div>`;
+            cont.innerHTML += `
+            <div class="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-xl mb-2">
+                <div class="truncate pr-2">
+                    <span class="text-sm font-bold text-slate-700 block truncate">${p.descricao}</span>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Vence: ${formatarData(p.data_vencimento)}</span>
+                </div>
+                <span class="text-sm font-black text-orange-500 whitespace-nowrap">${formatarMoeda(p.valor)}</span>
+            </div>`;
         });
         document.getElementById('modalPendenteLista').classList.remove('hidden');
     };
 
-    // --- MAGICA DA INJEÇÃO DIRETA: Lê a variável injetada na largada ---
-    document.addEventListener("DOMContentLoaded", () => {
-        atualizarDisplayMes();
-        if (typeof PACOTAO_INICIAL !== 'undefined' && PACOTAO_INICIAL) {
-            // Se o pacotão foi injetado pelo servidor (primeiro carregamento), usa ele direto!
-            currentData = new Date(PACOTAO_INICIAL.ano_atual, PACOTAO_INICIAL.mes_atual - 1, 1);
-            atualizarDisplayMes();
-            processarPacotao(PACOTAO_INICIAL);
+    // NOVO: Modal "Já Pago"
+    const abrirModalPagosLista = () => {
+        const cont = document.getElementById('lista_detalhe_pagos'); cont.innerHTML = '';
+        // Filtra todas as contas que foram pagas E que não são do Dia-a-Dia
+        const pagos = despesasGlobais.filter(x => x.pago && x.tipo_despesa !== 'Diária');
+        
+        if(pagos.length === 0) {
+            cont.innerHTML = "<p class='text-center text-xs text-slate-400 font-bold py-4'>Nenhuma conta paga ainda.</p>";
         } else {
-            // Fallback (caso a injeção falhe por algum motivo)
+            // Ordena pela data de pagamento (mais recentes primeiro)
+            pagos.sort((a, b) => new Date(b.data_pagamento || b.data_vencimento) - new Date(a.data_pagamento || a.data_vencimento));
+            
+            pagos.forEach(p => {
+                const dataPago = p.data_pagamento ? formatarData(p.data_pagamento) : formatarData(p.data_vencimento);
+                cont.innerHTML += `
+                <div class="flex justify-between items-center p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl mb-2">
+                    <div class="truncate pr-2">
+                        <span class="text-sm font-bold text-slate-700 block truncate">${p.descricao}</span>
+                        <span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Pago em: ${dataPago}</span>
+                    </div>
+                    <span class="text-sm font-black text-emerald-600 whitespace-nowrap">${formatarMoeda(p.valor)}</span>
+                </div>`;
+            });
+        }
+        document.getElementById('modalPagosLista').classList.remove('hidden');
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+        // MÊS GLOBAL: Ao carregar a tela, verifica se tem um mês salvo no LocalStorage
+        const mesGlobalStr = localStorage.getItem('mesGlobalData');
+        if (mesGlobalStr) {
+            const mesGlobal = JSON.parse(mesGlobalStr);
+            currentData = new Date(mesGlobal.ano, mesGlobal.mes - 1, 1);
+        }
+
+        atualizarDisplayMes();
+        
+        if (typeof PACOTAO_INICIAL !== 'undefined' && PACOTAO_INICIAL) {
+            // Se o mês salvo for diferente do mês injetado (ex: o usuário recarregou a Home forçando o mês atual do servidor), 
+            // a gente ignora a injeção inicial e busca o mês que o usuário realmente quer ver
+            if (mesGlobalStr && (PACOTAO_INICIAL.mes_atual !== currentData.getMonth() + 1 || PACOTAO_INICIAL.ano_atual !== currentData.getFullYear())) {
+                carregarDashboard();
+            } else {
+                processarPacotao(PACOTAO_INICIAL);
+            }
+        } else {
             carregarDashboard();
         }
     });

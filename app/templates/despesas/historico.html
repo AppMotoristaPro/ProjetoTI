@@ -80,27 +80,29 @@
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y,m,d] = ds.split('-'); return `${d}/${m}`; };
     const toYMD = (y, m, d) => `${y}-${pad(m+1)}-${pad(d)}`;
 
-    // Lógica para quebrar o mês em semanas começando sempre no domingo
     function gerarSemanasDoMes(ano, mes) {
         let semanas = [];
         let d = new Date(ano, mes, 1);
         while (d.getMonth() === mes) {
             let sDate = d.getDate();
-            let eD = new Date(ano, mes, sDate + (6 - d.getDay())); // Vai até o próximo sábado
-            if (eD.getMonth() !== mes) eD = new Date(ano, mes + 1, 0); // Trava no último dia do mês se vazar
+            let eD = new Date(ano, mes, sDate + (6 - d.getDay())); 
+            if (eD.getMonth() !== mes) eD = new Date(ano, mes + 1, 0); 
             let eDate = eD.getDate();
             
             let label = `${pad(sDate)}/${pad(mes+1)} até ${pad(eDate)}/${pad(mes+1)}`;
             semanas.push({ label, start: toYMD(ano, mes, sDate), end: toYMD(ano, mes, eDate) });
             
-            d.setDate(eDate + 1); // Pula para o próximo domingo
+            d.setDate(eDate + 1); 
         }
         return semanas;
     }
 
+    // MÊS GLOBAL: Salva a escolha do usuário
     const mudarMes = (d) => { 
         dataHist.setMonth(dataHist.getMonth() + d); 
-        // Reseta os filtros quando muda o mês
+        const mesGlobal = { mes: dataHist.getMonth() + 1, ano: dataHist.getFullYear() };
+        localStorage.setItem('mesGlobalData', JSON.stringify(mesGlobal));
+
         filtroModo = 'mes';
         filtroParam = '';
         document.getElementById('select-modo').value = 'mes';
@@ -116,7 +118,6 @@
         renderizarLista();
     };
 
-    // Controla o menu dropdown do filtro
     function mudarModoFiltro(modo) {
         filtroModo = modo;
         const selParam = document.getElementById('select-param');
@@ -129,18 +130,18 @@
             selParam.classList.remove('hidden');
             const semanas = gerarSemanasDoMes(dataHist.getFullYear(), dataHist.getMonth());
             semanas.forEach((s, idx) => { selParam.innerHTML += `<option value="${idx}">${s.label}</option>`; });
-            filtroParam = '0'; // Seleciona a primeira semana por padrão
+            filtroParam = '0'; 
         } else if (modo === 'dia') {
             selParam.classList.remove('hidden');
             const diarias = despesasPagas.filter(x => x.tipo_despesa === 'Diária');
-            let dias = [...new Set(diarias.map(x => x.data_pagamento || x.data_vencimento))].sort((a,b) => b.localeCompare(a)); // Pega os dias e ordena decrescente
+            let dias = [...new Set(diarias.map(x => x.data_pagamento || x.data_vencimento))].sort((a,b) => b.localeCompare(a)); 
             
             if (dias.length === 0) {
                 selParam.innerHTML = `<option value="">Sem gastos no mês</option>`;
                 filtroParam = '';
             } else {
                 dias.forEach(d => { selParam.innerHTML += `<option value="${d}">${formatarData(d)}</option>`; });
-                filtroParam = dias[0]; // Seleciona o dia mais recente
+                filtroParam = dias[0]; 
             }
         }
         renderizarLista();
@@ -161,13 +162,9 @@
 
     const renderizarLista = () => {
         const c = document.getElementById('lista-historico'); 
-        
-        // Exibe ou esconde o menu de filtro dependendo da aba
         document.getElementById('filtros-diaria-container').classList.toggle('hidden', abaAtual !== 'Diária');
-
         let filtradas = despesasPagas.filter(x => x.tipo_despesa === abaAtual);
         
-        // APLICA O FILTRO DO DIÁRIO ANTES DE RENDERIZAR
         if (abaAtual === 'Diária') {
             if (filtroModo === 'semana' && filtroParam !== '') {
                 const semanas = gerarSemanasDoMes(dataHist.getFullYear(), dataHist.getMonth());
@@ -188,7 +185,6 @@
 
         let conteudoHtml = '';
         
-        // RENDERIZAÇÃO DO TOTALIZADOR DO DIÁRIO
         if (abaAtual === 'Diária') {
             const totalDiario = filtradas.reduce((soma, item) => soma + parseFloat(item.valor), 0);
             let rotuloTotal = 'no Mês';
@@ -213,18 +209,7 @@
                 
                 if(abaAtual === 'Diária') {
                     const descSafe = x.descricao.replace(/'/g, "\\'");
-                    
-                    // Ícones de Categorias Atualizados!
-                    const icones = {
-                        'Combustível': '⛽',
-                        'Mercado': '🛒',
-                        'Farmácia': '💊',
-                        'Restaurante': '🍽️',
-                        'Shopee': '🛍️',
-                        'Mercado Livre': '📦',
-                        'Besteira': '🍫',
-                        'Outros': '🏷️'
-                    };
+                    const icones = { 'Combustível': '⛽', 'Mercado': '🛒', 'Farmácia': '💊', 'Restaurante': '🍽️', 'Shopee': '🛍️', 'Mercado Livre': '📦', 'Besteira': '🍫', 'Outros': '🏷️' };
                     const iconeCat = icones[x.categoria] || '☕'; 
 
                     conteudoHtml += `
@@ -262,7 +247,6 @@
                 }
             });
         }
-        
         c.innerHTML = conteudoHtml;
     };
 
@@ -293,7 +277,15 @@
 
     const desfazerPagamento = async (id) => { if(confirm("Marcar como PENDENTE e devolver pro painel?")) { await fetch(`/api/despesas/${id}/desfazer`, { method: 'POST' }); carregarH(); } };
 
-    document.addEventListener("DOMContentLoaded", carregarH);
+    document.addEventListener("DOMContentLoaded", () => {
+        // MÊS GLOBAL: Lê a escolha do usuário
+        const mesGlobalStr = localStorage.getItem('mesGlobalData');
+        if (mesGlobalStr) {
+            const mesGlobal = JSON.parse(mesGlobalStr);
+            dataHist = new Date(mesGlobal.ano, mesGlobal.mes - 1, 1);
+        }
+        carregarH();
+    });
 </script>
 {% endblock %}
 

@@ -1,11 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="mb-8 flex items-center justify-between">
-    <div class="flex items-center gap-4">
-        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg></a>
-        <h2 class="text-xl font-black text-slate-800 tracking-tight">Variáveis</h2>
-    </div>
-    <button onclick="abrirModalNovaVar()" class="btn-active w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg active:scale-95 transition"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
+<div class="mb-8 flex items-center gap-4">
+    <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg></a>
+    <h2 class="text-xl font-black text-slate-800 tracking-tight">Despesas Variáveis</h2>
 </div>
 
 <div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
@@ -120,7 +117,14 @@
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
     function toggleParcelas() { const box = document.getElementById('box-parcelas'); if(document.getElementById('recorrente').checked) box.classList.remove('hidden'); else box.classList.add('hidden'); }
-    const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarVariaveis(); };
+    
+    // MÊS GLOBAL: Salva a escolha do usuário
+    const mudarMes = (d) => { 
+        currentData.setMonth(currentData.getMonth() + d); 
+        const mesGlobal = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear() };
+        localStorage.setItem('mesGlobalData', JSON.stringify(mesGlobal));
+        carregarVariaveis(); 
+    };
 
     const carregarVariaveis = async () => {
         const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -213,7 +217,15 @@
     document.getElementById('btnApenasBaixa').onclick = async () => { fecharModais(); await dispararPagamento(null); };
     const dispararPagamento = async (file) => { const cardNode = document.getElementById(`conta-card-${contaEmFocoId}`); if(cardNode) { cardNode.style.transition = "all 0.3s"; cardNode.style.opacity = "0"; setTimeout(() => cardNode.remove(), 300); } const formData = new FormData(); if(file) formData.append('comprovante', file); await fetch(`/api/despesas/${contaEmFocoId}/pagar`, { method: 'POST', body: formData }); };
 
-    document.addEventListener("DOMContentLoaded", carregarVariaveis);
+    document.addEventListener("DOMContentLoaded", () => {
+        // MÊS GLOBAL: Lê a escolha do usuário
+        const mesGlobalStr = localStorage.getItem('mesGlobalData');
+        if (mesGlobalStr) {
+            const mesGlobal = JSON.parse(mesGlobalStr);
+            currentData = new Date(mesGlobal.ano, mesGlobal.mes - 1, 1);
+        }
+        carregarVariaveis();
+    });
 </script>
 {% endblock %}
 
