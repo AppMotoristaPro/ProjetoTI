@@ -3,7 +3,6 @@ import urllib.parse
 import ssl
 import queue
 import threading
-import socket
 from config import Config
 
 class PooledConnection:
@@ -32,19 +31,20 @@ class DbPool:
         parsed = urllib.parse.urlparse(Config.DATABASE_URL)
         try:
             context = ssl.create_default_context()
-            # Adicionado timeout de socket para evitar que a leitura fique travada eternamente
+            # Timeout de 10s apenas para o momento da conexão inicial
             conn = pg8000.dbapi.connect(
                 user=parsed.username, password=parsed.password,
                 host=parsed.hostname, port=parsed.port or 5432,
                 database=parsed.path.lstrip('/'), ssl_context=context,
-                timeout=10 # Tempo máximo para tentar conectar
+                timeout=10 
             )
-            # Configura o timeout de leitura/escrita direto no socket do banco
-            conn._context.sock.settimeout(10.0) 
             
             cur = conn.cursor()
             cur.execute("SET TIME ZONE 'America/Sao_Paulo';")
+            # A FORMA SEGURA: Limita o tempo da consulta a 10s, sem matar a conexão ociosa
+            cur.execute("SET statement_timeout = 10000;") 
             cur.close()
+            
             with self.lock: self.current_conns += 1
             return conn
         except Exception as e:

@@ -17,6 +17,7 @@ class DespesaRepository:
     @staticmethod
     def _garantir_tabelas():
         conn = get_db_connection()
+        if not conn: return
         try:
             cur = conn.cursor()
             cur.execute("""
@@ -55,6 +56,7 @@ class DespesaRepository:
     def listar_dias_marcados(mes, ano):
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
+        if not conn: return []
         try:
             cur = conn.cursor()
             cur.execute("SELECT data_marcada, usuario, tipo FROM dias_marcados WHERE EXTRACT(MONTH FROM data_marcada) = %s AND EXTRACT(YEAR FROM data_marcada) = %s", (mes, ano))
@@ -66,6 +68,7 @@ class DespesaRepository:
     def marcar_dia(data, usuario, tipo):
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             
@@ -117,6 +120,7 @@ class DespesaRepository:
     @staticmethod
     def salvar_inscricao_push(usuario, sub_info):
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             endpoint = sub_info.get('endpoint')
@@ -133,6 +137,7 @@ class DespesaRepository:
     @staticmethod
     def obter_inscricoes(usuario):
         conn = get_db_connection()
+        if not conn: return []
         try:
             cur = conn.cursor()
             cur.execute("SELECT id, subscription_info FROM inscricoes_push WHERE usuario = %s", (usuario,))
@@ -143,6 +148,7 @@ class DespesaRepository:
     @staticmethod
     def remover_inscricao_push(id_inscricao):
         conn = get_db_connection()
+        if not conn: return
         try:
             cur = conn.cursor()
             cur.execute("DELETE FROM inscricoes_push WHERE id = %s", (id_inscricao,))
@@ -153,6 +159,7 @@ class DespesaRepository:
     @staticmethod
     def buscar_contas_proximos_7_dias():
         conn = get_db_connection()
+        if not conn: return []
         try:
             cur = conn.cursor()
             cur.execute("SELECT descricao, valor, data_vencimento FROM despesas WHERE pago = FALSE AND data_vencimento BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days' AND tipo_despesa IN ('Fixa', 'Variável') ORDER BY data_vencimento ASC")
@@ -164,6 +171,7 @@ class DespesaRepository:
     @staticmethod
     def buscar_contas_vencendo_amanha():
         conn = get_db_connection()
+        if not conn: return []
         try:
             cur = conn.cursor()
             cur.execute("SELECT descricao, valor, responsavel_pagamento FROM despesas WHERE pago = FALSE AND data_vencimento = CURRENT_DATE + INTERVAL '1 day' AND tipo_despesa IN ('Fixa', 'Variável')")
@@ -172,7 +180,6 @@ class DespesaRepository:
         except Exception: return []
         finally: conn.close()
 
-    # --- NOVO: Lê os dados da conta antes de editar, pagar ou excluir ---
     @staticmethod
     def obter_por_id(despesa_id):
         conn = get_db_connection()
@@ -186,7 +193,6 @@ class DespesaRepository:
             return None
         except Exception: return None
         finally: conn.close()
-    # --------------------------------------------------------------------
 
     @staticmethod
     def criar(dados, comprovante_binario, mimetype):
@@ -247,6 +253,7 @@ class DespesaRepository:
     @staticmethod
     def listar_rendas_detalhadas(mes, ano):
         conn = get_db_connection()
+        if not conn: return []
         try:
             cur = conn.cursor()
             cur.execute("SELECT id, usuario, fonte, valor FROM rendas WHERE mes=%s AND ano=%s ORDER BY id", (mes, ano))
@@ -257,6 +264,7 @@ class DespesaRepository:
     @staticmethod
     def salvar_renda(usuario, fonte, mes, ano, valor):
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s", (usuario, fonte, mes, ano))
@@ -271,6 +279,7 @@ class DespesaRepository:
     @staticmethod
     def atualizar_renda(renda_id, valor):
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             cur.execute("UPDATE rendas SET valor=%s WHERE id=%s", (valor, renda_id))
@@ -282,6 +291,7 @@ class DespesaRepository:
     @staticmethod
     def excluir_renda(renda_id):
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             cur.execute("DELETE FROM rendas WHERE id=%s", (renda_id,))
@@ -328,6 +338,7 @@ class DespesaRepository:
     @staticmethod
     def obter_comprovante(despesa_id):
         conn = get_db_connection()
+        if not conn: return (None, None)
         try:
             cur = conn.cursor()
             cur.execute("SELECT comprovante_dados, comprovante_mimetype FROM despesas WHERE id = %s", (despesa_id,))
@@ -338,6 +349,7 @@ class DespesaRepository:
     @staticmethod
     def marcar_paga(despesa_id, comprovante_binario=None, mimetype=None):
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             if comprovante_binario: cur.execute("UPDATE despesas SET pago = TRUE, data_pagamento = CURRENT_DATE, comprovante_dados = %s, comprovante_mimetype = %s WHERE id = %s", (comprovante_binario, mimetype, despesa_id))
@@ -350,6 +362,7 @@ class DespesaRepository:
     @staticmethod
     def desfazer_pagamento(despesa_id):
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             cur.execute("UPDATE despesas SET pago = FALSE, data_pagamento = NULL, comprovante_dados = NULL, comprovante_mimetype = NULL WHERE id = %s", (despesa_id,))
@@ -361,6 +374,7 @@ class DespesaRepository:
     @staticmethod
     def atualizar(despesa_id, dados):
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             if dados.get('data_pretensao') and dados.get('data_pretensao') != '': cur.execute("UPDATE despesas SET descricao=%s, valor=%s, data_vencimento=%s, data_pretensao=%s, responsavel_pagamento=%s, fonte_pagamento=%s WHERE id=%s", (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('data_pretensao'), dados.get('responsavel_pagamento'), dados.get('fonte_pagamento'), despesa_id))
@@ -373,6 +387,7 @@ class DespesaRepository:
     @staticmethod
     def excluir(despesa_id, excluir_todas=False):
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             if excluir_todas:
@@ -406,6 +421,7 @@ class DespesaRepository:
     def obter_sandero_config():
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
+        if not conn: return {}
         try:
             cur = conn.cursor()
             cur.execute("SELECT consumo, preco_combustivel, financiamento, seguro, ipva, pneus_valor, pneus_km, revisao_valor, reserva FROM sandero_config ORDER BY id DESC LIMIT 1")
@@ -420,6 +436,7 @@ class DespesaRepository:
     def salvar_sandero_config(dados):
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             cur.execute("SELECT id FROM sandero_config LIMIT 1")
@@ -437,6 +454,7 @@ class DespesaRepository:
     def listar_sandero_diario(mes, ano):
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
+        if not conn: return []
         try:
             cur = conn.cursor()
             cur.execute("SELECT id, data_registro, km_rodado, ganho, custo_calculado, lucro_real FROM sandero_diario WHERE EXTRACT(MONTH FROM data_registro) = %s AND EXTRACT(YEAR FROM data_registro) = %s ORDER BY data_registro DESC", (mes, ano))
@@ -454,6 +472,7 @@ class DespesaRepository:
     def salvar_sandero_diario(dados):
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             cur.execute("INSERT INTO sandero_diario (data_registro, km_rodado, ganho, custo_calculado, lucro_real) VALUES (%s, %s, %s, %s, %s)", (dados.get('data_registro'), dados.get('km_rodado'), dados.get('ganho'), dados.get('custo_calculado'), dados.get('lucro_real')))
@@ -466,6 +485,7 @@ class DespesaRepository:
     def excluir_sandero_diario(diario_id):
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             cur.execute("DELETE FROM sandero_diario WHERE id = %s", (diario_id,))
@@ -478,6 +498,7 @@ class DespesaRepository:
     def atualizar_sandero_diario(diario_id, dados):
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
+        if not conn: return False
         try:
             cur = conn.cursor()
             cur.execute("""
