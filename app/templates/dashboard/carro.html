@@ -66,12 +66,10 @@
 </div>
 
 <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-3 ml-2">Dias de Trabalho</h3>
-<div id="lista_diario_carro" class="space-y-3 mb-6">
-    </div>
+<div id="lista_diario_carro" class="space-y-3 mb-6"></div>
 
 <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-3 ml-2 mt-6">Histórico de Gastos (Carro)</h3>
-<div id="lista_despesas_carro" class="space-y-3 mb-32">
-    </div>
+<div id="lista_despesas_carro" class="space-y-3 mb-32"></div>
 
 <div class="fixed bottom-24 right-6 z-40 flex flex-col items-end gap-3">
     <div id="fab-menu-carro" class="hidden flex-col items-end gap-2 transition-all opacity-0 translate-y-4">
@@ -254,74 +252,67 @@
 
     const mudarMesCarro = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarCarro(); };
 
+    // FUNÇÃO SEPARADA PARA RECALCULAR O RAIO-X MENSAL LOCALMENTE
+    const atualizarPainelMensal = () => {
+        const cons = parseFloat(configCarro.consumo) || 1;
+        const valComb = parseFloat(configCarro.preco_combustivel) || 0;
+        const valPneu = parseFloat(configCarro.pneus_valor) || 0;
+        const kmPneu = parseFloat(configCarro.pneus_km) || 1;
+        const valRev = parseFloat(configCarro.revisao_valor) || 0;
+        
+        custoVariavelKM = (valComb / cons) + (valPneu / kmPneu) + (valRev / 10000);
+
+        const fixoFin = parseFloat(configCarro.financiamento) || 0;
+        const fixoSeg = parseFloat(configCarro.seguro) || 0;
+        const fixoIpva = (parseFloat(configCarro.ipva) || 0) / 12; 
+        const fixoRes = parseFloat(configCarro.reserva) || 0;
+        const custoFixoMes = fixoFin + fixoSeg + fixoIpva + fixoRes;
+
+        let totalKmMes = 0;
+        let totalGanhoMes = 0;
+        diarioCarro.forEach(d => {
+            totalKmMes += parseFloat(d.km_rodado);
+            totalGanhoMes += parseFloat(d.ganho);
+        });
+
+        const totalComb = totalKmMes * (valComb / cons);
+        const totalPneu = totalKmMes * (valPneu / kmPneu);
+        const totalRev = totalKmMes * (valRev / 10000);
+        const totalCustoVarMes = totalComb + totalPneu + totalRev;
+
+        const lucroLimpoMes = totalGanhoMes - totalCustoVarMes - custoFixoMes;
+
+        document.getElementById('rx_mes_km').innerText = `${totalKmMes} km`;
+        document.getElementById('rx_mes_ganho').innerText = formatarMoeda(totalGanhoMes);
+        document.getElementById('rx_mes_combustivel').innerText = `- ${formatarMoeda(totalComb)}`;
+        document.getElementById('rx_mes_pneus').innerText = `- ${formatarMoeda(totalPneu)}`;
+        document.getElementById('rx_mes_revisao').innerText = `- ${formatarMoeda(totalRev)}`;
+        document.getElementById('rx_mes_financiamento').innerText = `- ${formatarMoeda(fixoFin)}`;
+        document.getElementById('rx_mes_seguro').innerText = `- ${formatarMoeda(fixoSeg)}`;
+        document.getElementById('rx_mes_ipva').innerText = `- ${formatarMoeda(fixoIpva)}`;
+        document.getElementById('rx_mes_reserva').innerText = `- ${formatarMoeda(fixoRes)}`;
+        document.getElementById('rx_mes_lucro').innerText = formatarMoeda(lucroLimpoMes);
+
+        if (lucroLimpoMes < 0) { document.getElementById('rx_mes_lucro').classList.replace('text-white', 'text-red-400'); } 
+        else { document.getElementById('rx_mes_lucro').classList.replace('text-red-400', 'text-white'); }
+    };
+
+    // --- MAGICA 1: ROTA PACOTÃO ÚNICA NO CARRO ---
     const carregarCarro = async () => {
         const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         document.getElementById('mesDisplayCarro').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
         
         try {
             const m = currentData.getMonth() + 1; const a = currentData.getFullYear();
-            const [resCfg, resMarc, resDesp, resDiario] = await Promise.all([
-                fetch('/api/sandero/config'),
-                fetch(`/api/calendario/marcacoes?mes=${m}&ano=${a}`),
-                fetch(`/api/despesas?mes=${m}&ano=${a}`),
-                fetch(`/api/sandero/diario?mes=${m}&ano=${a}`)
-            ]);
+            const res = await fetch(`/api/carro/iniciar?mes=${m}&ano=${a}`);
+            const pacotao = await res.json();
 
-            configCarro = await resCfg.json();
-            marcacoesGerais = await resMarc.json();
-            despesasTotais = await resDesp.json();
-            diarioCarro = await resDiario.json();
+            configCarro = pacotao.config;
+            marcacoesGerais = pacotao.marcacoes;
+            despesasTotais = pacotao.despesas;
+            diarioCarro = pacotao.diario;
 
-            // Matemática Variável Base
-            const cons = parseFloat(configCarro.consumo) || 1;
-            const valComb = parseFloat(configCarro.preco_combustivel) || 0;
-            const valPneu = parseFloat(configCarro.pneus_valor) || 0;
-            const kmPneu = parseFloat(configCarro.pneus_km) || 1;
-            const valRev = parseFloat(configCarro.revisao_valor) || 0;
-            
-            custoVariavelKM = (valComb / cons) + (valPneu / kmPneu) + (valRev / 10000);
-
-            // Matemática Fixa Base (Mensal)
-            const fixoFin = parseFloat(configCarro.financiamento) || 0;
-            const fixoSeg = parseFloat(configCarro.seguro) || 0;
-            const fixoIpva = (parseFloat(configCarro.ipva) || 0) / 12; // IPVA mensalizado para o painel
-            const fixoRes = parseFloat(configCarro.reserva) || 0;
-            const custoFixoMes = fixoFin + fixoSeg + fixoIpva + fixoRes;
-
-            // O GRANDE RAIO-X MENSAL (Lógica de cruzamento)
-            let totalKmMes = 0;
-            let totalGanhoMes = 0;
-            diarioCarro.forEach(d => {
-                totalKmMes += parseFloat(d.km_rodado);
-                totalGanhoMes += parseFloat(d.ganho);
-            });
-
-            // Gastos Variáveis do mês inteiro baseados na KM
-            const totalComb = totalKmMes * (valComb / cons);
-            const totalPneu = totalKmMes * (valPneu / kmPneu);
-            const totalRev = totalKmMes * (valRev / 10000);
-            const totalCustoVarMes = totalComb + totalPneu + totalRev;
-
-            const lucroLimpoMes = totalGanhoMes - totalCustoVarMes - custoFixoMes;
-
-            // Renderizando valores do Raio-X Mensal
-            document.getElementById('rx_mes_km').innerText = `${totalKmMes} km`;
-            document.getElementById('rx_mes_ganho').innerText = formatarMoeda(totalGanhoMes);
-            
-            document.getElementById('rx_mes_combustivel').innerText = `- ${formatarMoeda(totalComb)}`;
-            document.getElementById('rx_mes_pneus').innerText = `- ${formatarMoeda(totalPneu)}`;
-            document.getElementById('rx_mes_revisao').innerText = `- ${formatarMoeda(totalRev)}`;
-
-            document.getElementById('rx_mes_financiamento').innerText = `- ${formatarMoeda(fixoFin)}`;
-            document.getElementById('rx_mes_seguro').innerText = `- ${formatarMoeda(fixoSeg)}`;
-            document.getElementById('rx_mes_ipva').innerText = `- ${formatarMoeda(fixoIpva)}`;
-            document.getElementById('rx_mes_reserva').innerText = `- ${formatarMoeda(fixoRes)}`;
-
-            document.getElementById('rx_mes_lucro').innerText = formatarMoeda(lucroLimpoMes);
-
-            if (lucroLimpoMes < 0) { document.getElementById('rx_mes_lucro').classList.replace('text-white', 'text-red-400'); } 
-            else { document.getElementById('rx_mes_lucro').classList.replace('text-red-400', 'text-white'); }
-
+            atualizarPainelMensal();
             renderizarCalendarioCarro();
             renderizarDiarioCarro();
             renderizarHistoricoCarro();
@@ -361,12 +352,10 @@
 
     const renderizarDiarioCarro = () => {
         const cont = document.getElementById('lista_diario_carro'); cont.innerHTML = '';
-        
         if (!diarioCarro || diarioCarro.length === 0) {
             cont.innerHTML = `<div class="text-center py-6 ultra-glass rounded-3xl"><p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Nenhum dia lançado neste mês.</p></div>`;
             return;
         }
-
         diarioCarro.forEach(d => {
             cont.innerHTML += `
                 <div onclick="abrirRaioX(${d.id})" class="p-4 bg-white border border-slate-100 rounded-[24px] shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition">
@@ -388,12 +377,10 @@
     const renderizarHistoricoCarro = () => {
         const cont = document.getElementById('lista_despesas_carro'); cont.innerHTML = '';
         const despCarro = despesasTotais.filter(d => d.categoria === 'Carro').sort((a,b) => new Date(b.data_vencimento) - new Date(a.data_vencimento));
-        
         if (despCarro.length === 0) {
             cont.innerHTML = `<div class="text-center py-8 ultra-glass rounded-3xl"><p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Nenhum custo registrado neste mês.</p></div>`;
             return;
         }
-
         despCarro.forEach(c => {
             cont.innerHTML += `
                 <div class="p-4 bg-white border border-slate-100 rounded-[24px] shadow-sm flex justify-between items-center">
@@ -420,7 +407,6 @@
 
         const km = parseFloat(d.km_rodado);
         const ganho = parseFloat(d.ganho);
-
         const cons = parseFloat(configCarro.consumo) || 1;
         const valComb = parseFloat(configCarro.preco_combustivel) || 0;
         const valPneu = parseFloat(configCarro.pneus_valor) || 0;
@@ -430,7 +416,6 @@
         const custoComb = km * (valComb / cons);
         const custoPneu = km * (valPneu / kmPneu);
         const custoRev = km * (valRev / 10000);
-
         const fixoFin = (parseFloat(configCarro.financiamento) || 0) / 30;
         const fixoSeg = (parseFloat(configCarro.seguro) || 0) / 30;
         const fixoIpva = (parseFloat(configCarro.ipva) || 0) / 365;
@@ -439,7 +424,6 @@
         document.getElementById('rx_combustivel').innerText = `- ${formatarMoeda(custoComb)}`;
         document.getElementById('rx_pneus').innerText = `- ${formatarMoeda(custoPneu)}`;
         document.getElementById('rx_revisao').innerText = `- ${formatarMoeda(custoRev)}`;
-
         document.getElementById('rx_financiamento').innerText = `- ${formatarMoeda(fixoFin)}`;
         document.getElementById('rx_seguro').innerText = `- ${formatarMoeda(fixoSeg)}`;
         document.getElementById('rx_ipva').innerText = `- ${formatarMoeda(fixoIpva)}`;
@@ -454,14 +438,18 @@
         document.getElementById('modalRaioX').classList.remove('hidden');
     };
 
-    const excluirDiaTrabalhado = async () => {
+    // --- MAGICA 2: ATUALIZAÇÃO OTIMISTA NA EXCLUSÃO DO DIA ---
+    const excluirDiaTrabalhado = () => {
         if(!visualizandoDiarioId) return;
         if(confirm("Tem certeza que deseja excluir os registros deste dia trabalhado?")) {
-            const btn = document.getElementById('btnExcluirDia'); btn.innerText = "⏳"; btn.disabled = true;
-            await fetch(`/api/sandero/diario/${visualizandoDiarioId}`, { method: 'DELETE' });
+            // Remove localmente e atualiza a tela na velocidade da luz
+            diarioCarro = diarioCarro.filter(d => d.id !== visualizandoDiarioId);
+            atualizarPainelMensal();
+            renderizarDiarioCarro();
             document.getElementById('modalRaioX').classList.add('hidden');
-            btn.innerHTML = "🗑️ EXCLUIR"; btn.disabled = false;
-            carregarCarro();
+            
+            // Manda o recado pro banco no fundo
+            fetch(`/api/sandero/diario/${visualizandoDiarioId}`, { method: 'DELETE' });
         }
     };
 
@@ -471,15 +459,12 @@
         if(!d) return;
 
         document.getElementById('modalRaioX').classList.add('hidden');
-        
         editandoDiarioId = d.id;
         document.getElementById('dia_data_oculta').value = d.data_registro; 
         document.getElementById('dia_km').value = d.km_rodado;
         document.getElementById('dia_ganho').value = d.ganho;
-        
         document.getElementById('tituloLancarDia').innerText = "Editar Corrida";
         document.getElementById('btnSalvarDiaSandero').innerText = "ATUALIZAR HISTÓRICO";
-
         document.getElementById('modalLancarDia').classList.remove('hidden');
     };
 
@@ -494,6 +479,7 @@
         document.getElementById('modalLancarDia').classList.remove('hidden');
         if(!document.getElementById('fab-menu-carro').classList.contains('hidden')) toggleFabCarro();
     };
+    
     const fecharModalLancarDia = () => { document.getElementById('modalLancarDia').classList.add('hidden'); };
 
     const salvarDiaTrabalhado = async () => {
@@ -511,21 +497,16 @@
         }
 
         const btn = document.getElementById('btnSalvarDiaSandero'); btn.innerText = "SALVANDO..."; btn.disabled = true;
-        
         const payload = { data_registro: dataRegistro, km_rodado: km, ganho: ganho, custo_calculado: custoVariavelDia, lucro_real: lucroReal };
 
         if (editandoDiarioId) {
-            await fetch(`/api/sandero/diario/${editandoDiarioId}`, {
-                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
-            });
+            await fetch(`/api/sandero/diario/${editandoDiarioId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
         } else {
-            await fetch('/api/sandero/diario', {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
-            });
+            await fetch('/api/sandero/diario', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
         }
         
         fecharModalLancarDia(); 
-        carregarCarro();
+        carregarCarro(); // Como agora é a rota do pacotão, ele recarrega rápido!
     };
 
     const abrirModalConfig = () => {
@@ -592,10 +573,22 @@
         document.getElementById('modalCalCarro').classList.remove('hidden');
     };
 
-    const marcarAgendaCarro = async (tipo) => {
-        await fetch('/api/calendario/marcar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({data: dataCalendarioAtual, usuario: 'Igor', tipo: tipo}) });
+    // --- MAGICA 3: ATUALIZAÇÃO OTIMISTA DA AGENDA DA OFICINA ---
+    const marcarAgendaCarro = (tipo) => {
+        // Muda no visual primeiro
+        marcacoesGerais = marcacoesGerais.filter(m => !(m.data === dataCalendarioAtual && m.usuario === 'Igor'));
+        if (tipo) {
+            marcacoesGerais.push({ data: dataCalendarioAtual, usuario: 'Igor', tipo: tipo });
+        }
+        renderizarCalendarioCarro();
         document.getElementById('modalCalCarro').classList.add('hidden');
-        carregarCarro();
+
+        // Salva no banco de dados depois
+        fetch('/api/calendario/marcar', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({data: dataCalendarioAtual, usuario: 'Igor', tipo: tipo}) 
+        });
     };
 
     document.addEventListener("DOMContentLoaded", carregarCarro);

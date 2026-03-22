@@ -157,37 +157,26 @@
 
     const mudarMes = (d) => { currentData.setMonth(currentData.getMonth() + d); carregarDashboard(); };
 
+    // --- MAGICA 1: ROTA PACOTÃO ÚNICA ---
     const carregarDashboard = async () => {
         atualizarDisplayMes();
         try {
             const mAtual = currentData.getMonth() + 1;
             const aAtual = currentData.getFullYear();
             
-            let mAnt = mAtual - 1;
-            let aAnt = aAtual;
-            if (mAnt === 0) { mAnt = 12; aAnt--; }
+            const response = await fetch(`/api/dashboard/iniciar?mes=${mAtual}&ano=${aAtual}`);
+            const pacotao = await response.json();
 
-            const [resResumo, resDespesas, resMarcAtual, resMarcAnt] = await Promise.all([
-                fetch(`/api/resumo?mes=${mAtual}&ano=${aAtual}`),
-                fetch(`/api/despesas?mes=${mAtual}&ano=${aAtual}`),
-                fetch(`/api/calendario/marcacoes?mes=${mAtual}&ano=${aAtual}`),
-                fetch(`/api/calendario/marcacoes?mes=${mAnt}&ano=${aAnt}`)
-            ]);
-
-            resumoGlobal = await resResumo.json();
-            despesasGlobais = await resDespesas.json();
-            
-            const marcAtual = await resMarcAtual.json();
-            const marcAnt = await resMarcAnt.json();
-            
-            diasMarcadosGlobais = [...marcAnt, ...marcAtual];
+            resumoGlobal = pacotao.resumo;
+            despesasGlobais = pacotao.despesas;
+            diasMarcadosGlobais = pacotao.marcacoes;
 
             document.getElementById('saldo_final').innerText = formatarMoeda(resumoGlobal.saldo_final);
             document.getElementById('total_pendente').innerText = formatarMoeda(resumoGlobal.total_pendente);
 
             renderizarGraficos(resumoGlobal, despesasGlobais);
             renderizarCalendario(despesasGlobais);
-            calcularProjecao(); // Adicionado para calcular faltas e projeções ao carregar
+            calcularProjecao();
         } catch(e) { console.error(e); }
     };
 
@@ -312,7 +301,6 @@
         }
     };
 
-    // Nova função de cálculo de Projeção e Faltas
     const calcularProjecao = () => {
         const currentMonth = currentData.getMonth();
         const currentYear = currentData.getFullYear();
@@ -356,7 +344,6 @@
         const valorFaltasProximoMes = faltasProximoMes * 245.00;
         const valorMorato = diasMorato * 139.00;
         
-        // O Saldo Projetado não subtrai a falta, pois a falta é dinheiro que não existe.
         const saldoProjetado = resumoGlobal.saldo_final + valorShopeeEsteMes + valorMorato;
 
         document.getElementById('lbl_shopee_pendente_este_mes').innerText = `(+) Shopee (Cai Neste Mês: ${diasShopeeEsteMes} d)`;
@@ -377,10 +364,32 @@
         document.getElementById('math_saldo_projetado').innerText = formatarMoeda(saldoProjetado);
     };
 
-    window.toggleMarcacao = async (data, usuario, tipo) => {
-        await fetch('/api/calendario/marcar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({data, usuario, tipo}) });
-        await carregarDashboard(); 
-        abrirModalCalendario(data); 
+    // --- MAGICA 2: ATUALIZAÇÃO OTIMISTA DO CALENDÁRIO ---
+    window.toggleMarcacao = (data, usuario, tipo) => {
+        // Passo 1: Atualiza a interface imediatamente para o usuário (0 delay)
+        diasMarcadosGlobais = diasMarcadosGlobais.filter(m => !(m.data === data && m.usuario === usuario));
+        if (tipo !== '') diasMarcadosGlobais.push({ data, usuario, tipo });
+        
+        renderizarCalendario(despesasGlobais);
+        calcularProjecao();
+        abrirModalCalendario(data);
+        
+        // Passo 2: Sincroniza em segundo plano com o servidor
+        fetch('/api/calendario/marcar', { 
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({data, usuario, tipo}) 
+        }).then(() => {
+            // Passo 3: Puxa o pacotão novo em silêncio para garantir que as rendas e o Saldo Livre estão corretos
+            const mAtual = currentData.getMonth() + 1;
+            const aAtual = currentData.getFullYear();
+            fetch(`/api/dashboard/iniciar?mes=${mAtual}&ano=${aAtual}`)
+            .then(res => res.json())
+            .then(pacotao => {
+                resumoGlobal = pacotao.resumo;
+                document.getElementById('saldo_final').innerText = formatarMoeda(resumoGlobal.saldo_final);
+                renderizarGraficos(resumoGlobal, despesasGlobais);
+                calcularProjecao();
+            });
+        });
     };
 
     window.marcarShopeeTrabalhado = (dataStr) => {
@@ -403,12 +412,12 @@
         if(!dataRecebimento) { alert('Por favor, escolha a data em que o dinheiro vai cair.'); return; }
         
         const tipoComData = `shopee_trabalhado|${dataRecebimento}`;
-        await toggleMarcacao(diaTrabalhadoAtual, 'Igor', tipoComData);
+        toggleMarcacao(diaTrabalhadoAtual, 'Igor', tipoComData);
         fecharModalShopee();
     };
 
     window.apenasMarcarTrabalhado = async () => {
-        await toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado');
+        toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado');
         fecharModalShopee();
     };
 

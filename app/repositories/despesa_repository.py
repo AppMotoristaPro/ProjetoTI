@@ -299,7 +299,6 @@ class DespesaRepository:
             res_desp = cur.fetchone()
             total_todas_despesas_mes = float(res_desp[0]) if res_desp and res_desp[0] else 0.0
             
-            # Caixinhas foram removidas, não descontam mais do saldo
             saldo_final = total_renda - total_todas_despesas_mes
             
             return { 
@@ -371,6 +370,26 @@ class DespesaRepository:
             return True
         except Exception: return False
         finally: conn.close()
+
+    # --- MÉTODOS DO PACOTÃO (OTIMIZAÇÃO DE REDE) ---
+    @staticmethod
+    def obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant):
+        # Chama as funções existentes. Como temos o Connection Pool, 
+        # as conexões abrem em 0.001 segundos sem gargalo.
+        return {
+            "resumo": DespesaRepository.obter_resumo(mes, ano),
+            "despesas": DespesaRepository.listar_por_mes(mes, ano),
+            "marcacoes": DespesaRepository.listar_dias_marcados(mes_ant, ano_ant) + DespesaRepository.listar_dias_marcados(mes, ano)
+        }
+
+    @staticmethod
+    def obter_pacotao_carro(mes, ano):
+        return {
+            "config": DespesaRepository.obter_sandero_config(),
+            "marcacoes": DespesaRepository.listar_dias_marcados(mes, ano),
+            "despesas": DespesaRepository.listar_por_mes(mes, ano),
+            "diario": DespesaRepository.listar_sandero_diario(mes, ano)
+        }
 
     # --- MÉTODOS DO SANDERO ---
     @staticmethod

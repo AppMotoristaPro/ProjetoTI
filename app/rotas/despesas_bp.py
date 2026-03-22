@@ -160,7 +160,29 @@ def marcar_dia():
     if sucesso: return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# ROTAS DO SANDERO
+# --- NOVAS ROTAS DE PACOTÃO (OTIMIZAÇÃO DE REDE) ---
+@despesas_bp.route('/api/dashboard/iniciar', methods=['GET'])
+def iniciar_dashboard():
+    hoje = hoje_br()
+    mes = int(request.args.get('mes', hoje.month))
+    ano = int(request.args.get('ano', hoje.year))
+    mes_ant = mes - 1
+    ano_ant = ano
+    if mes_ant == 0:
+        mes_ant = 12
+        ano_ant -= 1
+    pacotao = DespesaRepository.obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant)
+    return jsonify(pacotao), 200
+
+@despesas_bp.route('/api/carro/iniciar', methods=['GET'])
+def iniciar_carro():
+    hoje = hoje_br()
+    mes = int(request.args.get('mes', hoje.month))
+    ano = int(request.args.get('ano', hoje.year))
+    pacotao = DespesaRepository.obter_pacotao_carro(mes, ano)
+    return jsonify(pacotao), 200
+
+# --- ROTAS DO SANDERO ---
 @despesas_bp.route('/api/sandero/config', methods=['GET', 'POST'])
 def gerenciar_sandero_config():
     if request.method == 'GET':

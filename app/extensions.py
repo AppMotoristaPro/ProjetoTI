@@ -1,31 +1,93 @@
 import pg8000.dbapi
 import urllib.parse
 import ssl
+import queue
+import threading
 from config import Config
 
-def get_db_connection():
-    if not Config.DATABASE_URL:
-        print("⚠️ Aviso: DATABASE_URL não configurada.")
-        return None
+# --- INÍCIO DA MÁGICA: CONNECTION POOL ---
+class PooledConnection:
+    def __init__(self, pool, conn):
+        self._pool = pool
+        self._conn = conn
+
+    def cursor(self): return self._conn.cursor()
+    def commit(self): self._conn.commit()
+    def rollback(self): self._conn.rollback()
     
-    parsed = urllib.parse.urlparse(Config.DATABASE_URL)
-    try:
-        context = ssl.create_default_context()
-        conn = pg8000.dbapi.connect(
-            user=parsed.username,
-            password=parsed.password,
-            host=parsed.hostname,
-            port=parsed.port or 5432,
-            database=parsed.path.lstrip('/'),
-            ssl_context=context
-        )
-        cur = conn.cursor()
-        cur.execute("SET TIME ZONE 'America/Sao_Paulo';")
-        cur.close()
-        return conn
-    except Exception as e:
-        print(f"❌ Erro ao conectar no PostgreSQL: {e}")
-        return None
+    # Em vez de fechar e matar o banco, devolve a conexão viva para a piscina!
+    def close(self):
+        self._pool.put_conn(self._conn)
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+class DbPool:
+    def __init__(self, minconn=2, maxconn=10):
+        self.maxconn = maxconn
+        self.pool = queue.Queue(maxsize=maxconn)
+        self.lock = threading.Lock()
+        self.current_conns = 0
+        for _ in range(minconn):
+            conn = self._create_conn()
+            if conn: self.pool.put(conn)
+
+    def _create_conn(self):
+        if not Config.DATABASE_URL: return None
+        parsed = urllib.parse.urlparse(Config.DATABASE_URL)
+        try:
+            context = ssl.create_default_context()
+            conn = pg8000.dbapi.connect(
+                user=parsed.username, password=parsed.password,
+                host=parsed.hostname, port=parsed.port or 5432,
+                database=parsed.path.lstrip('/'), ssl_context=context
+            )
+            cur = conn.cursor()
+            cur.execute("SET TIME ZONE 'America/Sao_Paulo';")
+            cur.close()
+            with self.lock: self.current_conns += 1
+            return conn
+        except Exception as e:
+            print(f"❌ Erro ao criar conexão no pool: {e}")
+            return None
+
+    def get_conn(self):
+        try:
+            real_conn = self.pool.get(block=False)
+            return PooledConnection(self, real_conn)
+        except queue.Empty:
+            with self.lock:
+                if self.current_conns < self.maxconn:
+                    new_conn = self._create_conn()
+                    if new_conn: return PooledConnection(self, new_conn)
+            try:
+                real_conn = self.pool.get(block=True, timeout=10)
+                return PooledConnection(self, real_conn)
+            except queue.Empty:
+                print("⚠️ Pool de conexões esgotado!")
+                return None
+
+    def put_conn(self, conn):
+        try:
+            # Testa se a conexão ainda está viva num piscar de olhos
+            cur = conn.cursor()
+            cur.execute("SELECT 1")
+            cur.close()
+            self.pool.put(conn, block=False)
+        except Exception:
+            try: conn.close()
+            except: pass
+            with self.lock: self.current_conns -= 1
+
+_db_pool = None
+
+def get_db_connection():
+    global _db_pool
+    if not _db_pool:
+        _db_pool = DbPool(minconn=2, maxconn=15)
+    return _db_pool.get_conn()
+# --- FIM DO CONNECTION POOL ---
+
 
 def init_db():
     conn = get_db_connection()
@@ -93,6 +155,4 @@ def init_db():
         print(f"❌ Erro ao inicializar o banco: {e}")
     finally:
         conn.close()
-
-
 
