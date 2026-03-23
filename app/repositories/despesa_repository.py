@@ -262,16 +262,29 @@ class DespesaRepository:
             mes = data_obj.month
             ano = data_obj.year
             
-            cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND data_recebimento=%s", (usuario, fonte, data_recebimento))
+            # Procura se JÁ EXISTE uma entrada exatamente nessa data (ex: mesma quinta-feira da Shopee)
+            cur.execute("SELECT id, valor FROM rendas WHERE usuario=%s AND fonte=%s AND data_recebimento=%s", (usuario, fonte, data_recebimento))
             linha = cur.fetchone()
+            
             if linha: 
-                cur.execute("UPDATE rendas SET valor = valor + %s WHERE id=%s", (valor, linha[0]))
+                novo_valor = float(linha[1]) + float(valor)
+                
+                # Se o usuário desmarcar um dia "Fui" e o valor chegar a zero, APAGA a linha do banco!
+                if novo_valor <= 0:
+                    cur.execute("DELETE FROM rendas WHERE id=%s", (linha[0],))
+                else:
+                    cur.execute("UPDATE rendas SET valor = %s WHERE id=%s", (novo_valor, linha[0]))
             else: 
-                cur.execute("INSERT INTO rendas (usuario, fonte, mes, ano, valor, data_recebimento) VALUES (%s, %s, %s, %s, %s, %s)", (usuario, fonte, mes, ano, valor, data_recebimento))
+                if float(valor) > 0:
+                    cur.execute("INSERT INTO rendas (usuario, fonte, mes, ano, valor, data_recebimento) VALUES (%s, %s, %s, %s, %s, %s)", (usuario, fonte, mes, ano, valor, data_recebimento))
+            
             conn.commit()
             return True
-        except Exception as e: print(e); return False
-        finally: conn.close()
+        except Exception as e: 
+            print(f"❌ Erro ao salvar renda: {e}")
+            return False
+        finally: 
+            conn.close()
 
     @staticmethod
     def atualizar_renda(renda_id, valor, data_recebimento=None):
@@ -308,7 +321,6 @@ class DespesaRepository:
         try:
             cur = conn.cursor()
             
-            # --- NOVA MÁGICA: A MÁQUINA DO TEMPO (Saldo do Mês Anterior) ---
             primeiro_dia_atual = datetime.date(ano, mes, 1)
             ultimo_dia_ant = primeiro_dia_atual - datetime.timedelta(days=1)
             
@@ -328,7 +340,6 @@ class DespesaRepository:
             tot_desp_ant = float(res_desp_ant[0]) if res_desp_ant and res_desp_ant[0] else 0.0
 
             saldo_mes_anterior = tot_rendas_ant - tot_desp_ant
-            # ---------------------------------------------------------------
 
             cur.execute("SELECT usuario, fonte, valor FROM rendas WHERE mes = %s AND ano = %s", (mes, ano))
             rendas_detalhadas = {'Igor': {}, 'Thaynara': {}}
@@ -356,7 +367,7 @@ class DespesaRepository:
                 "total_renda": total_renda, "total_pendente": total_pendente,
                 "total_despesas_mes": total_todas_despesas_mes,
                 "total_caixinhas_mes": 0.0,
-                "saldo_mes_anterior": saldo_mes_anterior, # Injetado aqui para a interface usar
+                "saldo_mes_anterior": saldo_mes_anterior, 
                 "saldo_final": saldo_final
             }
         finally: conn.close()
