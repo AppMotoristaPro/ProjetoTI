@@ -20,20 +20,16 @@ despesas_bp = Blueprint('despesas', __name__)
 def hoje_br():
     return (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).date()
 
-# --- FUNÇÃO AUXILIAR PARA LER O CRACHÁ DO USUÁRIO ---
 def obter_usuario_atual():
-    # Tenta pegar do header HTTP enviado pelo JS interceptador
     usuario_header = request.headers.get('X-Usuario-Atual')
     if usuario_header: return usuario_header
     
-    # Tenta pegar do form ou do JSON como fallback
     if request.is_json and request.json:
         return request.json.get('autor_criacao') or request.json.get('usuario')
     if request.form:
         return request.form.get('autor_criacao') or request.form.get('usuario')
         
-    return 'Igor' # Fallback final
-# ----------------------------------------------------
+    return 'Igor' 
 
 @despesas_bp.route('/manifest.json')
 def manifest():
@@ -97,8 +93,11 @@ def home():
 
 @despesas_bp.route('/historico', methods=['GET'])
 def tela_historico(): return render_template('despesas/historico.html')
-@despesas_bp.route('/carro', methods=['GET'])
-def tela_carro(): return render_template('dashboard/carro.html')
+
+# --- NOVA ROTA SUBSTITUINDO O CARRO ---
+@despesas_bp.route('/rotas', methods=['GET'])
+def tela_rotas(): return render_template('dashboard/rotas.html')
+
 @despesas_bp.route('/entradas', methods=['GET'])
 def tela_entradas(): return render_template('dashboard/entradas.html')
 @despesas_bp.route('/fixas', methods=['GET'])
@@ -269,37 +268,24 @@ def iniciar_dashboard():
     pacotao = DespesaRepository.obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant)
     return jsonify(pacotao), 200
 
-@despesas_bp.route('/api/carro/iniciar', methods=['GET'])
-def iniciar_carro():
+# --- NOVAS ROTAS DO SISTEMA DE AJUDA DE CUSTO ---
+@despesas_bp.route('/api/rotas/iniciar', methods=['GET'])
+def iniciar_rotas():
     hoje = hoje_br()
     mes = int(request.args.get('mes', hoje.month))
     ano = int(request.args.get('ano', hoje.year))
-    pacotao = DespesaRepository.obter_pacotao_carro(mes, ano)
+    pacotao = DespesaRepository.obter_pacotao_rotas(mes, ano)
     return jsonify(pacotao), 200
 
-@despesas_bp.route('/api/sandero/config', methods=['GET', 'POST'])
-def gerenciar_sandero_config():
-    if request.method == 'GET':
-        return jsonify(DespesaRepository.obter_sandero_config()), 200
-    else:
-        sucesso = DespesaRepository.salvar_sandero_config(request.json)
-        return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
+@despesas_bp.route('/api/rotas/dias', methods=['POST'])
+def salvar_rotas_dias():
+    dados = request.json
+    mes = dados.get('mes'); ano = dados.get('ano'); dias = dados.get('dias')
+    sucesso = DespesaRepository.salvar_rotas_dias(mes, ano, dias)
+    return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
 
-@despesas_bp.route('/api/sandero/diario', methods=['GET', 'POST'])
-def gerenciar_sandero_diario():
-    if request.method == 'GET':
-        mes = request.args.get('mes'); ano = request.args.get('ano')
-        return jsonify(DespesaRepository.listar_sandero_diario(int(mes), int(ano))), 200
-    else:
-        sucesso = DespesaRepository.salvar_sandero_diario(request.json)
-        return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
-
-@despesas_bp.route('/api/sandero/diario/<int:diario_id>', methods=['PUT', 'DELETE'])
-def alterar_sandero_diario(diario_id):
-    if request.method == 'DELETE':
-        sucesso = DespesaRepository.excluir_sandero_diario(diario_id)
-        return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
-    else:
-        sucesso = DespesaRepository.atualizar_sandero_diario(diario_id, request.json)
-        return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
+@despesas_bp.route('/api/rotas/config', methods=['POST'])
+def salvar_rotas_config():
+    sucesso = DespesaRepository.salvar_rotas_config(request.json)
+    return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
 

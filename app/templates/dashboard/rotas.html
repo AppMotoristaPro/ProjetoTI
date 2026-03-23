@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div class="flex items-center gap-4">
+        <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg></a>
+        <h2 class="text-xl font-black text-slate-800 tracking-tight">Gestão de Rotas</h2>
+    </div>
+    <button onclick="abrirModalConfig()" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-theme transition active:scale-90 shadow-sm"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></button>
+</div>
+
+<div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
+    <button onclick="mudarMes(-1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+    <h2 id="mesDisplay" class="text-xs font-bold uppercase tracking-widest text-slate-700">Carregando...</h2>
+    <button onclick="mudarMes(1)" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:text-theme transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+</div>
+
+<div class="ultra-glass p-6 rounded-[32px] shadow-lg border border-white/80 mb-6 text-center relative overflow-hidden bg-gradient-to-br from-indigo-500/10 to-transparent">
+    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Lucro Real do Mês</p>
+    <h1 id="tot_lucro_real" class="text-4xl font-black text-indigo-600 tracking-tight">R$ 0,00</h1>
+    
+    <div class="flex justify-center gap-6 mt-4 pt-4 border-t border-white/50">
+        <div>
+            <p class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Ajuda Custo</p>
+            <p id="tot_ganho" class="text-sm font-black text-slate-700">R$ 0,00</p>
+        </div>
+        <div>
+            <p class="text-[9px] font-black text-red-400 uppercase tracking-widest">Custo Real</p>
+            <p id="tot_custo" class="text-sm font-black text-slate-700">R$ 0,00</p>
+        </div>
+    </div>
+</div>
+
+<div class="flex justify-between items-center mb-3 px-2">
+    <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest">Dias Trabalhados</h3>
+    <span id="save-status" class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity">Salvo!</span>
+</div>
+
+<div class="space-y-4 mb-32">
+    <div class="ultra-glass p-5 rounded-[28px] border border-white/60 shadow-sm relative">
+        <div class="flex justify-between items-center mb-3">
+            <h4 class="font-black text-slate-800 text-lg flex items-center gap-2">📍 Itupeva</h4>
+            <div class="flex items-center gap-2 bg-white/50 p-1.5 rounded-xl border border-slate-100 shadow-inner">
+                <button onclick="alterarDias('Itupeva', -1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-black text-slate-500 shadow-sm active:scale-90">-</button>
+                <input type="number" id="dias_Itupeva" value="0" min="0" onchange="recalcularNaHora()" class="w-10 text-center font-black text-slate-800 bg-transparent outline-none">
+                <button onclick="alterarDias('Itupeva', 1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-black text-slate-500 shadow-sm active:scale-90">+</button>
+            </div>
+        </div>
+        <div class="flex justify-between text-xs font-bold bg-white/40 p-3 rounded-xl">
+            <div class="text-emerald-600"><span class="text-[9px] uppercase block text-emerald-400 mb-0.5">Ganho</span><span id="ganho_Itupeva">R$ 0,00</span></div>
+            <div class="text-red-500 text-center"><span class="text-[9px] uppercase block text-red-300 mb-0.5">Custo</span><span id="custo_Itupeva">R$ 0,00</span></div>
+            <div class="text-indigo-600 text-right"><span class="text-[9px] uppercase block text-indigo-400 mb-0.5">Lucro Rota</span><span id="lucro_Itupeva" class="text-sm font-black">R$ 0,00</span></div>
+        </div>
+    </div>
+
+    <div class="ultra-glass p-5 rounded-[28px] border border-white/60 shadow-sm relative">
+        <div class="flex justify-between items-center mb-3">
+            <h4 class="font-black text-slate-800 text-lg flex items-center gap-2">📍 Cabreúva</h4>
+            <div class="flex items-center gap-2 bg-white/50 p-1.5 rounded-xl border border-slate-100 shadow-inner">
+                <button onclick="alterarDias('Cabreuva', -1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-black text-slate-500 shadow-sm active:scale-90">-</button>
+                <input type="number" id="dias_Cabreuva" value="0" min="0" onchange="recalcularNaHora()" class="w-10 text-center font-black text-slate-800 bg-transparent outline-none">
+                <button onclick="alterarDias('Cabreuva', 1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-black text-slate-500 shadow-sm active:scale-90">+</button>
+            </div>
+        </div>
+        <div class="flex justify-between text-xs font-bold bg-white/40 p-3 rounded-xl">
+            <div class="text-emerald-600"><span class="text-[9px] uppercase block text-emerald-400 mb-0.5">Ganho</span><span id="ganho_Cabreuva">R$ 0,00</span></div>
+            <div class="text-red-500 text-center"><span class="text-[9px] uppercase block text-red-300 mb-0.5">Custo</span><span id="custo_Cabreuva">R$ 0,00</span></div>
+            <div class="text-indigo-600 text-right"><span class="text-[9px] uppercase block text-indigo-400 mb-0.5">Lucro Rota</span><span id="lucro_Cabreuva" class="text-sm font-black">R$ 0,00</span></div>
+        </div>
+    </div>
+
+    <div class="ultra-glass p-5 rounded-[28px] border border-white/60 shadow-sm relative">
+        <div class="flex justify-between items-center mb-3">
+            <h4 class="font-black text-slate-800 text-lg flex items-center gap-2">📍 Morato</h4>
+            <div class="flex items-center gap-2 bg-white/50 p-1.5 rounded-xl border border-slate-100 shadow-inner">
+                <button onclick="alterarDias('Morato', -1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-black text-slate-500 shadow-sm active:scale-90">-</button>
+                <input type="number" id="dias_Morato" value="0" min="0" onchange="recalcularNaHora()" class="w-10 text-center font-black text-slate-800 bg-transparent outline-none">
+                <button onclick="alterarDias('Morato', 1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-black text-slate-500 shadow-sm active:scale-90">+</button>
+            </div>
+        </div>
+        <div class="flex justify-between text-xs font-bold bg-white/40 p-3 rounded-xl">
+            <div class="text-emerald-600"><span class="text-[9px] uppercase block text-emerald-400 mb-0.5">Ganho</span><span id="ganho_Morato">R$ 0,00</span></div>
+            <div class="text-red-500 text-center"><span class="text-[9px] uppercase block text-red-300 mb-0.5">Custo</span><span id="custo_Morato">R$ 0,00</span></div>
+            <div class="text-indigo-600 text-right"><span class="text-[9px] uppercase block text-indigo-400 mb-0.5">Lucro Rota</span><span id="lucro_Morato" class="text-sm font-black">R$ 0,00</span></div>
+        </div>
+    </div>
+</div>
+
+<div id="modalConfigRotas" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <button onclick="fecharModalConfig()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-xl font-black text-slate-800 mb-1">Configurações Base</h3>
+        <p class="text-xs font-bold text-slate-400 mb-6">Valores de R$/Dia por Rota</p>
+        
+        <div class="space-y-4">
+            <div class="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                <p class="font-black text-slate-700 mb-2 text-sm uppercase tracking-widest">Itupeva</p>
+                <div class="flex gap-2">
+                    <div class="w-1/2"><label class="text-[9px] uppercase font-bold text-emerald-500 ml-1">Ajuda Custo</label><input type="number" step="0.01" id="cfg_Itupeva_ganho" class="w-full p-2 mt-1 rounded-xl border border-slate-200 outline-none font-black text-slate-800"></div>
+                    <div class="w-1/2"><label class="text-[9px] uppercase font-bold text-red-500 ml-1">Custo Real</label><input type="number" step="0.01" id="cfg_Itupeva_custo" class="w-full p-2 mt-1 rounded-xl border border-slate-200 outline-none font-black text-slate-800"></div>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                <p class="font-black text-slate-700 mb-2 text-sm uppercase tracking-widest">Cabreúva</p>
+                <div class="flex gap-2">
+                    <div class="w-1/2"><label class="text-[9px] uppercase font-bold text-emerald-500 ml-1">Ajuda Custo</label><input type="number" step="0.01" id="cfg_Cabreuva_ganho" class="w-full p-2 mt-1 rounded-xl border border-slate-200 outline-none font-black text-slate-800"></div>
+                    <div class="w-1/2"><label class="text-[9px] uppercase font-bold text-red-500 ml-1">Custo Real</label><input type="number" step="0.01" id="cfg_Cabreuva_custo" class="w-full p-2 mt-1 rounded-xl border border-slate-200 outline-none font-black text-slate-800"></div>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                <p class="font-black text-slate-700 mb-2 text-sm uppercase tracking-widest">Morato</p>
+                <div class="flex gap-2">
+                    <div class="w-1/2"><label class="text-[9px] uppercase font-bold text-emerald-500 ml-1">Ajuda Custo</label><input type="number" step="0.01" id="cfg_Morato_ganho" class="w-full p-2 mt-1 rounded-xl border border-slate-200 outline-none font-black text-slate-800"></div>
+                    <div class="w-1/2"><label class="text-[9px] uppercase font-bold text-red-500 ml-1">Custo Real</label><input type="number" step="0.01" id="cfg_Morato_custo" class="w-full p-2 mt-1 rounded-xl border border-slate-200 outline-none font-black text-slate-800"></div>
+                </div>
+            </div>
+            
+            <button onclick="salvarConfigRotas()" class="w-full py-4 mt-2 bg-indigo-500 text-white rounded-2xl font-black active:scale-95 transition shadow-lg">SALVAR VALORES</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentData = new Date();
+    let rotasConfig = {};
+    let rotasDias = {};
+    let timerSalvar = null;
+
+    const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    const atualizarDisplayMes = () => {
+        const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
+    };
+
+    const mudarMes = (d) => { 
+        currentData.setMonth(currentData.getMonth() + d); 
+        const mesGlobal = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear() };
+        localStorage.setItem('mesGlobalData', JSON.stringify(mesGlobal));
+        carregarRotas(); 
+    };
+
+    const carregarRotas = async () => {
+        atualizarDisplayMes();
+        const res = await fetch(`/api/rotas/iniciar?mes=${currentData.getMonth()+1}&ano=${currentData.getFullYear()}`);
+        const dados = await res.json();
+        
+        rotasConfig = dados.config || {
+            "Itupeva": {"ganho": 66.72, "custo": 29.28},
+            "Cabreuva": {"ganho": 81.59, "custo": 42.31},
+            "Morato": {"ganho": 139.00, "custo": 47.34}
+        };
+        
+        rotasDias = dados.dias || {"Itupeva": 0, "Cabreuva": 0, "Morato": 0};
+
+        ['Itupeva', 'Cabreuva', 'Morato'].forEach(r => {
+            document.getElementById(`dias_${r}`).value = rotasDias[r] || 0;
+            
+            // Popula o modal de configs
+            if(rotasConfig[r]) {
+                document.getElementById(`cfg_${r}_ganho`).value = rotasConfig[r].ganho;
+                document.getElementById(`cfg_${r}_custo`).value = rotasConfig[r].custo;
+            }
+        });
+
+        calcularEAtualizarTela();
+    };
+
+    const alterarDias = (rota, delta) => {
+        const input = document.getElementById(`dias_${rota}`);
+        let novoValor = parseInt(input.value || 0) + delta;
+        if(novoValor < 0) novoValor = 0;
+        input.value = novoValor;
+        recalcularNaHora();
+    };
+
+    const recalcularNaHora = () => {
+        ['Itupeva', 'Cabreuva', 'Morato'].forEach(r => {
+            rotasDias[r] = parseInt(document.getElementById(`dias_${r}`).value || 0);
+        });
+        
+        calcularEAtualizarTela();
+        
+        // Auto-save com debounce de 1 segundo
+        clearTimeout(timerSalvar);
+        timerSalvar = setTimeout(salvarDiasNoBanco, 1000);
+    };
+
+    const calcularEAtualizarTela = () => {
+        let ganhoTotal = 0;
+        let custoTotal = 0;
+
+        ['Itupeva', 'Cabreuva', 'Morato'].forEach(r => {
+            const dias = rotasDias[r] || 0;
+            const ganhoDia = (rotasConfig[r] && rotasConfig[r].ganho) ? rotasConfig[r].ganho : 0;
+            const custoDia = (rotasConfig[r] && rotasConfig[r].custo) ? rotasConfig[r].custo : 0;
+
+            const ganhoRota = dias * ganhoDia;
+            const custoRota = dias * custoDia;
+            const lucroRota = ganhoRota - custoRota;
+
+            document.getElementById(`ganho_${r}`).innerText = formatarMoeda(ganhoRota);
+            document.getElementById(`custo_${r}`).innerText = formatarMoeda(custoRota);
+            document.getElementById(`lucro_${r}`).innerText = formatarMoeda(lucroRota);
+
+            ganhoTotal += ganhoRota;
+            custoTotal += custoRota;
+        });
+
+        const lucroRealTotal = ganhoTotal - custoTotal;
+
+        document.getElementById('tot_ganho').innerText = formatarMoeda(ganhoTotal);
+        document.getElementById('tot_custo').innerText = formatarMoeda(custoTotal);
+        document.getElementById('tot_lucro_real').innerText = formatarMoeda(lucroRealTotal);
+        
+        const elLucro = document.getElementById('tot_lucro_real');
+        elLucro.classList.remove('text-indigo-600', 'text-red-500');
+        if (lucroRealTotal >= 0) { elLucro.classList.add('text-indigo-600'); } 
+        else { elLucro.classList.add('text-red-500'); }
+    };
+
+    const salvarDiasNoBanco = async () => {
+        const objSave = {
+            mes: currentData.getMonth() + 1,
+            ano: currentData.getFullYear(),
+            dias: rotasDias
+        };
+        const statusEl = document.getElementById('save-status');
+        
+        await fetch('/api/rotas/dias', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(objSave)
+        });
+        
+        statusEl.classList.remove('opacity-0');
+        setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
+    };
+
+    // --- CONTROLES DO MODAL DE CONFIG ---
+    const controlarCabecalho = (mostrar) => {
+        const cabecalho = document.querySelector('header');
+        if (cabecalho) cabecalho.style.display = mostrar ? '' : 'none';
+    };
+
+    const abrirModalConfig = () => {
+        controlarCabecalho(false);
+        document.getElementById('modalConfigRotas').classList.remove('hidden');
+    };
+
+    const fecharModalConfig = () => {
+        document.getElementById('modalConfigRotas').classList.add('hidden');
+        controlarCabecalho(true);
+    };
+
+    const salvarConfigRotas = async () => {
+        ['Itupeva', 'Cabreuva', 'Morato'].forEach(r => {
+            if(!rotasConfig[r]) rotasConfig[r] = {};
+            rotasConfig[r].ganho = parseFloat(document.getElementById(`cfg_${r}_ganho`).value || 0);
+            rotasConfig[r].custo = parseFloat(document.getElementById(`cfg_${r}_custo`).value || 0);
+        });
+
+        await fetch('/api/rotas/config', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(rotasConfig)
+        });
+
+        fecharModalConfig();
+        recalcularNaHora();
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const mesGlobalStr = localStorage.getItem('mesGlobalData');
+        if (mesGlobalStr) {
+            const mesGlobal = JSON.parse(mesGlobalStr);
+            currentData = new Date(mesGlobal.ano, mesGlobal.mes - 1, 1);
+        }
+        carregarRotas();
+    });
+</script>
+{% endblock %}
+

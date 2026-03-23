@@ -27,29 +27,23 @@ class DespesaRepository:
                     usuario VARCHAR(50),
                     tipo VARCHAR(50)
                 );
-                CREATE TABLE IF NOT EXISTS sandero_config (
+            """)
+            # --- NOVAS TABELAS FLEXÍVEIS DO AJUDA DE CUSTO ---
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS rotas_mensal (
                     id SERIAL PRIMARY KEY,
-                    consumo FLOAT DEFAULT 0,
-                    preco_combustivel FLOAT DEFAULT 0,
-                    financiamento FLOAT DEFAULT 0,
-                    seguro FLOAT DEFAULT 0,
-                    ipva FLOAT DEFAULT 0,
-                    pneus_valor FLOAT DEFAULT 0,
-                    pneus_km INT DEFAULT 40000,
-                    revisao_valor FLOAT DEFAULT 0,
-                    reserva FLOAT DEFAULT 0
+                    mes INT NOT NULL,
+                    ano INT NOT NULL,
+                    dias JSONB DEFAULT '{}',
+                    UNIQUE(mes, ano)
                 );
-                CREATE TABLE IF NOT EXISTS sandero_diario (
+                CREATE TABLE IF NOT EXISTS rotas_config (
                     id SERIAL PRIMARY KEY,
-                    data_registro DATE,
-                    km_rodado FLOAT,
-                    ganho FLOAT,
-                    custo_calculado FLOAT,
-                    lucro_real FLOAT
+                    config JSONB DEFAULT '{}'
                 );
             """)
             conn.commit()
-        except Exception: pass
+        except Exception as e: print(e)
         finally: conn.close()
 
     @staticmethod
@@ -76,10 +70,18 @@ class DespesaRepository:
             tipo_anterior = linha[0] if linha else None
 
             if usuario == 'Thaynara':
-                if tipo == 'morato_reembolsado' and tipo_anterior != 'morato_reembolsado':
-                    DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', data, 139.00)
-                elif tipo_anterior == 'morato_reembolsado' and tipo != 'morato_reembolsado':
-                    DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', data, -139.00)
+                if tipo_anterior and tipo_anterior.startswith('morato_reembolsado|'):
+                    if not tipo or not tipo.startswith('morato_reembolsado|'):
+                        partes_ant = tipo_anterior.split('|')
+                        if len(partes_ant) == 2:
+                            try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', partes_ant[1], -139.00)
+                            except: pass
+                
+                if tipo and tipo.startswith('morato_reembolsado|'):
+                    partes_novo = tipo.split('|')
+                    if len(partes_novo) == 2:
+                        try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', partes_novo[1], 139.00)
+                        except: pass
             
             if usuario == 'Igor':
                 if tipo_anterior and tipo_anterior.startswith('shopee_trabalhado|'):
@@ -262,14 +264,11 @@ class DespesaRepository:
             mes = data_obj.month
             ano = data_obj.year
             
-            # Procura se JÁ EXISTE uma entrada exatamente nessa data (ex: mesma quinta-feira da Shopee)
             cur.execute("SELECT id, valor FROM rendas WHERE usuario=%s AND fonte=%s AND data_recebimento=%s", (usuario, fonte, data_recebimento))
             linha = cur.fetchone()
             
             if linha: 
                 novo_valor = float(linha[1]) + float(valor)
-                
-                # Se o usuário desmarcar um dia "Fui" e o valor chegar a zero, APAGA a linha do banco!
                 if novo_valor <= 0:
                     cur.execute("DELETE FROM rendas WHERE id=%s", (linha[0],))
                 else:
@@ -437,113 +436,55 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
+    # --- NOVO SISTEMA DE ROTAS (SUBSTITUINDO O CARRO) ---
     @staticmethod
-    def obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant):
-        return {
-            "resumo": DespesaRepository.obter_resumo(mes, ano),
-            "despesas": DespesaRepository.listar_por_mes(mes, ano),
-            "marcacoes": DespesaRepository.listar_dias_marcados(mes_ant, ano_ant) + DespesaRepository.listar_dias_marcados(mes, ano),
-            "rendas": DespesaRepository.listar_rendas_detalhadas(mes, ano)
-        }
-
-    @staticmethod
-    def obter_pacotao_carro(mes, ano):
-        return {
-            "config": DespesaRepository.obter_sandero_config(),
-            "marcacoes": DespesaRepository.listar_dias_marcados(mes, ano),
-            "despesas": DespesaRepository.listar_por_mes(mes, ano),
-            "diario": DespesaRepository.listar_sandero_diario(mes, ano)
-        }
-
-    @staticmethod
-    def obter_sandero_config():
+    def obter_pacotao_rotas(mes, ano):
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
         if not conn: return {}
         try:
             cur = conn.cursor()
-            cur.execute("SELECT consumo, preco_combustivel, financiamento, seguro, ipva, pneus_valor, pneus_km, revisao_valor, reserva FROM sandero_config ORDER BY id DESC LIMIT 1")
-            linha = cur.fetchone()
-            if not linha: return {"consumo": 10, "preco_combustivel": 5, "financiamento": 0, "seguro": 0, "ipva": 0, "pneus_valor": 0, "pneus_km": 40000, "revisao_valor": 0, "reserva": 0}
-            colunas = [desc[0] for desc in cur.description]
-            return dict(zip(colunas, linha))
-        except Exception: return {}
-        finally: conn.close()
-
+            
+            cur.execute("SELECT config FROM rotas_config ORDER BY id DESC LIMIT 1")
+            row_config = cur.fetchone()
+            config = row_config[0] if row_config else {
+                "Itupeva": {"ganho": 66.72, "custo": 29.28},
+                "Cabreuva": {"ganho": 81.59, "custo": 42.31},
+                "Morato": {"ganho": 139.00, "custo": 47.34}
+            }
+            
+            cur.execute("SELECT dias FROM rotas_mensal WHERE mes = %s AND ano = %s", (mes, ano))
+            row_dias = cur.fetchone()
+            dias = row_dias[0] if row_dias else {}
+            
+            return {"config": config, "dias": dias}
+        except Exception as e:
+            print(e)
+            return {}
+        finally:
+            conn.close()
+            
     @staticmethod
-    def salvar_sandero_config(dados):
+    def salvar_rotas_dias(mes, ano, dias_json):
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
         if not conn: return False
         try:
             cur = conn.cursor()
-            cur.execute("SELECT id FROM sandero_config LIMIT 1")
-            linha = cur.fetchone()
-            if linha:
-                cur.execute("UPDATE sandero_config SET consumo=%s, preco_combustivel=%s, financiamento=%s, seguro=%s, ipva=%s, pneus_valor=%s, pneus_km=%s, revisao_valor=%s, reserva=%s WHERE id=%s", (dados.get('consumo', 10), dados.get('preco_combustivel', 5), dados.get('financiamento', 0), dados.get('seguro', 0), dados.get('ipva', 0), dados.get('pneus_valor', 0), dados.get('pneus_km', 40000), dados.get('revisao_valor', 0), dados.get('reserva', 0), linha[0]))
-            else:
-                cur.execute("INSERT INTO sandero_config (consumo, preco_combustivel, financiamento, seguro, ipva, pneus_valor, pneus_km, revisao_valor, reserva) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)", (dados.get('consumo', 10), dados.get('preco_combustivel', 5), dados.get('financiamento', 0), dados.get('seguro', 0), dados.get('ipva', 0), dados.get('pneus_valor', 0), dados.get('pneus_km', 40000), dados.get('revisao_valor', 0), dados.get('reserva', 0)))
+            cur.execute("INSERT INTO rotas_mensal (mes, ano, dias) VALUES (%s, %s, %s) ON CONFLICT (mes, ano) DO UPDATE SET dias = EXCLUDED.dias", (mes, ano, json.dumps(dias_json)))
             conn.commit()
             return True
         except Exception: return False
         finally: conn.close()
 
     @staticmethod
-    def listar_sandero_diario(mes, ano):
-        DespesaRepository._garantir_tabelas()
-        conn = get_db_connection()
-        if not conn: return []
-        try:
-            cur = conn.cursor()
-            cur.execute("SELECT id, data_registro, km_rodado, ganho, custo_calculado, lucro_real FROM sandero_diario WHERE EXTRACT(MONTH FROM data_registro) = %s AND EXTRACT(YEAR FROM data_registro) = %s ORDER BY data_registro DESC", (mes, ano))
-            colunas = [desc[0] for desc in cur.description]
-            resultados = []
-            for row in cur.fetchall():
-                d = dict(zip(colunas, row))
-                d['data_registro'] = d['data_registro'].strftime('%Y-%m-%d')
-                resultados.append(d)
-            return resultados
-        except Exception: return []
-        finally: conn.close()
-
-    @staticmethod
-    def salvar_sandero_diario(dados):
+    def salvar_rotas_config(config_json):
         DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
         if not conn: return False
         try:
             cur = conn.cursor()
-            cur.execute("INSERT INTO sandero_diario (data_registro, km_rodado, ganho, custo_calculado, lucro_real) VALUES (%s, %s, %s, %s, %s)", (dados.get('data_registro'), dados.get('km_rodado'), dados.get('ganho'), dados.get('custo_calculado'), dados.get('lucro_real')))
-            conn.commit()
-            return True
-        except Exception: return False
-        finally: conn.close()
-
-    @staticmethod
-    def excluir_sandero_diario(diario_id):
-        DespesaRepository._garantir_tabelas()
-        conn = get_db_connection()
-        if not conn: return False
-        try:
-            cur = conn.cursor()
-            cur.execute("DELETE FROM sandero_diario WHERE id = %s", (diario_id,))
-            conn.commit()
-            return True
-        except Exception: return False
-        finally: conn.close()
-
-    @staticmethod
-    def atualizar_sandero_diario(diario_id, dados):
-        DespesaRepository._garantir_tabelas()
-        conn = get_db_connection()
-        if not conn: return False
-        try:
-            cur = conn.cursor()
-            cur.execute("""
-                UPDATE sandero_diario
-                SET data_registro = %s, km_rodado = %s, ganho = %s, custo_calculado = %s, lucro_real = %s
-                WHERE id = %s
-            """, (dados.get('data_registro'), dados.get('km_rodado'), dados.get('ganho'), dados.get('custo_calculado'), dados.get('lucro_real'), diario_id))
+            cur.execute("INSERT INTO rotas_config (config) VALUES (%s)", (json.dumps(config_json),))
             conn.commit()
             return True
         except Exception: return False

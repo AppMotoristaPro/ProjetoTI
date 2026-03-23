@@ -18,30 +18,25 @@
         const temaSalvo = localStorage.getItem('app_theme') || 'blue';
         document.documentElement.setAttribute('data-theme', temaSalvo);
 
-        // --- A MÁGICA DO CRACHÁ VIRTUAL ---
         const originalFetch = window.fetch;
         window.fetch = async function(resource, config) {
             const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
             
-            // Garante que o objeto config e headers existem
             config = config || {};
             config.headers = config.headers || {};
             
-            // Anexa o crachá de segurança em TODAS as requisições
             if (config.headers instanceof Headers) {
                 config.headers.append('X-Usuario-Atual', currentUser);
             } else {
                 config.headers['X-Usuario-Atual'] = currentUser;
             }
 
-            // Mantém a compatibilidade com a rota de criar nova despesa (FormData)
             if (resource === '/api/despesas/nova' && config.body instanceof FormData) {
                 config.body.append('autor_criacao', currentUser);
             }
             
             return originalFetch(resource, config);
         };
-        // -----------------------------------
     </script>
 
     <style>
@@ -117,8 +112,8 @@
 
         <button onclick="abrirModalInteligente()" class="flex flex-col items-center relative z-50 active:scale-95 transition-transform focus:outline-none"><div class="btn-active w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white -mt-5"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div></button>
 
-        <a href="/carro" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+        <a href="/rotas" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
         </div></a>
         <a href="/historico" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div></a>
     </nav>
@@ -252,7 +247,7 @@
                     fecharModalDiaDia(); e.target.reset();
                     if (typeof carregarDashboard === "function") { carregarDashboard(); } 
                     else if (typeof carregarH === "function") { carregarH(); }
-                    else if (typeof carregarCarro === "function") { carregarCarro(); }
+                    else if (typeof carregarRotas === "function") { carregarRotas(); } 
                     else { window.location.reload(); }
                 } else { alert("Erro ao salvar o gasto diário."); }
             } catch (error) { alert("Erro de rede."); } finally { btn.innerText = 'LANÇAR GASTO'; btn.disabled = false; }
