@@ -257,7 +257,7 @@
             const custoDia = obterConfig(r, 'custo', defCusto);
 
             const ganhoRota = dias * ganhoDia;
-            const custoRota = dias * custoRota;
+            const custoRota = dias * custoDia; // ERRO CORRIGIDO AQUI!
             const lucroRota = ganhoRota - custoRota;
 
             document.getElementById(`ganho_${r}`).innerText = formatarMoeda(ganhoRota);
@@ -356,7 +356,6 @@
                 const subtotal = dias * ganho;
                 totalReceber += subtotal;
 
-                // Agora o (R$ X,XX/km) aparece para TODAS as rotas
                 let valorKm = kmEmp > 0 ? (ganho / kmEmp) : 0;
                 let detalheDiaria = ` (${formatarMoeda(valorKm)}/km)`;
 
