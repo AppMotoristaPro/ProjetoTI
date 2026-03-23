@@ -94,7 +94,6 @@ def home():
 @despesas_bp.route('/historico', methods=['GET'])
 def tela_historico(): return render_template('despesas/historico.html')
 
-# --- NOVA ROTA SUBSTITUINDO O CARRO ---
 @despesas_bp.route('/rotas', methods=['GET'])
 def tela_rotas(): return render_template('dashboard/rotas.html')
 
@@ -268,7 +267,6 @@ def iniciar_dashboard():
     pacotao = DespesaRepository.obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant)
     return jsonify(pacotao), 200
 
-# --- NOVAS ROTAS DO SISTEMA DE AJUDA DE CUSTO ---
 @despesas_bp.route('/api/rotas/iniciar', methods=['GET'])
 def iniciar_rotas():
     hoje = hoje_br()

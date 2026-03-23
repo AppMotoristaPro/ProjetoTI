@@ -18,9 +18,17 @@
         const temaSalvo = localStorage.getItem('app_theme') || 'blue';
         document.documentElement.setAttribute('data-theme', temaSalvo);
 
+        // --- SOLUÇÃO DO BUG DAS NOTIFICAÇÕES: IDENTIDADE FIXA ---
+        let usuarioReal = localStorage.getItem('usuario_real');
+        if (!usuarioReal) {
+            usuarioReal = prompt("Quem é o dono deste celular? (Digite Igor ou Thaynara)", "Igor");
+            if (usuarioReal !== 'Igor' && usuarioReal !== 'Thaynara') usuarioReal = 'Igor';
+            localStorage.setItem('usuario_real', usuarioReal);
+        }
+
         const originalFetch = window.fetch;
         window.fetch = async function(resource, config) {
-            const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
+            const currentUser = localStorage.getItem('usuario_real') || 'Igor';
             
             config = config || {};
             config.headers = config.headers || {};
@@ -37,6 +45,7 @@
             
             return originalFetch(resource, config);
         };
+        // --------------------------------------------------------
     </script>
 
     <style>
@@ -90,7 +99,7 @@
     </style>
 </head>
 <body>
-    <header style="background: var(--bg-header)" class="fixed top-0 left-0 w-full pt-6 pb-4 px-4 text-center z-50 backdrop-blur-md border-b border-white/50">
+    <header id="main-header" style="background: var(--bg-header)" class="fixed top-0 left-0 w-full pt-6 pb-4 px-4 text-center z-50 backdrop-blur-md border-b border-white/50">
         <h1 onclick="toggleTheme()" class="text-2xl font-black tracking-tight text-theme cursor-pointer active:scale-95 transition-transform">Despesas T&I 🫶</h1>
     </header>
 
@@ -156,6 +165,17 @@
     </div>
 
     <script>
+        // --- Ocultar cabeçalho se não for a Home ---
+        document.addEventListener("DOMContentLoaded", () => {
+            if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+                const header = document.getElementById('main-header');
+                if (header) {
+                    header.style.display = 'none';
+                    document.body.style.paddingTop = '20px';
+                }
+            }
+        });
+
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js?v=2').then(reg => { reg.update(); }).catch(err => console.error('❌ Erro no SW:', err));
         }
@@ -179,7 +199,7 @@
                     if (!subscription) {
                         subscription = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicVapidKey) });
                     }
-                    const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
+                    const currentUser = localStorage.getItem('usuario_real') || 'Igor';
                     await fetch('/api/push/subscribe', {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ usuario: currentUser, subscription: subscription })

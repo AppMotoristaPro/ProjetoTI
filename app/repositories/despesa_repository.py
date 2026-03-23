@@ -113,13 +113,17 @@ class DespesaRepository:
             cur = conn.cursor()
             endpoint = sub_info.get('endpoint')
             sub_str = json.dumps(sub_info)
-            cur.execute("SELECT id FROM inscricoes_push WHERE usuario = %s AND subscription_info->>'endpoint' = %s", (usuario, endpoint))
-            linha = cur.fetchone()
-            if linha: cur.execute("UPDATE inscricoes_push SET subscription_info = %s WHERE id = %s", (sub_str, linha[0]))
-            else: cur.execute("INSERT INTO inscricoes_push (usuario, subscription_info) VALUES (%s, %s)", (usuario, sub_str))
+            
+            # --- SOLUÇÃO NOTIFICAÇÕES: Remove do banco qualquer usuário que use este mesmo aparelho ---
+            cur.execute("DELETE FROM inscricoes_push WHERE subscription_info->>'endpoint' = %s", (endpoint,))
+            
+            # --- Agora salva limpo para o usuário real ---
+            cur.execute("INSERT INTO inscricoes_push (usuario, subscription_info) VALUES (%s, %s)", (usuario, sub_str))
             conn.commit()
             return True
-        except Exception: return False
+        except Exception as e: 
+            print(e)
+            return False
         finally: conn.close()
 
     @staticmethod
@@ -263,7 +267,6 @@ class DespesaRepository:
             mes = data_obj.month
             ano = data_obj.year
             
-            # MÁGICA DA UBER: Procura apenas por mês/ano, ignorando o dia
             if fonte == 'Uber':
                 cur.execute("SELECT id, valor FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s", (usuario, fonte, mes, ano))
             else:
@@ -276,7 +279,6 @@ class DespesaRepository:
                 if novo_valor <= 0:
                     cur.execute("DELETE FROM rendas WHERE id=%s", (linha[0],))
                 else:
-                    # Para a Uber, aproveitamos para atualizar a data para o lançamento mais recente
                     cur.execute("UPDATE rendas SET valor = %s, data_recebimento = %s WHERE id=%s", (novo_valor, data_recebimento, linha[0]))
             else: 
                 if float(valor) > 0:
@@ -311,7 +313,7 @@ class DespesaRepository:
         conn = get_db_connection()
         if not conn: return False
         try:
-            cur = conn.cursor()
+            cur = cur = conn.cursor()
             cur.execute("DELETE FROM rendas WHERE id=%s", (renda_id,))
             conn.commit()
             return True
@@ -461,16 +463,16 @@ class DespesaRepository:
             cur.execute("SELECT config FROM rotas_config ORDER BY id DESC LIMIT 1")
             row_config = cur.fetchone()
             config = row_config[0] if row_config else {
-                "Itupeva": {"ganho": 66.72, "custo": 29.28, "km_emp": 48.0, "km_real": 60.0},
-                "Cabreuva": {"ganho": 81.59, "custo": 42.31, "km_emp": 58.7, "km_real": 86.7},
-                "Morato": {"ganho": 139.00, "custo": 47.34, "km_emp": 100.0, "km_real": 97.0}
+                "preco_km": 1.39,
+                "preco_comb": 5.50,
+                "Itupeva": {"km_emp": 48.0, "km_real": 60.0},
+                "Cabreuva": {"km_emp": 58.7, "km_real": 86.7},
+                "Morato": {"km_emp": 100.0, "km_real": 97.0}
             }
             
-            cur.execute("SELECT dias FROM rotas_mensal WHERE mes = %s AND ano = %s", (mes, ano))
-            row_dias = cur.fetchone()
-            dias = row_dias[0] if row_dias else {}
+            marcacoes = DespesaRepository.listar_dias_marcados(mes, ano)
             
-            return {"config": config, "dias": dias}
+            return {"config": config, "marcacoes": marcacoes}
         except Exception as e:
             print(e)
             return {}
@@ -479,16 +481,9 @@ class DespesaRepository:
             
     @staticmethod
     def salvar_rotas_dias(mes, ano, dias_json):
-        DespesaRepository._garantir_tabelas()
-        conn = get_db_connection()
-        if not conn: return False
-        try:
-            cur = conn.cursor()
-            cur.execute("INSERT INTO rotas_mensal (mes, ano, dias) VALUES (%s, %s, %s) ON CONFLICT (mes, ano) DO UPDATE SET dias = EXCLUDED.dias", (mes, ano, json.dumps(dias_json)))
-            conn.commit()
-            return True
-        except Exception: return False
-        finally: conn.close()
+        # Esta função fica legada (inativa) pois o calendário assumiu o controle, 
+        # mas mantemos por segurança caso tenha histórico antigo.
+        return True
 
     @staticmethod
     def salvar_rotas_config(config_json):
