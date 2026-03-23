@@ -3,6 +3,7 @@ import urllib.parse
 import ssl
 import queue
 import threading
+import socket
 from config import Config
 
 class PooledConnection:
@@ -31,17 +32,16 @@ class DbPool:
         parsed = urllib.parse.urlparse(Config.DATABASE_URL)
         try:
             context = ssl.create_default_context()
-            # Timeout de 10s apenas para o momento da conexão inicial
             conn = pg8000.dbapi.connect(
                 user=parsed.username, password=parsed.password,
                 host=parsed.hostname, port=parsed.port or 5432,
                 database=parsed.path.lstrip('/'), ssl_context=context,
                 timeout=10 
             )
+            conn._context.sock.settimeout(10.0) 
             
             cur = conn.cursor()
             cur.execute("SET TIME ZONE 'America/Sao_Paulo';")
-            # A FORMA SEGURA: Limita o tempo da consulta a 10s, sem matar a conexão ociosa
             cur.execute("SET statement_timeout = 10000;") 
             cur.close()
             
@@ -148,6 +148,9 @@ def init_db():
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS data_pagamento DATE;")
         
         cur.execute("ALTER TABLE rendas ADD COLUMN IF NOT EXISTS fonte VARCHAR(50) DEFAULT 'Geral';")
+        
+        # --- NOVO: A coluna para rastrear o dia exato da entrada! ---
+        cur.execute("ALTER TABLE rendas ADD COLUMN IF NOT EXISTS data_recebimento DATE;")
 
         try: cur.execute("ALTER TABLE caixinhas ADD COLUMN icone_svg VARCHAR(50) DEFAULT 'geral';")
         except Exception: pass 

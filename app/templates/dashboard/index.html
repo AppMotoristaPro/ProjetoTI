@@ -127,8 +127,11 @@
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <button onclick="document.getElementById('modalCalendarioDia').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 id="modal_cal_data" class="text-sm font-black text-theme uppercase tracking-widest mb-4">--/--/----</h3>
+        
+        <div id="fluxo_caixa_dia" class="mb-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hidden"></div>
+        
         <div id="painel_marcacao_dia"></div>
-        <div id="lista_contas_dia" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1"></div>
+        <div id="lista_contas_dia" class="space-y-3 max-h-[50vh] overflow-y-auto pr-1"></div>
     </div>
 </div>
 
@@ -152,7 +155,11 @@
 </div>
 
 <script>
-    let currentData = new Date(); let despesasGlobais = []; let resumoGlobal = null; let diasMarcadosGlobais = [];
+    let currentData = new Date(); 
+    let despesasGlobais = []; 
+    let resumoGlobal = null; 
+    let diasMarcadosGlobais = [];
+    let rendasGlobais = []; // NOVO: Armazena as rendas lidas do banco com as datas
     let chartDespesasObj = null; let chartRendaIgorObj = null; let chartRendaThayObj = null; let chartTiposObj = null; let chartCatObj = null;
     let diaTrabalhadoAtual = null;
     
@@ -172,7 +179,6 @@
         document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
     };
 
-    // A MÁGICA RECRIADA: A função que o JavaScript estava procurando!
     const carregarDashboard = async () => {
         atualizarDisplayMes();
         try {
@@ -188,12 +194,8 @@
 
     const mudarMes = async (d) => { 
         currentData.setMonth(currentData.getMonth() + d); 
-        
-        // MÊS GLOBAL: Salva a escolha do usuário
         const mesGlobal = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear() };
         localStorage.setItem('mesGlobalData', JSON.stringify(mesGlobal));
-
-        // Chama a função recriada para buscar os novos dados sem travar
         carregarDashboard();
     };
 
@@ -201,6 +203,7 @@
         resumoGlobal = pacotao.resumo;
         despesasGlobais = pacotao.despesas;
         diasMarcadosGlobais = pacotao.marcacoes;
+        rendasGlobais = pacotao.rendas || []; // Salva as rendas no frontend
 
         document.getElementById('saldo_final').innerText = formatarMoeda(resumoGlobal.saldo_final);
         document.getElementById('total_pendente').innerText = formatarMoeda(resumoGlobal.total_pendente);
@@ -226,7 +229,6 @@
         document.getElementById('gauge-valor').innerText = formatarMoeda(tPendentes);
         document.getElementById('valor-pago').innerText = formatarMoeda(tPagas);
 
-        // GRÁFICO RECALCULADO CORRETAMENTE: Destruir e recriar sempre que há dados novos
         if (chartDespesasObj) { chartDespesasObj.destroy(); chartDespesasObj = null; }
         const ctxDesp = document.getElementById('chartDespesas');
         if(tPagas === 0 && tPendentes === 0) {
@@ -240,7 +242,6 @@
             });
         }
 
-        // Totais das Rendas (Embaixo das Pizzas)
         document.getElementById('totRendaIgor').innerText = formatarMoeda(resumo.renda_igor);
         document.getElementById('totRendaThay').innerText = formatarMoeda(resumo.renda_thaynara);
 
@@ -295,8 +296,11 @@
             const contasDoDia = despFiltradas.filter(d => getDataBase(d) === dataStr);
             const marcacaoDoDia = diasMarcadosGlobais.find(m => m.data === dataStr && m.usuario === currentUser);
             
+            // Verifica se tem dinheiro entrando neste dia (Shopee ou Renda Thaynara)
+            const entradasDoDia = rendasGlobais.filter(r => r.data_recebimento === dataStr);
+            
             let dotHtml = '';
-            let corFundoIgor = ''; // O NOVO QUADRADINHO DO IGOR
+            let corFundoIgor = ''; 
 
             if (contasDoDia.length > 0) {
                 const qtdTotal = contasDoDia.length;
@@ -310,7 +314,6 @@
                 if (currentUser === 'Thaynara') {
                     dotHtml = `<div class="text-[8px] ${corStatus.split(' ')[0]} ${corStatus.includes('pulse') ? 'animate-pulse' : ''}" title="Contas do Dia">💖</div>`;
                 } 
-                // Para o Igor, não usamos mais dotHtml. A cor vai pro quadrado principal!
             }
             
             let markerHtml = '';
@@ -328,16 +331,21 @@
             const gapClass = (dotHtml && markerHtml) ? 'gap-1' : '';
             let bgClassCard = isMesAtual && dia === hojeObj.getDate() ? 'bg-theme-light shadow-lg border-theme/50' : 'bg-white/40 text-slate-700 hover:bg-white/80 border-white/50';
             
-            // Aplica o quadrado colorido pro Igor (se tiver cor) e ignora a borda padrão
             if (currentUser === 'Igor' && corFundoIgor !== '') {
                 bgClassCard = `${corFundoIgor} text-slate-800 shadow-sm border`;
             } else {
-                bgClassCard += ' border'; // Adiciona a borda padrão se não for colorido
+                bgClassCard += ' border'; 
+            }
+
+            // O CALENDÁRIO DOURADO: Se tem entrada, o número do dia brilha!
+            let spanDia = `<span class="text-xs font-bold">${dia}</span>`;
+            if(entradasDoDia.length > 0) {
+                spanDia = `<span class="text-xs font-black text-yellow-500 drop-shadow-sm">${dia}</span>`;
             }
 
             grid.innerHTML += `
                 <div onclick="abrirModalCalendario('${dataStr}')" class="flex flex-col items-center justify-center p-2 rounded-xl cursor-pointer transition active:scale-90 ${bgClassCard}">
-                    <span class="text-xs font-bold">${dia}</span>
+                    ${spanDia}
                     <div class="flex justify-center items-center h-2.5 mt-0.5 ${gapClass}">${dotHtml}${markerHtml}</div>
                 </div>`;
         }
@@ -483,12 +491,64 @@
                 </div>`;
         }
 
+        // --- MATEMÁTICA DO FLUXO DE CAIXA DIÁRIO ---
+        let entradasAteOntem = 0; let despesasAteOntem = 0;
+        let entradasHoje = 0; let despesasHoje = 0;
+
+        rendasGlobais.forEach(r => {
+            if (!r.data_recebimento) return;
+            if (r.data_recebimento < dataStr) entradasAteOntem += parseFloat(r.valor);
+            else if (r.data_recebimento === dataStr) entradasHoje += parseFloat(r.valor);
+        });
+
+        despesasGlobais.forEach(d => {
+            const dataBase = getDataBase(d);
+            if (!dataBase) return;
+            if (dataBase < dataStr) despesasAteOntem += parseFloat(d.valor);
+            else if (dataBase === dataStr) despesasHoje += parseFloat(d.valor);
+        });
+
+        const caixaManha = entradasAteOntem - despesasAteOntem;
+        const sobraFimDoDia = caixaManha + entradasHoje - despesasHoje;
+
+        const painelFluxo = document.getElementById('fluxo_caixa_dia');
+        painelFluxo.innerHTML = `
+            <div class="flex justify-between mb-2 pb-2 border-b border-slate-100">
+                <span class="text-[10px] uppercase font-bold text-slate-400" title="Acumulado das rendas do dia 1 até ontem">Caixa da Manhã</span> 
+                <span class="text-xs font-black text-slate-700">${formatarMoeda(caixaManha)}</span>
+            </div>
+            <div class="flex justify-between mb-1">
+                <span class="text-[10px] uppercase font-bold text-emerald-500">Entradas Hoje</span> 
+                <span class="text-xs font-black text-emerald-600">+ ${formatarMoeda(entradasHoje)}</span>
+            </div>
+            <div class="flex justify-between mb-2">
+                <span class="text-[10px] uppercase font-bold text-red-400">Contas Hoje</span> 
+                <span class="text-xs font-black text-red-500">- ${formatarMoeda(despesasHoje)}</span>
+            </div>
+            <div class="flex justify-between border-t border-slate-200 pt-2 mt-1">
+                <span class="text-[10px] uppercase font-black text-slate-500">Saldo Fim do Dia</span> 
+                <span class="text-sm font-black ${sobraFimDoDia >= 0 ? 'text-indigo-600' : 'text-red-500'}">${formatarMoeda(sobraFimDoDia)}</span>
+            </div>
+        `;
+        painelFluxo.classList.remove('hidden');
+        // -------------------------------------------
+
         const contasDoDia = despesasGlobais.filter(d => d.tipo_despesa !== 'Diária' && getDataBase(d) === dataStr);
+        const entradasDoDia = rendasGlobais.filter(r => r.data_recebimento === dataStr);
+        
         const cont = document.getElementById('lista_contas_dia'); cont.innerHTML = '';
-        if (contasDoDia.length === 0) {
-            cont.innerHTML = `<div class="text-center py-6 border-t border-slate-100"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sem compromissos financeiros</p></div>`;
+        
+        if (contasDoDia.length === 0 && entradasDoDia.length === 0) {
+            cont.innerHTML = `<div class="text-center py-6 border-t border-slate-100"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sem movimentos neste dia</p></div>`;
         } else {
             cont.innerHTML = '<div class="border-t border-slate-100 pt-3"></div>';
+            
+            // Renderiza primeiro as entradas (em verde)
+            entradasDoDia.forEach(r => {
+                cont.innerHTML += `<div class="p-4 bg-emerald-50/50 border border-emerald-100 rounded-[20px] flex justify-between items-center mb-2"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-xs">💰</div><div><p class="text-sm font-bold text-slate-800 leading-tight">${r.fonte}</p><p class="text-[9px] font-semibold text-slate-500 mt-0.5">${r.usuario}</p></div></div><div class="flex flex-col items-end gap-1"><p class="font-black text-emerald-600">+ ${formatarMoeda(r.valor)}</p><span class="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-emerald-100 text-emerald-700">ENTRADA</span></div></div>`;
+            });
+
+            // Depois renderiza as saídas (contas)
             contasDoDia.forEach(c => {
                 cont.innerHTML += `<div class="p-4 bg-slate-50 border border-slate-100 rounded-[20px] flex justify-between items-center mb-2"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-xs">${c.tipo_despesa === 'Fixa' ? '🏠' : '💳'}</div><div><p class="text-sm font-bold text-slate-800 leading-tight">${c.descricao}</p><p class="text-[9px] font-semibold text-slate-500 mt-0.5">${c.responsavel_pagamento} • ${c.categoria}</p></div></div><div class="flex flex-col items-end gap-1"><p class="font-black text-slate-800">${formatarMoeda(c.valor)}</p><span class="px-2 py-0.5 rounded text-[8px] font-black uppercase ${c.pago ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">${c.pago ? 'PAGO' : 'PENDENTE'}</span></div></div>`;
             });
@@ -503,7 +563,6 @@
         document.getElementById('modalExplicaSaldo').classList.remove('hidden');
     };
 
-    // Modal de Pendentes (Agora exibe a Data de Vencimento)
     const abrirResumoPendentes = () => {
         const cont = document.getElementById('lista_detalhe_pendentes'); cont.innerHTML = '';
         const pendentes = despesasGlobais.filter(x => !x.pago);
@@ -521,16 +580,13 @@
         document.getElementById('modalPendenteLista').classList.remove('hidden');
     };
 
-    // NOVO: Modal "Já Pago"
     const abrirModalPagosLista = () => {
         const cont = document.getElementById('lista_detalhe_pagos'); cont.innerHTML = '';
-        // Filtra todas as contas que foram pagas E que não são do Dia-a-Dia
         const pagos = despesasGlobais.filter(x => x.pago && x.tipo_despesa !== 'Diária');
         
         if(pagos.length === 0) {
             cont.innerHTML = "<p class='text-center text-xs text-slate-400 font-bold py-4'>Nenhuma conta paga ainda.</p>";
         } else {
-            // Ordena pela data de pagamento (mais recentes primeiro)
             pagos.sort((a, b) => new Date(b.data_pagamento || b.data_vencimento) - new Date(a.data_pagamento || a.data_vencimento));
             
             pagos.forEach(p => {
@@ -549,7 +605,6 @@
     };
 
     document.addEventListener("DOMContentLoaded", () => {
-        // MÊS GLOBAL: Ao carregar a tela, verifica se tem um mês salvo no LocalStorage
         const mesGlobalStr = localStorage.getItem('mesGlobalData');
         if (mesGlobalStr) {
             try {
@@ -561,8 +616,6 @@
         atualizarDisplayMes();
         
         if (typeof PACOTAO_INICIAL !== 'undefined' && PACOTAO_INICIAL) {
-            // Se o mês salvo for diferente do mês injetado (ex: o usuário recarregou a Home forçando o mês atual do servidor), 
-            // a gente ignora a injeção inicial e busca o mês que o usuário realmente quer ver
             if (mesGlobalStr && (PACOTAO_INICIAL.mes_atual !== currentData.getMonth() + 1 || PACOTAO_INICIAL.ano_atual !== currentData.getFullYear())) {
                 carregarDashboard();
             } else {

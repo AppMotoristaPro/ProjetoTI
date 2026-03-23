@@ -37,7 +37,6 @@ def manifest():
         }]
     })
 
-# --- ATUALIZAÇÃO DOS ÍCONES NATIVOS (BADGE CIFRÃO) ---
 @despesas_bp.route('/sw.js')
 def sw():
     js = """
@@ -130,11 +129,19 @@ def listar_rendas():
     mes = request.args.get('mes'); ano = request.args.get('ano')
     return jsonify(DespesaRepository.listar_rendas_detalhadas(int(mes), int(ano))), 200
 
-# --- NOVO GATILHO: Renda Lançada ---
 @despesas_bp.route('/api/rendas', methods=['POST'])
 def atualizar_renda():
     dados = request.json
-    sucesso = DespesaRepository.salvar_renda(dados.get('usuario'), dados.get('fonte', 'Geral'), dados.get('mes'), dados.get('ano'), dados.get('valor'))
+    
+    # --- NOVO: Lendo o dia exato da entrada ---
+    data_rec = dados.get('data_recebimento')
+    if not data_rec:
+        # Proteção provisória caso a tela antiga sem o calendário dispare uma requisição
+        mes = dados.get('mes', hoje_br().month)
+        ano = dados.get('ano', hoje_br().year)
+        data_rec = f"{ano}-{str(mes).zfill(2)}-01"
+        
+    sucesso = DespesaRepository.salvar_renda(dados.get('usuario'), dados.get('fonte', 'Geral'), data_rec, dados.get('valor'))
     if sucesso:
         autor = dados.get('usuario')
         outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
@@ -149,10 +156,11 @@ def alterar_renda(renda_id):
     if request.method == 'DELETE':
         if DespesaRepository.excluir_renda(renda_id): return jsonify({"status": "sucesso"}), 200
     else:
-        if DespesaRepository.atualizar_renda(renda_id, request.json.get('valor')): return jsonify({"status": "sucesso"}), 200
+        dados = request.json
+        if DespesaRepository.atualizar_renda(renda_id, dados.get('valor'), dados.get('data_recebimento')): 
+            return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# --- NOVO GATILHO: Conta Paga ---
 @despesas_bp.route('/api/despesas/<int:despesa_id>/pagar', methods=['POST'])
 def pagar_despesa(despesa_id):
     arquivo = request.files.get('comprovante')
@@ -185,7 +193,6 @@ def ver_comprovante(despesa_id):
     if not bytes_dados: return "Não encontrado", 404
     return send_file(io.BytesIO(bytes_dados), mimetype=mimetype, as_attachment=False)
 
-# --- NOVO GATILHO: Conta Apagada ---
 @despesas_bp.route('/api/despesas/<int:despesa_id>', methods=['DELETE'])
 def deletar_despesa(despesa_id):
     lote = request.args.get('todas') == 'true'
@@ -202,7 +209,6 @@ def deletar_despesa(despesa_id):
         return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# --- NOVO GATILHO: Conta Editada ---
 @despesas_bp.route('/api/despesas/<int:despesa_id>/editar', methods=['PUT'])
 def editar_despesa(despesa_id):
     despesa_antiga = DespesaRepository.obter_por_id(despesa_id)

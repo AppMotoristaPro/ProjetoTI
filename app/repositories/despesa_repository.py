@@ -71,41 +71,28 @@ class DespesaRepository:
         if not conn: return False
         try:
             cur = conn.cursor()
-            
             cur.execute("SELECT tipo FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
             linha = cur.fetchone()
             tipo_anterior = linha[0] if linha else None
-            
-            try:
-                data_obj = datetime.datetime.strptime(data, '%Y-%m-%d').date()
-                mes_cal = data_obj.month
-                ano_cal = data_obj.year
-            except:
-                mes_cal = datetime.date.today().month
-                ano_cal = datetime.date.today().year
 
             if usuario == 'Thaynara':
                 if tipo == 'morato_reembolsado' and tipo_anterior != 'morato_reembolsado':
-                    DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', mes_cal, ano_cal, 139.00)
+                    DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', data, 139.00)
                 elif tipo_anterior == 'morato_reembolsado' and tipo != 'morato_reembolsado':
-                    DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', mes_cal, ano_cal, -139.00)
+                    DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', data, -139.00)
             
             if usuario == 'Igor':
                 if tipo_anterior and tipo_anterior.startswith('shopee_trabalhado|'):
                     if not tipo or tipo == 'carro_parado' or not tipo.startswith('shopee_trabalhado|'):
                         partes_ant = tipo_anterior.split('|')
                         if len(partes_ant) == 2:
-                            try:
-                                dp_obj_ant = datetime.datetime.strptime(partes_ant[1], '%Y-%m-%d').date()
-                                DespesaRepository.salvar_renda('Igor', 'Shopee', dp_obj_ant.month, dp_obj_ant.year, -245.00)
+                            try: DespesaRepository.salvar_renda('Igor', 'Shopee', partes_ant[1], -245.00)
                             except: pass
                 
                 if tipo and tipo.startswith('shopee_trabalhado|'):
                     partes_novo = tipo.split('|')
                     if len(partes_novo) == 2:
-                        try:
-                            dp_obj_novo = datetime.datetime.strptime(partes_novo[1], '%Y-%m-%d').date()
-                            DespesaRepository.salvar_renda('Igor', 'Shopee', dp_obj_novo.month, dp_obj_novo.year, 245.00)
+                        try: DespesaRepository.salvar_renda('Igor', 'Shopee', partes_novo[1], 245.00)
                         except: pass
             
             cur.execute("DELETE FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
@@ -188,8 +175,7 @@ class DespesaRepository:
             cur = conn.cursor()
             cur.execute("SELECT descricao, valor, responsavel_pagamento FROM despesas WHERE id = %s", (despesa_id,))
             linha = cur.fetchone()
-            if linha:
-                return {"descricao": linha[0], "valor": float(linha[1]), "responsavel_pagamento": linha[2]}
+            if linha: return {"descricao": linha[0], "valor": float(linha[1]), "responsavel_pagamento": linha[2]}
             return None
         except Exception: return None
         finally: conn.close()
@@ -250,39 +236,55 @@ class DespesaRepository:
             return resultados
         finally: conn.close()
 
+    # --- NOVO: Passa a listar as rendas junto com as datas exatas (data_recebimento) ---
     @staticmethod
     def listar_rendas_detalhadas(mes, ano):
         conn = get_db_connection()
         if not conn: return []
         try:
             cur = conn.cursor()
-            cur.execute("SELECT id, usuario, fonte, valor FROM rendas WHERE mes=%s AND ano=%s ORDER BY id", (mes, ano))
+            cur.execute("SELECT id, usuario, fonte, valor, data_recebimento FROM rendas WHERE mes=%s AND ano=%s ORDER BY data_recebimento ASC NULLS LAST, id ASC", (mes, ano))
             colunas = [desc[0] for desc in cur.description]
-            return [dict(zip(colunas, row)) for row in cur.fetchall()]
+            resultados = []
+            for row in cur.fetchall():
+                d = dict(zip(colunas, row))
+                if d.get('data_recebimento'): d['data_recebimento'] = d['data_recebimento'].strftime('%Y-%m-%d')
+                resultados.append(d)
+            return resultados
         finally: conn.close()
 
     @staticmethod
-    def salvar_renda(usuario, fonte, mes, ano, valor):
+    def salvar_renda(usuario, fonte, data_recebimento, valor):
         conn = get_db_connection()
         if not conn: return False
         try:
             cur = conn.cursor()
-            cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s", (usuario, fonte, mes, ano))
+            data_obj = datetime.datetime.strptime(data_recebimento, '%Y-%m-%d').date()
+            mes = data_obj.month
+            ano = data_obj.year
+            
+            cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND data_recebimento=%s", (usuario, fonte, data_recebimento))
             linha = cur.fetchone()
-            if linha: cur.execute("UPDATE rendas SET valor = valor + %s WHERE id=%s", (valor, linha[0]))
-            else: cur.execute("INSERT INTO rendas (usuario, fonte, mes, ano, valor) VALUES (%s, %s, %s, %s, %s)", (usuario, fonte, mes, ano, valor))
+            if linha: 
+                cur.execute("UPDATE rendas SET valor = valor + %s WHERE id=%s", (valor, linha[0]))
+            else: 
+                cur.execute("INSERT INTO rendas (usuario, fonte, mes, ano, valor, data_recebimento) VALUES (%s, %s, %s, %s, %s, %s)", (usuario, fonte, mes, ano, valor, data_recebimento))
             conn.commit()
             return True
-        except Exception: return False
+        except Exception as e: print(e); return False
         finally: conn.close()
 
     @staticmethod
-    def atualizar_renda(renda_id, valor):
+    def atualizar_renda(renda_id, valor, data_recebimento=None):
         conn = get_db_connection()
         if not conn: return False
         try:
             cur = conn.cursor()
-            cur.execute("UPDATE rendas SET valor=%s WHERE id=%s", (valor, renda_id))
+            if data_recebimento:
+                data_obj = datetime.datetime.strptime(data_recebimento, '%Y-%m-%d').date()
+                cur.execute("UPDATE rendas SET valor=%s, data_recebimento=%s, mes=%s, ano=%s WHERE id=%s", (valor, data_recebimento, data_obj.month, data_obj.year, renda_id))
+            else:
+                cur.execute("UPDATE rendas SET valor=%s WHERE id=%s", (valor, renda_id))
             conn.commit()
             return True
         except Exception: return False
@@ -400,12 +402,15 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
+    # O Pacotão agora carrega as "rendas" junto, para que o JavaScript da tela inicial
+    # possa fazer a varredura e calcular o "Fluxo de Caixa Diário"
     @staticmethod
     def obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant):
         return {
             "resumo": DespesaRepository.obter_resumo(mes, ano),
             "despesas": DespesaRepository.listar_por_mes(mes, ano),
-            "marcacoes": DespesaRepository.listar_dias_marcados(mes_ant, ano_ant) + DespesaRepository.listar_dias_marcados(mes, ano)
+            "marcacoes": DespesaRepository.listar_dias_marcados(mes_ant, ano_ant) + DespesaRepository.listar_dias_marcados(mes, ano),
+            "rendas": DespesaRepository.listar_rendas_detalhadas(mes, ano)
         }
 
     @staticmethod

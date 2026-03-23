@@ -22,6 +22,9 @@
         <div class="space-y-4 mb-6">
             <div id="box_usu"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">De quem é?</label><select id="entrada_usuario" onchange="atualizarFontesRenda()" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"><option value="Igor" selected>Igor</option><option value="Thaynara">Thaynara</option></select></div>
             <div id="box_fnt"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Tipo de Entrada</label><select id="entrada_fonte" class="w-full p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 font-bold outline-none text-emerald-700"></select></div>
+            
+            <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Data de Recebimento</label><input type="date" id="entrada_data" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-emerald-400" required></div>
+            
             <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Valor</label><input type="number" id="entrada_valor" step="0.01" placeholder="0.00" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 font-black text-xl outline-none focus:border-emerald-400"></div>
         </div>
         <button onclick="salvarEntrada()" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition shadow-lg">Salvar Entrada</button>
@@ -31,8 +34,8 @@
 <script>
     let currentData = new Date();
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
     
-    // MÊS GLOBAL: Salva a escolha do usuário
     const mudarMes = (d) => { 
         currentData.setMonth(currentData.getMonth() + d); 
         const mesGlobal = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear() };
@@ -60,15 +63,18 @@
         
         dados.forEach(r => {
             const bgClass = r.usuario === 'Igor' ? 'bg-indigo-100 text-indigo-600' : 'bg-pink-100 text-pink-600';
+            const dataExibicao = r.data_recebimento ? formatarData(r.data_recebimento) : '--/--';
+
             cont.innerHTML += `
                 <div class="p-5 ultra-glass rounded-[28px] border border-white/60 flex justify-between items-center shadow-sm">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-2xl ${bgClass} flex items-center justify-center font-bold text-sm shadow-inner">${r.usuario.charAt(0)}</div>
                         <div>
                             <p class="font-bold text-slate-800 text-sm">${r.fonte}</p>
-                            <div class="flex gap-2 mt-0.5">
-                                <button onclick="abrirEditar(${r.id}, '${r.usuario}', '${r.fonte}', ${r.valor})" class="text-[9px] font-black uppercase text-theme hover:opacity-70">Editar</button>
-                                <button onclick="excluirRenda(${r.id})" class="text-[9px] font-black uppercase text-red-500 hover:text-red-700">Excluir</button>
+                            <p class="text-[9px] font-bold text-slate-500 mt-0.5">📅 Recebido em: <span class="text-emerald-500">${dataExibicao}</span></p>
+                            <div class="flex gap-2 mt-1">
+                                <button onclick="abrirEditar(${r.id}, '${r.usuario}', '${r.fonte}', ${r.valor}, '${r.data_recebimento || ''}')" class="text-[9px] font-black uppercase text-theme hover:opacity-70 bg-white px-2 py-0.5 rounded-md shadow-sm border border-slate-100">Editar</button>
+                                <button onclick="excluirRenda(${r.id})" class="text-[9px] font-black uppercase text-red-500 hover:text-red-700 bg-white px-2 py-0.5 rounded-md shadow-sm border border-slate-100">Excluir</button>
                             </div>
                         </div>
                     </div>
@@ -80,14 +86,19 @@
     const abrirModalNovaEntrada = () => { 
         document.getElementById('ent_titulo').innerText = "Lançar Receita";
         document.getElementById('entrada_id').value = ''; document.getElementById('entrada_valor').value = '';
+        
+        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+        document.getElementById('entrada_data').value = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+        
         document.getElementById('box_usu').classList.remove('hidden'); document.getElementById('box_fnt').classList.remove('hidden');
         atualizarFontesRenda(); document.getElementById('modalEntrada').classList.remove('hidden'); 
     };
     
-    const abrirEditar = (id, usu, fnt, val) => {
+    const abrirEditar = (id, usu, fnt, val, data_rec) => {
         document.getElementById('ent_titulo').innerText = `Editar: ${fnt}`;
         document.getElementById('entrada_id').value = id;
         document.getElementById('entrada_valor').value = val;
+        document.getElementById('entrada_data').value = data_rec;
         document.getElementById('box_usu').classList.add('hidden'); document.getElementById('box_fnt').classList.add('hidden');
         document.getElementById('modalEntrada').classList.remove('hidden');
     };
@@ -95,15 +106,19 @@
     const fecharModalEntrada = () => document.getElementById('modalEntrada').classList.add('hidden');
 
     const salvarEntrada = async () => {
-        const id = document.getElementById('entrada_id').value; const v = parseFloat(document.getElementById('entrada_valor').value);
+        const id = document.getElementById('entrada_id').value; 
+        const v = parseFloat(document.getElementById('entrada_valor').value);
+        const data_rec = document.getElementById('entrada_data').value;
+        
         if(isNaN(v) || v <= 0) return alert('Valor inválido!');
+        if(!data_rec) return alert('Selecione a data de recebimento!');
         
         if (id) {
-            await fetch(`/api/rendas/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({valor: v}) });
+            await fetch(`/api/rendas/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({valor: v, data_recebimento: data_rec}) });
         } else {
             await fetch('/api/rendas', {
                 method:'POST', headers:{'Content-Type':'application/json'}, 
-                body:JSON.stringify({usuario: document.getElementById('entrada_usuario').value, fonte: document.getElementById('entrada_fonte').value, mes: currentData.getMonth()+1, ano: currentData.getFullYear(), valor: v})
+                body:JSON.stringify({usuario: document.getElementById('entrada_usuario').value, fonte: document.getElementById('entrada_fonte').value, mes: currentData.getMonth()+1, ano: currentData.getFullYear(), valor: v, data_recebimento: data_rec})
             });
         }
         fecharModalEntrada(); carregarEntradas();
@@ -114,7 +129,6 @@
     };
 
     document.addEventListener("DOMContentLoaded", () => {
-        // MÊS GLOBAL: Lê a escolha do usuário
         const mesGlobalStr = localStorage.getItem('mesGlobalData');
         if (mesGlobalStr) {
             const mesGlobal = JSON.parse(mesGlobalStr);
