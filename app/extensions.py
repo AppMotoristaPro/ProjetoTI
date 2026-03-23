@@ -3,7 +3,6 @@ import urllib.parse
 import ssl
 import queue
 import threading
-import socket
 from config import Config
 
 class PooledConnection:
@@ -38,10 +37,12 @@ class DbPool:
                 database=parsed.path.lstrip('/'), ssl_context=context,
                 timeout=10 
             )
-            conn._context.sock.settimeout(10.0) 
+            
+            # A linha que causava o erro ('_context') FOI REMOVIDA DAQUI!
             
             cur = conn.cursor()
             cur.execute("SET TIME ZONE 'America/Sao_Paulo';")
+            # Substituída pela forma segura de limitar tempo no banco:
             cur.execute("SET statement_timeout = 10000;") 
             cur.close()
             
@@ -148,8 +149,6 @@ def init_db():
         cur.execute("ALTER TABLE despesas ADD COLUMN IF NOT EXISTS data_pagamento DATE;")
         
         cur.execute("ALTER TABLE rendas ADD COLUMN IF NOT EXISTS fonte VARCHAR(50) DEFAULT 'Geral';")
-        
-        # --- NOVO: A coluna para rastrear o dia exato da entrada! ---
         cur.execute("ALTER TABLE rendas ADD COLUMN IF NOT EXISTS data_recebimento DATE;")
 
         try: cur.execute("ALTER TABLE caixinhas ADD COLUMN icone_svg VARCHAR(50) DEFAULT 'geral';")
