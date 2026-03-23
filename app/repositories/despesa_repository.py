@@ -28,7 +28,6 @@ class DespesaRepository:
                     tipo VARCHAR(50)
                 );
             """)
-            # --- NOVAS TABELAS FLEXÍVEIS DO AJUDA DE CUSTO ---
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS rotas_mensal (
                     id SERIAL PRIMARY KEY,
@@ -436,7 +435,6 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # --- FUNÇÃO RESTAURADA ---
     @staticmethod
     def obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant):
         return {
@@ -446,7 +444,7 @@ class DespesaRepository:
             "rendas": DespesaRepository.listar_rendas_detalhadas(mes, ano)
         }
 
-    # --- NOVO SISTEMA DE ROTAS (SUBSTITUINDO O CARRO) ---
+    # --- NOVO SISTEMA DE ROTAS: INCLUINDO AS KM PADRÃO ---
     @staticmethod
     def obter_pacotao_rotas(mes, ano):
         DespesaRepository._garantir_tabelas()
@@ -458,9 +456,9 @@ class DespesaRepository:
             cur.execute("SELECT config FROM rotas_config ORDER BY id DESC LIMIT 1")
             row_config = cur.fetchone()
             config = row_config[0] if row_config else {
-                "Itupeva": {"ganho": 66.72, "custo": 29.28},
-                "Cabreuva": {"ganho": 81.59, "custo": 42.31},
-                "Morato": {"ganho": 139.00, "custo": 47.34}
+                "Itupeva": {"ganho": 66.72, "custo": 29.28, "km_emp": 48.0, "km_real": 60.0},
+                "Cabreuva": {"ganho": 81.59, "custo": 42.31, "km_emp": 58.7, "km_real": 86.7},
+                "Morato": {"ganho": 139.00, "custo": 47.34, "km_emp": 100.0, "km_real": 97.0}
             }
             
             cur.execute("SELECT dias FROM rotas_mensal WHERE mes = %s AND ano = %s", (mes, ano))
