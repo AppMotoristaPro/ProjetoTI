@@ -135,25 +135,6 @@
     </div>
 </div>
 
-<div id="modalRecebimentoShopee" class="hidden fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 transition-opacity">
-    <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
-        <button onclick="fecharModalShopee()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        
-        <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mb-4">📦</div>
-        <h3 class="text-xl font-black text-slate-800 mb-1">Trabalho Concluído!</h3>
-        <p class="text-xs font-bold text-slate-500 mb-6 leading-relaxed">Você marcou este dia como trabalhado. Para qual dia devemos lançar a entrada de <span class="text-emerald-500 font-black">R$ 245,00</span>?</p>
-        
-        <div class="space-y-3">
-            <div>
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1">Data de Recebimento</label>
-                <input type="date" id="data_recebimento_shopee" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none focus:border-indigo-400" required>
-            </div>
-            <button onclick="confirmarRecebimentoShopee()" class="w-full py-4 bg-indigo-500 text-white rounded-2xl font-black active:scale-95 transition shadow-lg mt-2">LANÇAR ENTRADA</button>
-            <button onclick="apenasMarcarTrabalhado()" class="w-full py-3 bg-slate-50 text-slate-500 rounded-2xl font-bold border border-slate-100 hover:bg-slate-100 active:scale-95 transition">Apenas Marcar no Calendário</button>
-        </div>
-    </div>
-</div>
-
 <script>
     let currentData = new Date(); 
     let despesasGlobais = []; 
@@ -161,11 +142,9 @@
     let diasMarcadosGlobais = [];
     let rendasGlobais = []; 
     let chartDespesasObj = null; let chartRendaIgorObj = null; let chartRendaThayObj = null; let chartTiposObj = null; let chartCatObj = null;
-    let diaTrabalhadoAtual = null;
     
     Chart.register(ChartDataLabels);
 
-    // --- NOVA FUNÇÃO PARA ESCONDER/MOSTRAR O CABEÇALHO ---
     const controlarCabecalho = (mostrar) => {
         const cabecalho = document.querySelector('header') || document.querySelector('nav') || document.querySelector('.fixed.top-0');
         if (cabecalho) {
@@ -173,10 +152,9 @@
         }
     };
 
-    // Nova função unificada para fechar os modais
     window.fecharModal = (id) => {
         document.getElementById(id).classList.add('hidden');
-        controlarCabecalho(true); // Restaura o cabeçalho ao fechar
+        controlarCabecalho(true); 
     };
 
     window.addEventListener('themeChanged', () => {
@@ -441,33 +419,26 @@
         });
     };
 
+    // --- NOVA MÁGICA: Cálculo Automático da Quinta-Feira da Shopee ---
     window.marcarShopeeTrabalhado = (dataStr) => {
-        diaTrabalhadoAtual = dataStr;
-        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-        const hojeISO = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
-        document.getElementById('data_recebimento_shopee').value = hojeISO; 
-        document.getElementById('modalCalendarioDia').classList.add('hidden');
-        document.getElementById('modalRecebimentoShopee').classList.remove('hidden');
+        const [y, mn, d] = dataStr.split('-');
+        const workedDate = new Date(y, mn - 1, d);
+        
+        // Pula direto para a próxima quinta-feira do ciclo
+        const dayOfWeek = workedDate.getDay() || 7; // Domingo vira 7
+        const daysToNextThursday = 7 - dayOfWeek + 4;
+        const payDate = new Date(y, mn - 1, workedDate.getDate() + daysToNextThursday);
+        
+        // Ajusta fuso horário para não errar o dia e formata
+        const tzoffset = payDate.getTimezoneOffset() * 60000;
+        const payDateStr = new Date(payDate.getTime() - tzoffset).toISOString().slice(0, 10);
+        
+        const tipoComData = `shopee_trabalhado|${payDateStr}`;
+        toggleMarcacao(dataStr, 'Igor', tipoComData);
     };
-
-    window.fecharModalShopee = () => { 
-        document.getElementById('modalRecebimentoShopee').classList.add('hidden'); 
-        diaTrabalhadoAtual = null; 
-        controlarCabecalho(true); // Restaura o cabeçalho ao fechar
-    };
-
-    window.confirmarRecebimentoShopee = async () => {
-        const dataRecebimento = document.getElementById('data_recebimento_shopee').value;
-        if(!dataRecebimento) { alert('Por favor, escolha a data em que o dinheiro vai cair.'); return; }
-        const tipoComData = `shopee_trabalhado|${dataRecebimento}`;
-        toggleMarcacao(diaTrabalhadoAtual, 'Igor', tipoComData);
-        fecharModalShopee();
-    };
-
-    window.apenasMarcarTrabalhado = async () => { toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado'); fecharModalShopee(); };
 
     const abrirModalCalendario = (dataStr) => {
-        controlarCabecalho(false); // Esconde o cabeçalho
+        controlarCabecalho(false); 
         document.getElementById('modal_cal_data').innerText = `Dia ${formatarData(dataStr)}/${dataStr.split('-')[0]}`;
         
         const currentUser = localStorage.getItem('app_theme') === 'pink' ? 'Thaynara' : 'Igor';
@@ -525,11 +496,28 @@
             else if (dataBase === dataStr) despesasHoje += parseFloat(d.valor);
         });
 
-        const caixaManha = entradasAteOntem - despesasAteOntem;
+        // --- NOVA MÁGICA: Injeta o saldo do mês anterior se o dia for 5 ou maior! ---
+        const diaClick = parseInt(dataStr.split('-')[2]);
+        let saldoMesAnterior = 0;
+        let htmlSobraMês = '';
+        
+        if (diaClick >= 5) {
+            saldoMesAnterior = resumoGlobal.saldo_mes_anterior || 0;
+            if (saldoMesAnterior > 0) {
+                htmlSobraMês = `
+                <div class="flex justify-between mb-2 pb-2 border-b border-indigo-100/50">
+                    <span class="text-[10px] uppercase font-bold text-indigo-400" title="Sobra do mês anterior liberada no dia 5">Sobra Mês Anterior</span> 
+                    <span class="text-xs font-black text-indigo-500">+ ${formatarMoeda(saldoMesAnterior)}</span>
+                </div>`;
+            }
+        }
+
+        const caixaManha = entradasAteOntem - despesasAteOntem + saldoMesAnterior;
         const sobraFimDoDia = caixaManha + entradasHoje - despesasHoje;
 
         const painelFluxo = document.getElementById('fluxo_caixa_dia');
         painelFluxo.innerHTML = `
+            ${htmlSobraMês}
             <div class="flex justify-between mb-2 pb-2 border-b border-slate-100">
                 <span class="text-[10px] uppercase font-bold text-slate-400" title="Acumulado das rendas do dia 1 até ontem">Caixa da Manhã</span> 
                 <span class="text-xs font-black text-slate-700">${formatarMoeda(caixaManha)}</span>
@@ -571,7 +559,7 @@
     };
 
     const abrirExplicacaoSaldo = () => {
-        controlarCabecalho(false); // Esconde o cabeçalho
+        controlarCabecalho(false); 
         document.getElementById('math_renda').innerText = formatarMoeda(resumoGlobal.total_renda);
         document.getElementById('math_desp').innerText = formatarMoeda(resumoGlobal.total_despesas_mes);
         document.getElementById('math_saldo').innerText = formatarMoeda(resumoGlobal.saldo_final);
@@ -579,7 +567,7 @@
     };
 
     const abrirResumoPendentes = () => {
-        controlarCabecalho(false); // Esconde o cabeçalho
+        controlarCabecalho(false); 
         const cont = document.getElementById('lista_detalhe_pendentes'); cont.innerHTML = '';
         const pendentes = despesasGlobais.filter(x => !x.pago);
         if(pendentes.length === 0) cont.innerHTML = "<p class='text-center text-xs text-slate-400 font-bold py-4'>Tudo pago! 🎉</p>";
@@ -597,7 +585,7 @@
     };
 
     const abrirModalPagosLista = () => {
-        controlarCabecalho(false); // Esconde o cabeçalho
+        controlarCabecalho(false); 
         const cont = document.getElementById('lista_detalhe_pagos'); cont.innerHTML = '';
         const pagos = despesasGlobais.filter(x => x.pago && x.tipo_despesa !== 'Diária');
         

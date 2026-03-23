@@ -236,7 +236,6 @@ class DespesaRepository:
             return resultados
         finally: conn.close()
 
-    # --- NOVO: Passa a listar as rendas junto com as datas exatas (data_recebimento) ---
     @staticmethod
     def listar_rendas_detalhadas(mes, ano):
         conn = get_db_connection()
@@ -308,10 +307,34 @@ class DespesaRepository:
         if not conn: return {}
         try:
             cur = conn.cursor()
+            
+            # --- NOVA MÁGICA: A MÁQUINA DO TEMPO (Saldo do Mês Anterior) ---
+            primeiro_dia_atual = datetime.date(ano, mes, 1)
+            ultimo_dia_ant = primeiro_dia_atual - datetime.timedelta(days=1)
+            
+            cur.execute("""
+                SELECT SUM(valor) FROM rendas 
+                WHERE data_recebimento <= %s 
+                OR (data_recebimento IS NULL AND (ano < %s OR (ano = %s AND mes <= %s)))
+            """, (ultimo_dia_ant, ultimo_dia_ant.year, ultimo_dia_ant.year, ultimo_dia_ant.month))
+            res_rendas_ant = cur.fetchone()
+            tot_rendas_ant = float(res_rendas_ant[0]) if res_rendas_ant and res_rendas_ant[0] else 0.0
+
+            cur.execute("""
+                SELECT SUM(valor) FROM despesas 
+                WHERE COALESCE(data_pretensao, data_vencimento) <= %s
+            """, (ultimo_dia_ant,))
+            res_desp_ant = cur.fetchone()
+            tot_desp_ant = float(res_desp_ant[0]) if res_desp_ant and res_desp_ant[0] else 0.0
+
+            saldo_mes_anterior = tot_rendas_ant - tot_desp_ant
+            # ---------------------------------------------------------------
+
             cur.execute("SELECT usuario, fonte, valor FROM rendas WHERE mes = %s AND ano = %s", (mes, ano))
             rendas_detalhadas = {'Igor': {}, 'Thaynara': {}}
             for row in cur.fetchall():
-                if row[0] in rendas_detalhadas: rendas_detalhadas[row[0]][row[1]] = float(row[2])
+                if row[0] in rendas_detalhadas: 
+                    rendas_detalhadas[row[0]][row[1]] = rendas_detalhadas[row[0]].get(row[1], 0) + float(row[2])
             
             renda_igor = sum(rendas_detalhadas['Igor'].values())
             renda_thaynara = sum(rendas_detalhadas['Thaynara'].values())
@@ -333,6 +356,7 @@ class DespesaRepository:
                 "total_renda": total_renda, "total_pendente": total_pendente,
                 "total_despesas_mes": total_todas_despesas_mes,
                 "total_caixinhas_mes": 0.0,
+                "saldo_mes_anterior": saldo_mes_anterior, # Injetado aqui para a interface usar
                 "saldo_final": saldo_final
             }
         finally: conn.close()
@@ -402,8 +426,6 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # O Pacotão agora carrega as "rendas" junto, para que o JavaScript da tela inicial
-    # possa fazer a varredura e calcular o "Fluxo de Caixa Diário"
     @staticmethod
     def obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant):
         return {
