@@ -18,15 +18,30 @@
         const temaSalvo = localStorage.getItem('app_theme') || 'blue';
         document.documentElement.setAttribute('data-theme', temaSalvo);
 
+        // --- A MÁGICA DO CRACHÁ VIRTUAL ---
         const originalFetch = window.fetch;
-        window.fetch = async function() {
-            let [resource, config] = arguments;
-            if (resource === '/api/despesas/nova' && config && config.body instanceof FormData) {
-                const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
+        window.fetch = async function(resource, config) {
+            const currentUser = (localStorage.getItem('app_theme') === 'pink') ? 'Thaynara' : 'Igor';
+            
+            // Garante que o objeto config e headers existem
+            config = config || {};
+            config.headers = config.headers || {};
+            
+            // Anexa o crachá de segurança em TODAS as requisições
+            if (config.headers instanceof Headers) {
+                config.headers.append('X-Usuario-Atual', currentUser);
+            } else {
+                config.headers['X-Usuario-Atual'] = currentUser;
+            }
+
+            // Mantém a compatibilidade com a rota de criar nova despesa (FormData)
+            if (resource === '/api/despesas/nova' && config.body instanceof FormData) {
                 config.body.append('autor_criacao', currentUser);
             }
+            
             return originalFetch(resource, config);
         };
+        // -----------------------------------
     </script>
 
     <style>
@@ -208,7 +223,6 @@
             }
         }
 
-        // NOVO: BOTÃO '+' INTELIGENTE SENSÍVEL AO CONTEXTO DA URL
         function abrirModalInteligente() {
             const url = window.location.pathname;
             if (url === '/entradas' && typeof abrirModalNovaEntrada === 'function') {

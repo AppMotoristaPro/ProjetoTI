@@ -20,6 +20,21 @@ despesas_bp = Blueprint('despesas', __name__)
 def hoje_br():
     return (datetime.datetime.utcnow() - datetime.timedelta(hours=3)).date()
 
+# --- FUNÇÃO AUXILIAR PARA LER O CRACHÁ DO USUÁRIO ---
+def obter_usuario_atual():
+    # Tenta pegar do header HTTP enviado pelo JS interceptador
+    usuario_header = request.headers.get('X-Usuario-Atual')
+    if usuario_header: return usuario_header
+    
+    # Tenta pegar do form ou do JSON como fallback
+    if request.is_json and request.json:
+        return request.json.get('autor_criacao') or request.json.get('usuario')
+    if request.form:
+        return request.form.get('autor_criacao') or request.form.get('usuario')
+        
+    return 'Igor' # Fallback final
+# ----------------------------------------------------
+
 @despesas_bp.route('/manifest.json')
 def manifest():
     return jsonify({
@@ -104,7 +119,7 @@ def nova_despesa():
     dados['pago'] = True if request.form.get('pago') == 'true' else False
     sucesso = DespesaRepository.criar(dados, comprovante_binario, mimetype)
     if sucesso:
-        autor = dados.get('autor_criacao', 'Igor')
+        autor = obter_usuario_atual()
         outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
         valor_f = f"R$ {float(dados['valor']):.2f}".replace('.', ',')
         msg = f"{autor} adicionou uma conta {dados.get('tipo_despesa', 'Variável')}: {dados['descricao']} ({valor_f})"
@@ -133,31 +148,36 @@ def listar_rendas():
 def atualizar_renda():
     dados = request.json
     
-    # --- NOVO: Lendo o dia exato da entrada ---
     data_rec = dados.get('data_recebimento')
     if not data_rec:
-        # Proteção provisória caso a tela antiga sem o calendário dispare uma requisição
         mes = dados.get('mes', hoje_br().month)
         ano = dados.get('ano', hoje_br().year)
         data_rec = f"{ano}-{str(mes).zfill(2)}-01"
         
     sucesso = DespesaRepository.salvar_renda(dados.get('usuario'), dados.get('fonte', 'Geral'), data_rec, dados.get('valor'))
     if sucesso:
-        autor = dados.get('usuario')
+        autor = obter_usuario_atual()
         outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
         valor_f = f"R$ {float(dados.get('valor', 0)):.2f}".replace('.', ',')
-        msg = f"💰 Dinheiro na conta! {autor} lançou: {dados.get('fonte', 'Geral')} ({valor_f})"
+        quem_recebeu = dados.get('usuario')
+        msg = f"💰 {autor} lançou: {dados.get('fonte', 'Geral')} para {quem_recebeu} ({valor_f})"
         NotificacaoService.enviar_notificacao(outro_usuario, "💰 Nova Entrada Registrada!", msg)
         return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
 @despesas_bp.route('/api/rendas/<int:renda_id>', methods=['DELETE', 'PUT'])
 def alterar_renda(renda_id):
+    autor = obter_usuario_atual()
+    outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
+    
     if request.method == 'DELETE':
-        if DespesaRepository.excluir_renda(renda_id): return jsonify({"status": "sucesso"}), 200
+        if DespesaRepository.excluir_renda(renda_id): 
+            NotificacaoService.enviar_notificacao(outro_usuario, "🗑️ Receita Excluída", f"{autor} apagou um registro de receita.")
+            return jsonify({"status": "sucesso"}), 200
     else:
         dados = request.json
         if DespesaRepository.atualizar_renda(renda_id, dados.get('valor'), dados.get('data_recebimento')): 
+            NotificacaoService.enviar_notificacao(outro_usuario, "✏️ Receita Alterada", f"{autor} modificou o valor de uma receita.")
             return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
@@ -174,7 +194,7 @@ def pagar_despesa(despesa_id):
     
     if sucesso:
         if despesa:
-            autor = despesa['responsavel_pagamento']
+            autor = obter_usuario_atual()
             outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
             valor_f = f"R$ {float(despesa['valor']):.2f}".replace('.', ',')
             msg = f"✅ {autor} pagou a conta: {despesa['descricao']} ({valor_f})"
@@ -201,7 +221,7 @@ def deletar_despesa(despesa_id):
     
     if sucesso:
         if despesa:
-            autor = despesa['responsavel_pagamento']
+            autor = obter_usuario_atual()
             outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
             valor_f = f"R$ {float(despesa['valor']):.2f}".replace('.', ',')
             msg = f"🗑️ {autor} excluiu a conta: {despesa['descricao']} ({valor_f})"
@@ -216,7 +236,7 @@ def editar_despesa(despesa_id):
     
     if sucesso:
         if despesa_antiga:
-            autor = request.json.get('responsavel_pagamento', despesa_antiga['responsavel_pagamento'])
+            autor = obter_usuario_atual()
             outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
             msg = f"✏️ {autor} alterou a conta: {despesa_antiga['descricao']}"
             NotificacaoService.enviar_notificacao(outro_usuario, "✏️ Conta Alterada", msg)
