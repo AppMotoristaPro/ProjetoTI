@@ -263,7 +263,12 @@ class DespesaRepository:
             mes = data_obj.month
             ano = data_obj.year
             
-            cur.execute("SELECT id, valor FROM rendas WHERE usuario=%s AND fonte=%s AND data_recebimento=%s", (usuario, fonte, data_recebimento))
+            # MÁGICA DA UBER: Procura apenas por mês/ano, ignorando o dia
+            if fonte == 'Uber':
+                cur.execute("SELECT id, valor FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s", (usuario, fonte, mes, ano))
+            else:
+                cur.execute("SELECT id, valor FROM rendas WHERE usuario=%s AND fonte=%s AND data_recebimento=%s", (usuario, fonte, data_recebimento))
+            
             linha = cur.fetchone()
             
             if linha: 
@@ -271,7 +276,8 @@ class DespesaRepository:
                 if novo_valor <= 0:
                     cur.execute("DELETE FROM rendas WHERE id=%s", (linha[0],))
                 else:
-                    cur.execute("UPDATE rendas SET valor = %s WHERE id=%s", (novo_valor, linha[0]))
+                    # Para a Uber, aproveitamos para atualizar a data para o lançamento mais recente
+                    cur.execute("UPDATE rendas SET valor = %s, data_recebimento = %s WHERE id=%s", (novo_valor, data_recebimento, linha[0]))
             else: 
                 if float(valor) > 0:
                     cur.execute("INSERT INTO rendas (usuario, fonte, mes, ano, valor, data_recebimento) VALUES (%s, %s, %s, %s, %s, %s)", (usuario, fonte, mes, ano, valor, data_recebimento))
@@ -444,7 +450,6 @@ class DespesaRepository:
             "rendas": DespesaRepository.listar_rendas_detalhadas(mes, ano)
         }
 
-    # --- NOVO SISTEMA DE ROTAS: INCLUINDO AS KM PADRÃO ---
     @staticmethod
     def obter_pacotao_rotas(mes, ano):
         DespesaRepository._garantir_tabelas()

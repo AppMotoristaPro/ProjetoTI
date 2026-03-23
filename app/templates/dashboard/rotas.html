@@ -239,6 +239,7 @@
         
         calcularEAtualizarTela();
         
+        // Auto-save com debounce de 1 segundo
         clearTimeout(timerSalvar);
         timerSalvar = setTimeout(salvarDiasNoBanco, 1000);
     };
@@ -256,7 +257,7 @@
             const custoDia = obterConfig(r, 'custo', defCusto);
 
             const ganhoRota = dias * ganhoDia;
-            const custoRota = dias * custoDia;
+            const custoRota = dias * custoRota;
             const lucroRota = ganhoRota - custoRota;
 
             document.getElementById(`ganho_${r}`).innerText = formatarMoeda(ganhoRota);
@@ -291,6 +292,7 @@
         setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
     };
 
+    // --- CONTROLES DO MODAL DE CONFIG ---
     const controlarCabecalho = (mostrar) => {
         const cabecalho = document.querySelector('header');
         if (cabecalho) cabecalho.style.display = mostrar ? '' : 'none';
@@ -326,7 +328,7 @@
         recalcularNaHora();
     };
 
-    // --- NOVA LÓGICA: Geração Profissional de Relatório RH ---
+    // --- GERAÇÃO PROFISSIONAL DO WHATSAPP (AGORA COM /KM PARA TODAS AS ROTAS) ---
     const gerarRelatorioWhatsApp = () => {
         const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         const mesNome = meses[currentData.getMonth()];
@@ -335,14 +337,14 @@
         let totalReceber = 0;
         let temDado = false;
 
-        let mensagem = `Relatorio de Rotas e Reembolso - ${mesNome}/${ano}\n\n`;
-        mensagem += `Prezada Coordenacao,\n\n`;
-        mensagem += `Segue o detalhamento das rotas realizadas no periodo para fins de reembolso de ajuda de custo:\n\n`;
+        let mensagem = `*Ajuda de Custo - ${mesNome}/${ano}*\n\n`;
+        mensagem += `Prezada Adriana,\n\n`;
+        mensagem += `*Segue o detalhamento dos Deslocamentos e Reembolso de Francisco Morato:*\n\n`;
 
         const listaRotas = [
             { id: 'Itupeva', nome: 'Itupeva', defGanho: 66.72, defKm: 48.0 },
             { id: 'Cabreuva', nome: 'Cabreuva', defGanho: 81.59, defKm: 58.7 },
-            { id: 'Morato', nome: 'Francisco Morato', defGanho: 139.00, defKm: 100.0 }
+            { id: 'Morato', nome: 'Reembolso: Francisco Morato', defGanho: 139.00, defKm: 100.0 }
         ];
 
         listaRotas.forEach(r => {
@@ -354,11 +356,15 @@
                 const subtotal = dias * ganho;
                 totalReceber += subtotal;
 
-                mensagem += `Rota: ${r.nome}\n`;
-                mensagem += `- Distancia Reconhecida (Ida e Volta): ${kmEmp} km\n`;
-                mensagem += `- Valor da Diaria: ${formatarMoeda(ganho)}\n`;
-                mensagem += `- Dias Realizados: ${dias}\n`;
-                mensagem += `- Subtotal: ${formatarMoeda(subtotal)}\n\n`;
+                // Agora o (R$ X,XX/km) aparece para TODAS as rotas
+                let valorKm = kmEmp > 0 ? (ganho / kmEmp) : 0;
+                let detalheDiaria = ` (${formatarMoeda(valorKm)}/km)`;
+
+                mensagem += `\`${r.nome}\`\n`;
+                mensagem += `• Distancia (Ida e Volta): ${kmEmp} km\n`;
+                mensagem += `• Valor da Diaria: ${formatarMoeda(ganho)}${detalheDiaria}\n`;
+                mensagem += `• Dias: ${dias}\n`;
+                mensagem += `• Subtotal: ${formatarMoeda(subtotal)}\n\n`;
             }
         });
 

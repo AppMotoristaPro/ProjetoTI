@@ -325,7 +325,8 @@
             const contasDoDia = despFiltradas.filter(d => getDataBase(d) === dataStr);
             const marcacaoDoDia = diasMarcadosGlobais.find(m => m.data === dataStr && m.usuario === currentUser);
             
-            const entradasDoDia = rendasGlobais.filter(r => r.data_recebimento === dataStr);
+            // --- MÁGICA DA UBER: Omitir do calendário ---
+            const entradasDoDia = rendasGlobais.filter(r => r.data_recebimento === dataStr && r.fonte !== 'Uber');
             
             let dotHtml = '';
             let corFundoIgor = ''; 
@@ -350,10 +351,7 @@
                 else if (marcacaoDoDia.tipo && marcacaoDoDia.tipo.startsWith('shopee_trabalhado')) markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Trabalhado">✅📦</div>';
                 else if (marcacaoDoDia.tipo === 'shopee_nao_trabalhado') markerHtml = '<div class="text-[8px] opacity-90" title="Shopee: Não Trabalhado">❌📦</div>';
                 else if (marcacaoDoDia.tipo === 'morato_pendente') markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Pendente">🚆🔴</div>';
-                
-                // --- ATUALIZAÇÃO MORATO: Agora lê o formato com data ---
                 else if (marcacaoDoDia.tipo && marcacaoDoDia.tipo.startsWith('morato_reembolsado')) markerHtml = '<div class="text-[8px] opacity-90" title="Morato: Reembolsado">🚆🟢</div>';
-                
                 else if (marcacaoDoDia.tipo === 'coracao') markerHtml = '<div class="text-[8px] opacity-90 animate-pulse" title="Dia Especial">❤️</div>';
                 else if (marcacaoDoDia.tipo === 'carro_previsao') markerHtml = '<div class="text-[8px] opacity-90" title="Carro: Previsão de Oficina">🔧🟡</div>';
                 else if (marcacaoDoDia.tipo === 'carro_parado') markerHtml = '<div class="text-[8px] opacity-90 animate-pulse" title="Carro: Parado na Oficina">🚨🚗</div>';
@@ -488,7 +486,6 @@
 
     window.apenasMarcarTrabalhado = async () => { toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado'); fecharModalShopee(); };
 
-    // --- NOVA FUNÇÃO: Acionar o Modal da Thaynara (Morato) ---
     window.marcarMoratoReembolsado = (dataStr) => {
         diaTrabalhadoAtual = dataStr;
         const tzoffset = (new Date()).getTimezoneOffset() * 60000;
@@ -537,10 +534,7 @@
                 </div>`;
         } else {
             const isPend = marcacao && marcacao.tipo === 'morato_pendente';
-            
-            // --- ATUALIZAÇÃO MORATO: Reconhece a nova versão formatada ---
             const isReemb = marcacao && marcacao.tipo && marcacao.tipo.startsWith('morato_reembolsado');
-            
             const isCoracao = marcacao && marcacao.tipo === 'coracao';
             
             painel.innerHTML = `
@@ -552,9 +546,7 @@
                     <div class="flex items-center gap-2 mb-2"><span class="text-sm">🚆</span><span class="text-[10px] font-black text-pink-800 uppercase">Francisco Morato (Nexus)</span></div>
                     <div class="flex gap-2">
                         <button onclick="toggleMarcacao('${dataStr}', 'Thaynara', 'morato_pendente')" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition ${isPend ? 'bg-red-500 text-white shadow-md' : 'bg-white text-red-500 border border-red-200 hover:bg-red-50'}">Pendente</button>
-                        
                         <button onclick="marcarMoratoReembolsado('${dataStr}')" class="flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition ${isReemb ? 'bg-emerald-500 text-white shadow-md' : 'bg-white text-emerald-500 border border-emerald-200 hover:bg-emerald-50'}">Reembolsado</button>
-                        
                         ${(isPend || isReemb || isCoracao) ? `<button onclick="toggleMarcacao('${dataStr}', 'Thaynara', '')" class="w-8 flex items-center justify-center bg-white text-slate-400 border border-slate-200 rounded-lg hover:bg-slate-100 transition active:scale-90">❌</button>` : ''}
                     </div>
                 </div>`;
@@ -563,8 +555,9 @@
         let entradasAteOntem = 0; let despesasAteOntem = 0;
         let entradasHoje = 0; let despesasHoje = 0;
 
+        // --- MÁGICA DA UBER: Omitir do fluxo de caixa diário ---
         rendasGlobais.forEach(r => {
-            if (!r.data_recebimento) return;
+            if (!r.data_recebimento || r.fonte === 'Uber') return;
             if (r.data_recebimento < dataStr) entradasAteOntem += parseFloat(r.valor);
             else if (r.data_recebimento === dataStr) entradasHoje += parseFloat(r.valor);
         });
@@ -617,7 +610,9 @@
         painelFluxo.classList.remove('hidden');
 
         const contasDoDia = despesasGlobais.filter(d => d.tipo_despesa !== 'Diária' && getDataBase(d) === dataStr);
-        const entradasDoDia = rendasGlobais.filter(r => r.data_recebimento === dataStr);
+        
+        // --- MÁGICA DA UBER: Omitir da lista de hoje ---
+        const entradasDoDia = rendasGlobais.filter(r => r.data_recebimento === dataStr && r.fonte !== 'Uber');
         
         const cont = document.getElementById('lista_contas_dia'); cont.innerHTML = '';
         
