@@ -43,7 +43,11 @@
         carregarEntradas(); 
     };
 
-    const fontes = { 'Igor': ['Shopee', 'Uber', 'Outros'], 'Thaynara': ['Salário', 'VR', 'VA', 'Ajuda de Custo', 'Outros'] };
+    // A MÁGICA ACONTECE AQUI: Adiantamento Quinzenal adicionado para a Thaynara
+    const fontes = { 
+        'Igor': ['Shopee', 'Uber', 'Outros'], 
+        'Thaynara': ['Salário', 'Adiantamento Quinzenal', 'VR', 'VA', 'Ajuda de Custo', 'Outros'] 
+    };
     
     function atualizarFontesRenda() {
         const usu = document.getElementById('entrada_usuario').value;
