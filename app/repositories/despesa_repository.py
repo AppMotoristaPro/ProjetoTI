@@ -436,6 +436,16 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
+    # --- FUNÇÃO RESTAURADA ---
+    @staticmethod
+    def obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant):
+        return {
+            "resumo": DespesaRepository.obter_resumo(mes, ano),
+            "despesas": DespesaRepository.listar_por_mes(mes, ano),
+            "marcacoes": DespesaRepository.listar_dias_marcados(mes_ant, ano_ant) + DespesaRepository.listar_dias_marcados(mes, ano),
+            "rendas": DespesaRepository.listar_rendas_detalhadas(mes, ano)
+        }
+
     # --- NOVO SISTEMA DE ROTAS (SUBSTITUINDO O CARRO) ---
     @staticmethod
     def obter_pacotao_rotas(mes, ano):
