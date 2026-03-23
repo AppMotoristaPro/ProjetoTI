@@ -96,7 +96,7 @@
 
 <div id="modalExplicaSaldo" class="hidden fixed inset-0 z-[70] flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
     <div class="w-full max-w-sm mx-auto bg-white rounded-[32px] p-6 shadow-2xl relative">
-        <button onclick="document.getElementById('modalExplicaSaldo').classList.add('hidden')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <button onclick="fecharModal('modalExplicaSaldo')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-lg font-black text-theme mb-4">Matemática do Saldo</h3>
         <div class="space-y-3 font-bold text-sm">
             <div class="flex justify-between text-emerald-600"><span>(+) Renda Total do Mês</span><span id="math_renda"></span></div>
@@ -108,7 +108,7 @@
 
 <div id="modalPagosLista" class="hidden fixed inset-0 z-[70] flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
     <div class="w-full max-w-sm mx-auto bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[80vh] overflow-y-auto">
-        <button onclick="document.getElementById('modalPagosLista').classList.add('hidden')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <button onclick="fecharModal('modalPagosLista')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-lg font-black text-emerald-500 mb-2">Contas Pagas 🎉</h3>
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Detalhes de pagamento</p>
         <div id="lista_detalhe_pagos" class="space-y-2"></div>
@@ -117,7 +117,7 @@
 
 <div id="modalPendenteLista" class="hidden fixed inset-0 z-[70] flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
     <div class="w-full max-w-sm mx-auto bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[80vh] overflow-y-auto">
-        <button onclick="document.getElementById('modalPendenteLista').classList.add('hidden')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <button onclick="fecharModal('modalPendenteLista')" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 class="text-lg font-black text-theme mb-6">Contas Pendentes</h3>
         <div id="lista_detalhe_pendentes" class="space-y-3"></div>
     </div>
@@ -125,7 +125,7 @@
 
 <div id="modalCalendarioDia" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
-        <button onclick="document.getElementById('modalCalendarioDia').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <button onclick="fecharModal('modalCalendarioDia')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
         <h3 id="modal_cal_data" class="text-sm font-black text-theme uppercase tracking-widest mb-4">--/--/----</h3>
         
         <div id="fluxo_caixa_dia" class="mb-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hidden"></div>
@@ -159,11 +159,25 @@
     let despesasGlobais = []; 
     let resumoGlobal = null; 
     let diasMarcadosGlobais = [];
-    let rendasGlobais = []; // NOVO: Armazena as rendas lidas do banco com as datas
+    let rendasGlobais = []; 
     let chartDespesasObj = null; let chartRendaIgorObj = null; let chartRendaThayObj = null; let chartTiposObj = null; let chartCatObj = null;
     let diaTrabalhadoAtual = null;
     
     Chart.register(ChartDataLabels);
+
+    // --- NOVA FUNÇÃO PARA ESCONDER/MOSTRAR O CABEÇALHO ---
+    const controlarCabecalho = (mostrar) => {
+        const cabecalho = document.querySelector('header') || document.querySelector('nav') || document.querySelector('.fixed.top-0');
+        if (cabecalho) {
+            cabecalho.style.display = mostrar ? '' : 'none';
+        }
+    };
+
+    // Nova função unificada para fechar os modais
+    window.fecharModal = (id) => {
+        document.getElementById(id).classList.add('hidden');
+        controlarCabecalho(true); // Restaura o cabeçalho ao fechar
+    };
 
     window.addEventListener('themeChanged', () => {
         if(resumoGlobal && despesasGlobais) renderizarGraficos(resumoGlobal, despesasGlobais);
@@ -203,7 +217,7 @@
         resumoGlobal = pacotao.resumo;
         despesasGlobais = pacotao.despesas;
         diasMarcadosGlobais = pacotao.marcacoes;
-        rendasGlobais = pacotao.rendas || []; // Salva as rendas no frontend
+        rendasGlobais = pacotao.rendas || []; 
 
         document.getElementById('saldo_final').innerText = formatarMoeda(resumoGlobal.saldo_final);
         document.getElementById('total_pendente').innerText = formatarMoeda(resumoGlobal.total_pendente);
@@ -296,7 +310,6 @@
             const contasDoDia = despFiltradas.filter(d => getDataBase(d) === dataStr);
             const marcacaoDoDia = diasMarcadosGlobais.find(m => m.data === dataStr && m.usuario === currentUser);
             
-            // Verifica se tem dinheiro entrando neste dia (Shopee ou Renda Thaynara)
             const entradasDoDia = rendasGlobais.filter(r => r.data_recebimento === dataStr);
             
             let dotHtml = '';
@@ -337,7 +350,6 @@
                 bgClassCard += ' border'; 
             }
 
-            // O CALENDÁRIO DOURADO: Se tem entrada, o número do dia brilha!
             let spanDia = `<span class="text-xs font-bold">${dia}</span>`;
             if(entradasDoDia.length > 0) {
                 spanDia = `<span class="text-xs font-black text-yellow-500 drop-shadow-sm">${dia}</span>`;
@@ -410,6 +422,7 @@
         
         renderizarCalendario(despesasGlobais);
         calcularProjecao();
+        
         abrirModalCalendario(data);
         
         fetch('/api/calendario/marcar', { 
@@ -437,7 +450,11 @@
         document.getElementById('modalRecebimentoShopee').classList.remove('hidden');
     };
 
-    window.fecharModalShopee = () => { document.getElementById('modalRecebimentoShopee').classList.add('hidden'); diaTrabalhadoAtual = null; };
+    window.fecharModalShopee = () => { 
+        document.getElementById('modalRecebimentoShopee').classList.add('hidden'); 
+        diaTrabalhadoAtual = null; 
+        controlarCabecalho(true); // Restaura o cabeçalho ao fechar
+    };
 
     window.confirmarRecebimentoShopee = async () => {
         const dataRecebimento = document.getElementById('data_recebimento_shopee').value;
@@ -450,6 +467,7 @@
     window.apenasMarcarTrabalhado = async () => { toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado'); fecharModalShopee(); };
 
     const abrirModalCalendario = (dataStr) => {
+        controlarCabecalho(false); // Esconde o cabeçalho
         document.getElementById('modal_cal_data').innerText = `Dia ${formatarData(dataStr)}/${dataStr.split('-')[0]}`;
         
         const currentUser = localStorage.getItem('app_theme') === 'pink' ? 'Thaynara' : 'Igor';
@@ -491,7 +509,6 @@
                 </div>`;
         }
 
-        // --- MATEMÁTICA DO FLUXO DE CAIXA DIÁRIO ---
         let entradasAteOntem = 0; let despesasAteOntem = 0;
         let entradasHoje = 0; let despesasHoje = 0;
 
@@ -531,7 +548,6 @@
             </div>
         `;
         painelFluxo.classList.remove('hidden');
-        // -------------------------------------------
 
         const contasDoDia = despesasGlobais.filter(d => d.tipo_despesa !== 'Diária' && getDataBase(d) === dataStr);
         const entradasDoDia = rendasGlobais.filter(r => r.data_recebimento === dataStr);
@@ -543,12 +559,10 @@
         } else {
             cont.innerHTML = '<div class="border-t border-slate-100 pt-3"></div>';
             
-            // Renderiza primeiro as entradas (em verde)
             entradasDoDia.forEach(r => {
                 cont.innerHTML += `<div class="p-4 bg-emerald-50/50 border border-emerald-100 rounded-[20px] flex justify-between items-center mb-2"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-xs">💰</div><div><p class="text-sm font-bold text-slate-800 leading-tight">${r.fonte}</p><p class="text-[9px] font-semibold text-slate-500 mt-0.5">${r.usuario}</p></div></div><div class="flex flex-col items-end gap-1"><p class="font-black text-emerald-600">+ ${formatarMoeda(r.valor)}</p><span class="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-emerald-100 text-emerald-700">ENTRADA</span></div></div>`;
             });
 
-            // Depois renderiza as saídas (contas)
             contasDoDia.forEach(c => {
                 cont.innerHTML += `<div class="p-4 bg-slate-50 border border-slate-100 rounded-[20px] flex justify-between items-center mb-2"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-xs">${c.tipo_despesa === 'Fixa' ? '🏠' : '💳'}</div><div><p class="text-sm font-bold text-slate-800 leading-tight">${c.descricao}</p><p class="text-[9px] font-semibold text-slate-500 mt-0.5">${c.responsavel_pagamento} • ${c.categoria}</p></div></div><div class="flex flex-col items-end gap-1"><p class="font-black text-slate-800">${formatarMoeda(c.valor)}</p><span class="px-2 py-0.5 rounded text-[8px] font-black uppercase ${c.pago ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">${c.pago ? 'PAGO' : 'PENDENTE'}</span></div></div>`;
             });
@@ -557,6 +571,7 @@
     };
 
     const abrirExplicacaoSaldo = () => {
+        controlarCabecalho(false); // Esconde o cabeçalho
         document.getElementById('math_renda').innerText = formatarMoeda(resumoGlobal.total_renda);
         document.getElementById('math_desp').innerText = formatarMoeda(resumoGlobal.total_despesas_mes);
         document.getElementById('math_saldo').innerText = formatarMoeda(resumoGlobal.saldo_final);
@@ -564,6 +579,7 @@
     };
 
     const abrirResumoPendentes = () => {
+        controlarCabecalho(false); // Esconde o cabeçalho
         const cont = document.getElementById('lista_detalhe_pendentes'); cont.innerHTML = '';
         const pendentes = despesasGlobais.filter(x => !x.pago);
         if(pendentes.length === 0) cont.innerHTML = "<p class='text-center text-xs text-slate-400 font-bold py-4'>Tudo pago! 🎉</p>";
@@ -581,6 +597,7 @@
     };
 
     const abrirModalPagosLista = () => {
+        controlarCabecalho(false); // Esconde o cabeçalho
         const cont = document.getElementById('lista_detalhe_pagos'); cont.innerHTML = '';
         const pagos = despesasGlobais.filter(x => x.pago && x.tipo_despesa !== 'Diária');
         
