@@ -39,7 +39,6 @@
 
 <div class="flex justify-between items-center mb-3 px-2">
     <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest">Resumo das Rotas</h3>
-    <span id="save-status" class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity">Salvo!</span>
 </div>
 
 <div class="space-y-4">
@@ -291,17 +290,37 @@
         diaAbertoParaMarcacao = null;
     };
 
+    // --- CORREÇÃO: ATUALIZAÇÃO OTIMISTA & IDENTIDADE DO SISTEMA ---
     const marcarRota = async (tipo) => {
         if(!diaAbertoParaMarcacao) return;
-        const usuarioReal = localStorage.getItem('usuario_real') || 'Igor';
         
+        // Identidade exclusiva para o sistema de Rotas (Evita apagar a Shopee)
+        const usuarioRotas = 'RotasLogistica';
+
+        // 1. Atualização Otimista (Visual Imediato na tela)
+        marcacoesGlobais = marcacoesGlobais.filter(m => !(m.data === diaAbertoParaMarcacao && (m.tipo === 'rota_itupeva' || m.tipo === 'rota_cabreuva')));
+
+        if (tipo !== '') {
+            marcacoesGlobais.push({ data: diaAbertoParaMarcacao, usuario: usuarioRotas, tipo: tipo });
+        }
+
+        // Recalcula os contadores instantaneamente
+        diasContados.Itupeva = 0;
+        diasContados.Cabreuva = 0;
+        marcacoesGlobais.forEach(m => {
+            if (m.tipo === 'rota_itupeva') diasContados.Itupeva++;
+            if (m.tipo === 'rota_cabreuva') diasContados.Cabreuva++;
+        });
+
+        renderizarCalendarioRotas();
+        calcularEAtualizarTela();
+        fecharModalRotaDia();
+
+        // 2. Salva no banco de dados em background (sem travar a tela)
         await fetch('/api/calendario/marcar', { 
             method: 'POST', headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({data: diaAbertoParaMarcacao, usuario: usuarioReal, tipo: tipo}) 
+            body: JSON.stringify({data: diaAbertoParaMarcacao, usuario: usuarioRotas, tipo: tipo}) 
         });
-        
-        fecharModalRotaDia();
-        carregarRotas(); 
     };
 
     const calcularEAtualizarTela = () => {

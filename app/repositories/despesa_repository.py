@@ -57,6 +57,7 @@ class DespesaRepository:
         except Exception: return []
         finally: conn.close()
 
+    # --- NOVO MOTOR DE MARCAÇÃO: ACEITA MÚLTIPLOS CARIMBOS NO MESMO DIA ---
     @staticmethod
     def marcar_dia(data, usuario, tipo):
         DespesaRepository._garantir_tabelas()
@@ -64,46 +65,53 @@ class DespesaRepository:
         if not conn: return False
         try:
             cur = conn.cursor()
-            cur.execute("SELECT tipo FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
-            linha = cur.fetchone()
-            tipo_anterior = linha[0] if linha else None
-
-            if usuario == 'Thaynara':
-                if tipo_anterior and tipo_anterior.startswith('morato_reembolsado|'):
-                    if not tipo or not tipo.startswith('morato_reembolsado|'):
-                        partes_ant = tipo_anterior.split('|')
-                        if len(partes_ant) == 2:
-                            try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', partes_ant[1], -139.00)
-                            except: pass
+            
+            cur.execute("SELECT id, tipo FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
+            marcacoes_existentes = cur.fetchall()
+            
+            grupo_novo = tipo.split('_')[0] if tipo and '_' in tipo else tipo
+            
+            for m_id, m_tipo in marcacoes_existentes:
+                grupo_existente = m_tipo.split('_')[0] if m_tipo and '_' in m_tipo else m_tipo
                 
-                if tipo and tipo.startswith('morato_reembolsado|'):
+                if not tipo or grupo_existente == grupo_novo:
+                    
+                    if usuario == 'Thaynara' and m_tipo.startswith('morato_reembolsado|'):
+                        partes = m_tipo.split('|')
+                        if len(partes) == 2:
+                            try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', partes[1], -139.00)
+                            except: pass
+                            
+                    if usuario == 'Igor' and m_tipo.startswith('shopee_trabalhado|'):
+                        partes = m_tipo.split('|')
+                        if len(partes) == 2:
+                            try: DespesaRepository.salvar_renda('Igor', 'Shopee', partes[1], -245.00)
+                            except: pass
+                    
+                    cur.execute("DELETE FROM dias_marcados WHERE id = %s", (m_id,))
+            
+            if tipo:
+                if usuario == 'Thaynara' and tipo.startswith('morato_reembolsado|'):
                     partes_novo = tipo.split('|')
                     if len(partes_novo) == 2:
                         try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', partes_novo[1], 139.00)
                         except: pass
-            
-            if usuario == 'Igor':
-                if tipo_anterior and tipo_anterior.startswith('shopee_trabalhado|'):
-                    if not tipo or tipo == 'carro_parado' or not tipo.startswith('shopee_trabalhado|'):
-                        partes_ant = tipo_anterior.split('|')
-                        if len(partes_ant) == 2:
-                            try: DespesaRepository.salvar_renda('Igor', 'Shopee', partes_ant[1], -245.00)
-                            except: pass
-                
-                if tipo and tipo.startswith('shopee_trabalhado|'):
+                        
+                if usuario == 'Igor' and tipo.startswith('shopee_trabalhado|'):
                     partes_novo = tipo.split('|')
                     if len(partes_novo) == 2:
                         try: DespesaRepository.salvar_renda('Igor', 'Shopee', partes_novo[1], 245.00)
                         except: pass
-            
-            cur.execute("DELETE FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
-            if tipo:
+                        
                 cur.execute("INSERT INTO dias_marcados (data_marcada, usuario, tipo) VALUES (%s, %s, %s)", (data, usuario, tipo))
             
             conn.commit()
             return True
-        except Exception: return False
-        finally: conn.close()
+        except Exception as e: 
+            print(f"Erro no marcar_dia: {e}")
+            return False
+        finally: 
+            conn.close()
 
     @staticmethod
     def salvar_inscricao_push(usuario, sub_info):
@@ -113,11 +121,7 @@ class DespesaRepository:
             cur = conn.cursor()
             endpoint = sub_info.get('endpoint')
             sub_str = json.dumps(sub_info)
-            
-            # --- SOLUÇÃO NOTIFICAÇÕES: Remove do banco qualquer usuário que use este mesmo aparelho ---
             cur.execute("DELETE FROM inscricoes_push WHERE subscription_info->>'endpoint' = %s", (endpoint,))
-            
-            # --- Agora salva limpo para o usuário real ---
             cur.execute("INSERT INTO inscricoes_push (usuario, subscription_info) VALUES (%s, %s)", (usuario, sub_str))
             conn.commit()
             return True
@@ -313,7 +317,7 @@ class DespesaRepository:
         conn = get_db_connection()
         if not conn: return False
         try:
-            cur = cur = conn.cursor()
+            cur = conn.cursor()
             cur.execute("DELETE FROM rendas WHERE id=%s", (renda_id,))
             conn.commit()
             return True
@@ -478,12 +482,6 @@ class DespesaRepository:
             return {}
         finally:
             conn.close()
-            
-    @staticmethod
-    def salvar_rotas_dias(mes, ano, dias_json):
-        # Esta função fica legada (inativa) pois o calendário assumiu o controle, 
-        # mas mantemos por segurança caso tenha histórico antigo.
-        return True
 
     @staticmethod
     def salvar_rotas_config(config_json):
