@@ -39,6 +39,7 @@
 
 <div class="flex justify-between items-center mb-3 px-2">
     <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest">Resumo das Rotas</h3>
+    <span id="save-status" class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity">Salvo!</span>
 </div>
 
 <div class="space-y-4">
@@ -128,7 +129,6 @@
         <div class="space-y-3">
             <button onclick="marcarRota('rota_itupeva')" class="w-full py-4 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-2xl font-black active:scale-95 transition shadow-sm">📍 DHL Itupeva</button>
             <button onclick="marcarRota('rota_cabreuva')" class="w-full py-4 bg-pink-50 text-pink-600 border border-pink-200 rounded-2xl font-black active:scale-95 transition shadow-sm">📍 DHL Cabreúva</button>
-            <button onclick="marcarRota('rota_morato')" class="w-full py-4 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-2xl font-black active:scale-95 transition shadow-sm">🚆 Francisco Morato</button>
             <button onclick="marcarRota('')" class="w-full py-3 mt-4 bg-white text-red-500 border border-red-100 rounded-2xl font-bold active:scale-95 transition shadow-sm">🗑️ Limpar Marcação</button>
         </div>
     </div>
@@ -137,7 +137,7 @@
 <div id="modalConfigRotas" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-10">
         <button onclick="fecharModalConfig()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <h3 class="text-xl font-black text-slate-800 mb-1">Engenharia de Custos</h3>
+        <h3 class="text-xl font-black text-slate-800 mb-1">Configurações</h3>
         <p class="text-xs font-bold text-slate-400 mb-6">Defina as bases matemáticas para o aplicativo calcular os ganhos e custos.</p>
         
         <div class="space-y-4">
@@ -176,7 +176,7 @@
                 </div>
             </div>
             
-            <button onclick="salvarConfigRotas()" class="w-full py-4 mt-2 bg-indigo-500 text-white rounded-2xl font-black active:scale-95 transition shadow-lg">SALVAR ENGENHARIA</button>
+            <button onclick="salvarConfigRotas()" class="w-full py-4 mt-2 bg-indigo-500 text-white rounded-2xl font-black active:scale-95 transition shadow-lg">SALVAR</button>
         </div>
     </div>
 </div>
@@ -187,7 +187,7 @@
     let marcacoesGlobais = [];
     let diasContados = { Itupeva: 0, Cabreuva: 0, Morato: 0 };
     let diaAbertoParaMarcacao = null;
-    const CONSUMO_CARRO = 9.2; // km/L constante do carro
+    const CONSUMO_CARRO = 9.2; 
 
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
@@ -217,21 +217,17 @@
         rotasConfig = dados.config || {};
         marcacoesGlobais = dados.marcacoes || [];
 
-        // Preenche inputs globais
         document.getElementById('cfg_preco_km').value = rotasConfig.preco_km || 1.39;
         document.getElementById('cfg_preco_comb').value = rotasConfig.preco_comb || 5.50;
 
-        // Resetar contagem
         diasContados = { Itupeva: 0, Cabreuva: 0, Morato: 0 };
 
-        // Contar dias marcados no calendário
         marcacoesGlobais.forEach(m => {
             if (m.tipo === 'rota_itupeva') diasContados.Itupeva++;
             if (m.tipo === 'rota_cabreuva') diasContados.Cabreuva++;
             if (m.tipo === 'rota_morato' || m.tipo.startsWith('morato_reembolsado') || m.tipo === 'morato_pendente') diasContados.Morato++;
         });
 
-        // Atualizar campos das cidades
         ['Itupeva', 'Cabreuva', 'Morato'].forEach(r => {
             const defKmEmp = r === 'Itupeva' ? 48.0 : (r === 'Cabreuva' ? 58.7 : 100.0);
             const defKmReal = r === 'Itupeva' ? 60.0 : (r === 'Cabreuva' ? 86.7 : 97.0);
@@ -268,11 +264,9 @@
 
             const marcaIt = marcacoesDoDia.find(m => m.tipo === 'rota_itupeva');
             const marcaCb = marcacoesDoDia.find(m => m.tipo === 'rota_cabreuva');
-            const marcaMo = marcacoesDoDia.find(m => m.tipo === 'rota_morato' || m.tipo === 'morato_pendente' || m.tipo.startsWith('morato_reembolsado'));
 
             if(marcaIt) { textoBadge = 'IT'; corBadge = 'bg-indigo-100 text-indigo-600 border-indigo-200'; }
             else if(marcaCb) { textoBadge = 'CB'; corBadge = 'bg-pink-100 text-pink-600 border-pink-200'; }
-            else if(marcaMo) { textoBadge = 'MO'; corBadge = 'bg-emerald-100 text-emerald-600 border-emerald-200'; }
 
             let bgClassCard = isMesAtual && dia === hojeObj.getDate() ? 'bg-theme-light shadow-md border-theme/50' : 'bg-white/40 text-slate-700 hover:bg-white/80 border-white/50';
             if(textoBadge) bgClassCard = `${corBadge} shadow-sm border`;
@@ -299,7 +293,7 @@
 
     const marcarRota = async (tipo) => {
         if(!diaAbertoParaMarcacao) return;
-        const usuarioReal = localStorage.getItem('usuario_real') || 'Thaynara';
+        const usuarioReal = localStorage.getItem('usuario_real') || 'Igor';
         
         await fetch('/api/calendario/marcar', { 
             method: 'POST', headers: {'Content-Type': 'application/json'}, 
@@ -307,7 +301,7 @@
         });
         
         fecharModalRotaDia();
-        carregarRotas(); // Recarrega tudo (calendário e matemática)
+        carregarRotas(); 
     };
 
     const calcularEAtualizarTela = () => {
@@ -326,7 +320,6 @@
             const kmEmp = obterConfig(r, 'km_emp', defKmEmp);
             const kmReal = obterConfig(r, 'km_real', defKmReal);
 
-            // Matemática Inteligente
             const ganhoDia = kmEmp * precoKm;
             const custoDia = (kmReal / CONSUMO_CARRO) * precoComb;
 
