@@ -290,21 +290,19 @@
         diaAbertoParaMarcacao = null;
     };
 
-    // --- CORREÇÃO: ATUALIZAÇÃO OTIMISTA & IDENTIDADE DO SISTEMA ---
     const marcarRota = async (tipo) => {
         if(!diaAbertoParaMarcacao) return;
         
         // Identidade exclusiva para o sistema de Rotas (Evita apagar a Shopee)
         const usuarioRotas = 'RotasLogistica';
 
-        // 1. Atualização Otimista (Visual Imediato na tela)
+        // Atualização Otimista
         marcacoesGlobais = marcacoesGlobais.filter(m => !(m.data === diaAbertoParaMarcacao && (m.tipo === 'rota_itupeva' || m.tipo === 'rota_cabreuva')));
 
         if (tipo !== '') {
             marcacoesGlobais.push({ data: diaAbertoParaMarcacao, usuario: usuarioRotas, tipo: tipo });
         }
 
-        // Recalcula os contadores instantaneamente
         diasContados.Itupeva = 0;
         diasContados.Cabreuva = 0;
         marcacoesGlobais.forEach(m => {
@@ -316,7 +314,7 @@
         calcularEAtualizarTela();
         fecharModalRotaDia();
 
-        // 2. Salva no banco de dados em background (sem travar a tela)
+        // Salva no banco de dados em background (sem travar a tela)
         await fetch('/api/calendario/marcar', { 
             method: 'POST', headers: {'Content-Type': 'application/json'}, 
             body: JSON.stringify({data: diaAbertoParaMarcacao, usuario: usuarioRotas, tipo: tipo}) 
