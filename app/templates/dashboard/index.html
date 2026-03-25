@@ -81,7 +81,7 @@
 <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50 mb-10">
     <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Projeção & Faltas (Shopee/Nexus)</h3>
     <div class="space-y-3 font-bold text-xs">
-        <p class="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-2 border-b border-slate-200 pb-1">Valores a Receber</p>
+        <p class="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-2 border-b border-slate-200 pb-1">Valores a Receber (Somente Previstos)</p>
         <div class="flex justify-between text-indigo-500"><span id="lbl_shopee_pendente_este_mes">(+) Shopee (Neste Mês)</span><span id="math_shopee_pendente_este_mes">R$ 0,00</span></div>
         <div class="flex justify-between text-indigo-400"><span id="lbl_shopee_pendente_prox_mes">(+) Shopee (Próx. Mês)</span><span id="math_shopee_pendente_prox_mes">R$ 0,00</span></div>
         <div class="flex justify-between text-pink-500"><span id="lbl_morato_pendente">(+) Reembolso Pendente</span><span id="math_morato_pendente">R$ 0,00</span></div>
@@ -378,6 +378,7 @@
         }
     };
 
+    // CORREÇÃO DA MATEMÁTICA: "Trabalhado" já não soma na projeção, apenas o "Previsto"!
     const calcularProjecao = () => {
         const currentMonth = currentData.getMonth();
         const currentYear = currentData.getFullYear();
@@ -386,7 +387,8 @@
         let faltasEsteMes = 0; let faltasProximoMes = 0;
 
         diasMarcadosGlobais.forEach(m => {
-            if (m.tipo === 'shopee_previsto' || m.tipo === 'shopee_nao_trabalhado' || (m.tipo && m.tipo.startsWith('shopee_trabalhado'))) {
+            // Apenas Previsto e Não Trabalhado entram na projeção
+            if (m.tipo === 'shopee_previsto' || m.tipo === 'shopee_nao_trabalhado') {
                 const [y, mn, d] = m.data.split('-');
                 const workedDate = new Date(y, mn - 1, d);
                 const dayOfWeek = workedDate.getDay() || 7; 
@@ -394,9 +396,9 @@
                 const payDate = new Date(y, mn - 1, workedDate.getDate() + daysToNextThursday);
                 
                 const isEsteMes = (payDate.getMonth() === currentMonth && payDate.getFullYear() === currentYear);
-                const isProxMes = (payDate.getMonth() > currentMonth || payDate.getFullYear() > currentYear);
+                const isProxMes = (payDate.getFullYear() > currentYear || (payDate.getFullYear() === currentYear && payDate.getMonth() > currentMonth));
 
-                if (m.tipo === 'shopee_previsto' || (m.tipo && m.tipo.startsWith('shopee_trabalhado'))) {
+                if (m.tipo === 'shopee_previsto') {
                     if (isEsteMes) diasShopeeEsteMes++; else if (isProxMes) diasShopeeProximoMes++;
                 } else if (m.tipo === 'shopee_nao_trabalhado') {
                     if (isEsteMes) faltasEsteMes++; else if (isProxMes) faltasProximoMes++;
@@ -431,6 +433,7 @@
         document.getElementById('math_saldo_projetado').innerText = formatarMoeda(saldoProjetado);
     };
 
+    // CORREÇÃO OTIMISTA E RECARREGAMENTO DE CAIXA:
     window.toggleMarcacao = (data, usuario, tipo) => {
         diasMarcadosGlobais = diasMarcadosGlobais.filter(m => !(m.data === data && m.usuario === usuario));
         if (tipo !== '') diasMarcadosGlobais.push({ data, usuario, tipo });
@@ -438,7 +441,9 @@
         renderizarCalendario(despesasGlobais);
         calcularProjecao();
         
-        abrirModalCalendario(data);
+        if (!document.getElementById('modalCalendarioDia').classList.contains('hidden')) {
+            abrirModalCalendario(data);
+        }
         
         fetch('/api/calendario/marcar', { 
             method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({data, usuario, tipo}) 
@@ -449,14 +454,24 @@
             .then(res => res.json())
             .then(pacotao => {
                 resumoGlobal = pacotao.resumo;
+                despesasGlobais = pacotao.despesas;
+                rendasGlobais = pacotao.rendas || [];
+                diasMarcadosGlobais = pacotao.marcacoes || [];
+                
                 document.getElementById('saldo_final').innerText = formatarMoeda(resumoGlobal.saldo_final);
+                document.getElementById('total_pendente').innerText = formatarMoeda(resumoGlobal.total_pendente);
+                
                 renderizarGraficos(resumoGlobal, despesasGlobais);
+                renderizarCalendario(despesasGlobais);
                 calcularProjecao();
+                
+                if (!document.getElementById('modalCalendarioDia').classList.contains('hidden')) {
+                    abrirModalCalendario(data);
+                }
             });
         });
     };
 
-    // CORREÇÃO: "Fui" abre o modal com a quinta-feira sugerida
     window.marcarShopeeTrabalhado = (dataStr) => {
         diaTrabalhadoAtual = dataStr;
         
@@ -487,7 +502,6 @@
         fecharModalShopee();
     };
 
-    // CORREÇÃO: Envia comando 'shopee_trabalhado' puro, a base de dados associa à data do trabalho automaticamente
     window.apenasMarcarTrabalhado = async () => { 
         toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado'); 
         fecharModalShopee(); 
