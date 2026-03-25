@@ -148,7 +148,7 @@
                 <input type="date" id="data_recebimento_shopee" class="w-full p-4 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none focus:border-indigo-400" required>
             </div>
             <button onclick="confirmarRecebimentoShopee()" class="w-full py-4 bg-indigo-50 text-white rounded-2xl font-black active:scale-95 transition shadow-lg mt-2">LANÇAR ENTRADA</button>
-            <button onclick="apenasMarcarTrabalhado()" class="w-full py-3 bg-slate-50 text-slate-500 rounded-2xl font-bold border border-slate-100 hover:bg-slate-100 active:scale-95 transition">Apenas Marcar no Calendário</button>
+            <button onclick="apenasMarcarTrabalhado()" class="w-full py-3 bg-slate-50 text-slate-500 rounded-2xl font-bold border border-slate-100 hover:bg-slate-100 active:scale-95 transition">Apenas Marcar (Sem Data Fixa)</button>
         </div>
     </div>
 </div>
@@ -386,7 +386,6 @@
         let faltasEsteMes = 0; let faltasProximoMes = 0;
 
         diasMarcadosGlobais.forEach(m => {
-            // CORREÇÃO: Agora lê 'shopee_trabalhado' também para somar na projeção!
             if (m.tipo === 'shopee_previsto' || m.tipo === 'shopee_nao_trabalhado' || (m.tipo && m.tipo.startsWith('shopee_trabalhado'))) {
                 const [y, mn, d] = m.data.split('-');
                 const workedDate = new Date(y, mn - 1, d);
@@ -457,7 +456,10 @@
         });
     };
 
+    // CORREÇÃO: "Fui" abre o modal com a quinta-feira sugerida
     window.marcarShopeeTrabalhado = (dataStr) => {
+        diaTrabalhadoAtual = dataStr;
+        
         const [y, mn, d] = dataStr.split('-');
         const workedDate = new Date(y, mn - 1, d);
         const dayOfWeek = workedDate.getDay() || 7; 
@@ -466,8 +468,9 @@
         const tzoffset = payDate.getTimezoneOffset() * 60000;
         const payDateStr = new Date(payDate.getTime() - tzoffset).toISOString().slice(0, 10);
         
-        const tipoComData = `shopee_trabalhado|${payDateStr}`;
-        toggleMarcacao(dataStr, 'Igor', tipoComData);
+        document.getElementById('data_recebimento_shopee').value = payDateStr;
+        document.getElementById('modalCalendarioDia').classList.add('hidden');
+        document.getElementById('modalRecebimentoShopee').classList.remove('hidden');
     };
 
     window.fecharModalShopee = () => { 
@@ -484,7 +487,11 @@
         fecharModalShopee();
     };
 
-    window.apenasMarcarTrabalhado = async () => { toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado'); fecharModalShopee(); };
+    // CORREÇÃO: Envia comando 'shopee_trabalhado' puro, a base de dados associa à data do trabalho automaticamente
+    window.apenasMarcarTrabalhado = async () => { 
+        toggleMarcacao(diaTrabalhadoAtual, 'Igor', 'shopee_trabalhado'); 
+        fecharModalShopee(); 
+    };
 
     window.marcarMoratoReembolsado = (dataStr) => {
         diaTrabalhadoAtual = dataStr;

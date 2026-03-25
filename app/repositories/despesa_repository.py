@@ -57,7 +57,6 @@ class DespesaRepository:
         except Exception: return []
         finally: conn.close()
 
-    # --- NOVO MOTOR DE MARCAÇÃO: ACEITA MÚLTIPLOS CARIMBOS NO MESMO DIA ---
     @staticmethod
     def marcar_dia(data, usuario, tipo):
         DespesaRepository._garantir_tabelas()
@@ -65,6 +64,9 @@ class DespesaRepository:
         if not conn: return False
         try:
             cur = conn.cursor()
+            data_obj = datetime.datetime.strptime(data, '%Y-%m-%d').date()
+            mes_trabalho = data_obj.month
+            ano_trabalho = data_obj.year
             
             cur.execute("SELECT id, tipo FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
             marcacoes_existentes = cur.fetchall()
@@ -75,33 +77,33 @@ class DespesaRepository:
                 grupo_existente = m_tipo.split('_')[0] if m_tipo and '_' in m_tipo else m_tipo
                 
                 if not tipo or grupo_existente == grupo_novo:
-                    
-                    if usuario == 'Thaynara' and m_tipo.startswith('morato_reembolsado|'):
+                    # CORREÇÃO: Lê a data mesmo se o botão "Apenas Marcar" não enviou a data exata atrelada
+                    if usuario == 'Thaynara' and m_tipo.startswith('morato_reembolsado'):
                         partes = m_tipo.split('|')
-                        if len(partes) == 2:
-                            try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', partes[1], -139.00)
-                            except: pass
+                        data_ref = partes[1] if len(partes) == 2 else data
+                        try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', data_ref, -139.00, mes_trabalho, ano_trabalho)
+                        except: pass
                             
-                    if usuario == 'Igor' and m_tipo.startswith('shopee_trabalhado|'):
+                    if usuario == 'Igor' and m_tipo.startswith('shopee_trabalhado'):
                         partes = m_tipo.split('|')
-                        if len(partes) == 2:
-                            try: DespesaRepository.salvar_renda('Igor', 'Shopee', partes[1], -245.00)
-                            except: pass
+                        data_ref = partes[1] if len(partes) == 2 else data
+                        try: DespesaRepository.salvar_renda('Igor', 'Shopee', data_ref, -245.00, mes_trabalho, ano_trabalho)
+                        except: pass
                     
                     cur.execute("DELETE FROM dias_marcados WHERE id = %s", (m_id,))
             
             if tipo:
-                if usuario == 'Thaynara' and tipo.startswith('morato_reembolsado|'):
+                if usuario == 'Thaynara' and tipo.startswith('morato_reembolsado'):
                     partes_novo = tipo.split('|')
-                    if len(partes_novo) == 2:
-                        try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', partes_novo[1], 139.00)
-                        except: pass
+                    data_ref = partes_novo[1] if len(partes_novo) == 2 else data
+                    try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', data_ref, 139.00, mes_trabalho, ano_trabalho)
+                    except: pass
                         
-                if usuario == 'Igor' and tipo.startswith('shopee_trabalhado|'):
+                if usuario == 'Igor' and tipo.startswith('shopee_trabalhado'):
                     partes_novo = tipo.split('|')
-                    if len(partes_novo) == 2:
-                        try: DespesaRepository.salvar_renda('Igor', 'Shopee', partes_novo[1], 245.00)
-                        except: pass
+                    data_ref = partes_novo[1] if len(partes_novo) == 2 else data
+                    try: DespesaRepository.salvar_renda('Igor', 'Shopee', data_ref, 245.00, mes_trabalho, ano_trabalho)
+                    except: pass
                         
                 cur.execute("INSERT INTO dias_marcados (data_marcada, usuario, tipo) VALUES (%s, %s, %s)", (data, usuario, tipo))
             
@@ -261,29 +263,49 @@ class DespesaRepository:
             return resultados
         finally: conn.close()
 
+    # --- MATEMÁTICA BLINDADA: ATUALIZAÇÃO ATÔMICA E LIMPEZA DE CLONES ---
     @staticmethod
-    def salvar_renda(usuario, fonte, data_recebimento, valor):
+    def salvar_renda(usuario, fonte, data_recebimento, valor, mes_forcado=None, ano_forcado=None):
         conn = get_db_connection()
         if not conn: return False
         try:
             cur = conn.cursor()
-            data_obj = datetime.datetime.strptime(data_recebimento, '%Y-%m-%d').date()
-            mes = data_obj.month
-            ano = data_obj.year
-            
-            if fonte == 'Uber':
-                cur.execute("SELECT id, valor FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s", (usuario, fonte, mes, ano))
+            if data_recebimento:
+                data_obj = datetime.datetime.strptime(data_recebimento, '%Y-%m-%d').date()
+                mes = mes_forcado or data_obj.month
+                ano = ano_forcado or data_obj.year
             else:
-                cur.execute("SELECT id, valor FROM rendas WHERE usuario=%s AND fonte=%s AND data_recebimento=%s", (usuario, fonte, data_recebimento))
+                hoje = datetime.date.today()
+                mes = mes_forcado or hoje.month
+                ano = ano_forcado or hoje.year
+                data_recebimento = hoje.strftime('%Y-%m-%d')
             
-            linha = cur.fetchone()
+            agrupar_mensal = fonte in ['Uber', 'Shopee', 'Ajuda de Custo']
             
-            if linha: 
-                novo_valor = float(linha[1]) + float(valor)
-                if novo_valor <= 0:
-                    cur.execute("DELETE FROM rendas WHERE id=%s", (linha[0],))
-                else:
-                    cur.execute("UPDATE rendas SET valor = %s, data_recebimento = %s WHERE id=%s", (novo_valor, data_recebimento, linha[0]))
+            if agrupar_mensal:
+                cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s ORDER BY id ASC", (usuario, fonte, mes, ano))
+            else:
+                cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND data_recebimento=%s ORDER BY id ASC", (usuario, fonte, data_recebimento))
+            
+            linhas = cur.fetchall()
+            
+            if linhas: 
+                primeiro_id = linhas[0][0]
+                # A mágica que resolve os cliques rápidos:
+                cur.execute("UPDATE rendas SET valor = valor + %s, data_recebimento = %s WHERE id=%s RETURNING valor", (valor, data_recebimento, primeiro_id))
+                novo_val = cur.fetchone()[0]
+                
+                # Se cliques rápidos no passado geraram duplicatas, ele soma tudo e apaga as cópias!
+                if len(linhas) > 1:
+                    for l in linhas[1:]:
+                        cur.execute("UPDATE rendas SET valor = valor + (SELECT valor FROM rendas WHERE id=%s) WHERE id=%s", (l[0], primeiro_id))
+                        cur.execute("DELETE FROM rendas WHERE id=%s", (l[0],))
+                        
+                    cur.execute("SELECT valor FROM rendas WHERE id=%s", (primeiro_id,))
+                    novo_val = cur.fetchone()[0]
+
+                if float(novo_val) <= 0:
+                    cur.execute("DELETE FROM rendas WHERE id=%s", (primeiro_id,))
             else: 
                 if float(valor) > 0:
                     cur.execute("INSERT INTO rendas (usuario, fonte, mes, ano, valor, data_recebimento) VALUES (%s, %s, %s, %s, %s, %s)", (usuario, fonte, mes, ano, valor, data_recebimento))
