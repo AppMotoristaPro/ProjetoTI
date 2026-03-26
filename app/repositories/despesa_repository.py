@@ -347,7 +347,7 @@ class DespesaRepository:
             cur = conn.cursor()
             
             primeiro_dia_atual = datetime.date(ano, mes, 1)
-            ultimo_dia_ant = prime_dia_atual - datetime.timedelta(days=1)
+            ultimo_dia_ant = primeiro_dia_atual - datetime.timedelta(days=1)
             
             cur.execute("""
                 SELECT SUM(valor) FROM rendas 
