@@ -74,8 +74,6 @@ class DespesaRepository:
                 grupo_existente = m_tipo.split('_')[0] if m_tipo and '_' in m_tipo else m_tipo
                 
                 if not tipo or grupo_existente == grupo_novo:
-                    # CORREÇÃO: Removido o mes_forcado e ano_forcado
-                    # O sistema agora usa a data exata de recebimento para estornar do mês correto
                     if usuario == 'Thaynara' and m_tipo.startswith('morato_reembolsado'):
                         partes = m_tipo.split('|')
                         data_ref = partes[1] if len(partes) == 2 else data
@@ -91,8 +89,6 @@ class DespesaRepository:
                     cur.execute("DELETE FROM dias_marcados WHERE id = %s", (m_id,))
             
             if tipo:
-                # CORREÇÃO: Removido o mes_forcado e ano_forcado
-                # O sistema agora usa a data exata de recebimento para creditar no mês correto
                 if usuario == 'Thaynara' and tipo.startswith('morato_reembolsado'):
                     partes_novo = tipo.split('|')
                     data_ref = partes_novo[1] if len(partes_novo) == 2 else data
@@ -351,7 +347,7 @@ class DespesaRepository:
             cur = conn.cursor()
             
             primeiro_dia_atual = datetime.date(ano, mes, 1)
-            ultimo_dia_ant = primeiro_dia_atual - datetime.timedelta(days=1)
+            ultimo_dia_ant = prime_dia_atual - datetime.timedelta(days=1)
             
             cur.execute("""
                 SELECT SUM(valor) FROM rendas 
@@ -488,14 +484,16 @@ class DespesaRepository:
             config = row_config[0] if row_config else {
                 "preco_km": 1.39,
                 "preco_comb": 5.50,
-                "Itupeva": {"km_emp": 48.0, "km_real": 60.0},
                 "Cabreuva": {"km_emp": 58.7, "km_real": 86.7},
                 "Morato": {"km_emp": 100.0, "km_real": 97.0}
             }
             
-            marcacoes = DespesaRepository.listar_dias_marcados(mes, ano)
+            # Buscando as quantidades salvas com botões de +/-
+            cur.execute("SELECT dias FROM rotas_mensal WHERE mes = %s AND ano = %s", (mes, ano))
+            row_dias = cur.fetchone()
+            dias = row_dias[0] if row_dias else {"Cabreuva": 0, "Morato": 0}
             
-            return {"config": config, "marcacoes": marcacoes}
+            return {"config": config, "dias": dias}
         except Exception as e:
             print(e)
             return {}
@@ -514,4 +512,24 @@ class DespesaRepository:
             return True
         except Exception: return False
         finally: conn.close()
+
+    @staticmethod
+    def salvar_rotas_dias(mes, ano, dias_json):
+        DespesaRepository._garantir_tabelas()
+        conn = get_db_connection()
+        if not conn: return False
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM rotas_mensal WHERE mes = %s AND ano = %s", (mes, ano))
+            if cur.fetchone():
+                cur.execute("UPDATE rotas_mensal SET dias = %s WHERE mes = %s AND ano = %s", (json.dumps(dias_json), mes, ano))
+            else:
+                cur.execute("INSERT INTO rotas_mensal (mes, ano, dias) VALUES (%s, %s, %s)", (mes, ano, json.dumps(dias_json)))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Erro salvar_rotas_dias: {e}")
+            return False
+        finally:
+            conn.close()
 

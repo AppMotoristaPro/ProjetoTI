@@ -31,47 +31,19 @@
     </div>
 </div>
 
-<div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50 mb-6">
-    <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Calendário de Deslocamentos</h3>
-    <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-black text-slate-400 mb-2"><div class="text-red-400">DOM</div><div>SEG</div><div>TER</div><div>QUA</div><div>QUI</div><div>SEX</div><div>SÁB</div></div>
-    <div id="calendar-grid-rotas" class="grid grid-cols-7 gap-1.5"></div>
-</div>
-
 <div class="flex justify-between items-center mb-3 px-2">
     <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest">Resumo das Rotas</h3>
+    <span id="save-status" class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity">Salvo!</span>
 </div>
 
 <div class="space-y-4">
     <div class="ultra-glass p-5 rounded-[28px] border border-white/60 shadow-sm relative">
         <div class="flex justify-between items-center mb-3">
-            <h4 class="font-black text-slate-800 text-lg flex items-center gap-2">📍 Itupeva</h4>
-            <div class="flex items-center gap-2">
-                <span class="text-2xl font-black text-slate-800" id="card_dias_Itupeva">0</span>
-                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">dias</span>
-            </div>
-        </div>
-        <div class="flex justify-between text-xs font-bold bg-white/40 p-3 rounded-xl">
-            <div class="text-emerald-600">
-                <span class="text-[9px] uppercase block text-emerald-500 mb-0.5">Ganho <span class="text-slate-400 font-medium normal-case">| <span id="card_km_emp_Itupeva">48</span>km Emp</span></span>
-                <span id="ganho_Itupeva">R$ 0,00</span>
-            </div>
-            <div class="text-red-500 text-center">
-                <span class="text-[9px] uppercase block text-red-400 mb-0.5">Custo <span class="text-slate-400 font-medium normal-case">| <span id="card_km_real_Itupeva">60</span>km Real</span></span>
-                <span id="custo_Itupeva">R$ 0,00</span>
-            </div>
-            <div class="text-indigo-600 text-right">
-                <span class="text-[9px] uppercase block text-indigo-400 mb-0.5">Lucro Rota</span>
-                <span id="lucro_Itupeva" class="text-sm font-black">R$ 0,00</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="ultra-glass p-5 rounded-[28px] border border-white/60 shadow-sm relative">
-        <div class="flex justify-between items-center mb-3">
             <h4 class="font-black text-slate-800 text-lg flex items-center gap-2">📍 Cabreúva</h4>
-            <div class="flex items-center gap-2">
-                <span class="text-2xl font-black text-slate-800" id="card_dias_Cabreuva">0</span>
-                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">dias</span>
+            <div class="flex items-center gap-2 bg-white/50 p-1.5 rounded-xl border border-slate-100 shadow-inner">
+                <button onclick="alterarDias('Cabreuva', -1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-black text-slate-500 shadow-sm active:scale-90">-</button>
+                <input type="number" id="dias_Cabreuva" value="0" min="0" onchange="recalcularNaHora()" class="w-10 text-center font-black text-slate-800 bg-transparent outline-none">
+                <button onclick="alterarDias('Cabreuva', 1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-black text-slate-500 shadow-sm active:scale-90">+</button>
             </div>
         </div>
         <div class="flex justify-between text-xs font-bold bg-white/40 p-3 rounded-xl">
@@ -93,9 +65,10 @@
     <div class="ultra-glass p-5 rounded-[28px] border border-white/60 shadow-sm relative">
         <div class="flex justify-between items-center mb-3">
             <h4 class="font-black text-slate-800 text-lg flex items-center gap-2">📍 Morato</h4>
-            <div class="flex items-center gap-2">
-                <span class="text-2xl font-black text-slate-800" id="card_dias_Morato">0</span>
-                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">dias</span>
+            <div class="flex items-center gap-2 bg-white/50 p-1.5 rounded-xl border border-slate-100 shadow-inner">
+                <button onclick="alterarDias('Morato', -1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-black text-slate-500 shadow-sm active:scale-90">-</button>
+                <input type="number" id="dias_Morato" value="0" min="0" onchange="recalcularNaHora()" class="w-10 text-center font-black text-slate-800 bg-transparent outline-none">
+                <button onclick="alterarDias('Morato', 1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-black text-slate-500 shadow-sm active:scale-90">+</button>
             </div>
         </div>
         <div class="flex justify-between text-xs font-bold bg-white/40 p-3 rounded-xl">
@@ -120,19 +93,6 @@
     ENVIAR RELATÓRIO AO RH
 </button>
 
-<div id="modalRotaDia" class="hidden fixed inset-0 z-[80] flex flex-col justify-end bg-slate-900/60 backdrop-blur-md p-4 pb-24 transition-opacity">
-    <div class="w-full max-w-sm mx-auto bg-white rounded-[32px] p-6 shadow-2xl relative">
-        <button onclick="fecharModalRotaDia()" class="absolute top-5 right-5 text-slate-400 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <h3 id="titulo_modal_rota" class="text-lg font-black text-slate-800 mb-6">Rota do dia --/--</h3>
-        
-        <div class="space-y-3">
-            <button onclick="marcarRota('rota_itupeva')" class="w-full py-4 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-2xl font-black active:scale-95 transition shadow-sm">📍 DHL Itupeva</button>
-            <button onclick="marcarRota('rota_cabreuva')" class="w-full py-4 bg-pink-50 text-pink-600 border border-pink-200 rounded-2xl font-black active:scale-95 transition shadow-sm">📍 DHL Cabreúva</button>
-            <button onclick="marcarRota('')" class="w-full py-3 mt-4 bg-white text-red-500 border border-red-100 rounded-2xl font-bold active:scale-95 transition shadow-sm">🗑️ Limpar Marcação</button>
-        </div>
-    </div>
-</div>
-
 <div id="modalConfigRotas" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-10">
         <button onclick="fecharModalConfig()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
@@ -148,14 +108,6 @@
                 <div class="w-1/2 p-3 bg-red-50 border border-red-100 rounded-2xl">
                     <label class="text-[9px] uppercase font-black text-red-500">Valor Combustível</label>
                     <input type="number" step="0.01" id="cfg_preco_comb" class="w-full p-2 mt-1 rounded-xl bg-white border border-red-200 outline-none font-black text-slate-800 text-center text-lg">
-                </div>
-            </div>
-
-            <div class="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                <p class="font-black text-slate-700 mb-2 text-sm uppercase tracking-widest">Itupeva</p>
-                <div class="flex gap-2">
-                    <div class="w-1/2"><label class="text-[9px] uppercase font-bold text-emerald-500 ml-1">KM Empresa</label><input type="number" step="0.1" id="cfg_Itupeva_km_emp" class="w-full p-2 mt-1 rounded-xl border border-slate-200 outline-none font-black text-slate-800"></div>
-                    <div class="w-1/2"><label class="text-[9px] uppercase font-bold text-red-500 ml-1">KM Real</label><input type="number" step="0.1" id="cfg_Itupeva_km_real" class="w-full p-2 mt-1 rounded-xl border border-slate-200 outline-none font-black text-slate-800"></div>
                 </div>
             </div>
             
@@ -183,13 +135,11 @@
 <script>
     let currentData = new Date();
     let rotasConfig = {};
-    let marcacoesGlobais = [];
-    let diasContados = { Itupeva: 0, Cabreuva: 0, Morato: 0 };
-    let diaAbertoParaMarcacao = null;
+    let rotasDias = { Cabreuva: 0, Morato: 0 };
+    let timerSalvar = null;
     const CONSUMO_CARRO = 9.2; 
 
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
     
     const obterConfig = (rota, campo, padrao) => {
         if(rotasConfig[rota] && rotasConfig[rota][campo] !== undefined) return rotasConfig[rota][campo];
@@ -214,22 +164,17 @@
         const dados = await res.json();
         
         rotasConfig = dados.config || {};
-        marcacoesGlobais = dados.marcacoes || [];
+        rotasDias = dados.dias || { Cabreuva: 0, Morato: 0 };
 
         document.getElementById('cfg_preco_km').value = rotasConfig.preco_km || 1.39;
         document.getElementById('cfg_preco_comb').value = rotasConfig.preco_comb || 5.50;
 
-        diasContados = { Itupeva: 0, Cabreuva: 0, Morato: 0 };
-
-        marcacoesGlobais.forEach(m => {
-            if (m.tipo === 'rota_itupeva') diasContados.Itupeva++;
-            if (m.tipo === 'rota_cabreuva') diasContados.Cabreuva++;
-            if (m.tipo === 'rota_morato' || m.tipo.startsWith('morato_reembolsado') || m.tipo === 'morato_pendente') diasContados.Morato++;
-        });
-
-        ['Itupeva', 'Cabreuva', 'Morato'].forEach(r => {
-            const defKmEmp = r === 'Itupeva' ? 48.0 : (r === 'Cabreuva' ? 58.7 : 100.0);
-            const defKmReal = r === 'Itupeva' ? 60.0 : (r === 'Cabreuva' ? 86.7 : 97.0);
+        ['Cabreuva', 'Morato'].forEach(r => {
+            const elInputDias = document.getElementById(`dias_${r}`);
+            if(elInputDias) elInputDias.value = rotasDias[r] || 0;
+            
+            const defKmEmp = r === 'Cabreuva' ? 58.7 : 100.0;
+            const defKmReal = r === 'Cabreuva' ? 86.7 : 97.0;
 
             if(document.getElementById(`cfg_${r}_km_emp`)) {
                 document.getElementById(`cfg_${r}_km_emp`).value = obterConfig(r, 'km_emp', defKmEmp);
@@ -240,85 +185,27 @@
             document.getElementById(`card_km_real_${r}`).innerText = obterConfig(r, 'km_real', defKmReal);
         });
 
-        renderizarCalendarioRotas();
         calcularEAtualizarTela();
     };
 
-    const renderizarCalendarioRotas = () => {
-        const grid = document.getElementById('calendar-grid-rotas');
-        grid.innerHTML = '';
-        const ano = currentData.getFullYear(), mes = currentData.getMonth();
-        const primeiroDia = new Date(ano, mes, 1).getDay(), diasNoMes = new Date(ano, mes + 1, 0).getDate();
-        const hojeObj = new Date();
-        const isMesAtual = hojeObj.getMonth() === mes && hojeObj.getFullYear() === ano;
-
-        for (let i = 0; i < primeiroDia; i++) grid.innerHTML += `<div></div>`;
-        
-        for (let dia = 1; dia <= diasNoMes; dia++) {
-            const dataStr = `${ano}-${String(mes+1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-            const marcacoesDoDia = marcacoesGlobais.filter(m => m.data === dataStr);
-
-            let textoBadge = '';
-            let corBadge = '';
-
-            const marcaIt = marcacoesDoDia.find(m => m.tipo === 'rota_itupeva');
-            const marcaCb = marcacoesDoDia.find(m => m.tipo === 'rota_cabreuva');
-
-            if(marcaIt) { textoBadge = 'IT'; corBadge = 'bg-indigo-100 text-indigo-600 border-indigo-200'; }
-            else if(marcaCb) { textoBadge = 'CB'; corBadge = 'bg-pink-100 text-pink-600 border-pink-200'; }
-
-            let bgClassCard = isMesAtual && dia === hojeObj.getDate() ? 'bg-theme-light shadow-md border-theme/50' : 'bg-white/40 text-slate-700 hover:bg-white/80 border-white/50';
-            if(textoBadge) bgClassCard = `${corBadge} shadow-sm border`;
-            else bgClassCard += ' border';
-
-            grid.innerHTML += `
-                <div onclick="abrirModalRotaDia('${dataStr}')" class="flex flex-col items-center justify-center p-2 rounded-xl cursor-pointer transition active:scale-90 ${bgClassCard} h-12">
-                    <span class="text-xs font-bold">${dia}</span>
-                    ${textoBadge ? `<span class="text-[8px] font-black uppercase mt-1 leading-none">${textoBadge}</span>` : ''}
-                </div>`;
-        }
+    const alterarDias = (rota, delta) => {
+        const input = document.getElementById(`dias_${rota}`);
+        let novoValor = parseInt(input.value || 0) + delta;
+        if(novoValor < 0) novoValor = 0;
+        input.value = novoValor;
+        recalcularNaHora();
     };
 
-    const abrirModalRotaDia = (dataStr) => {
-        diaAbertoParaMarcacao = dataStr;
-        document.getElementById('titulo_modal_rota').innerText = `Rota do dia ${formatarData(dataStr)}`;
-        document.getElementById('modalRotaDia').classList.remove('hidden');
-    };
-
-    const fecharModalRotaDia = () => {
-        document.getElementById('modalRotaDia').classList.add('hidden');
-        diaAbertoParaMarcacao = null;
-    };
-
-    const marcarRota = async (tipo) => {
-        if(!diaAbertoParaMarcacao) return;
-        
-        // Identidade exclusiva para o sistema de Rotas (Evita apagar a Shopee)
-        const usuarioRotas = 'RotasLogistica';
-
-        // Atualização Otimista
-        marcacoesGlobais = marcacoesGlobais.filter(m => !(m.data === diaAbertoParaMarcacao && (m.tipo === 'rota_itupeva' || m.tipo === 'rota_cabreuva')));
-
-        if (tipo !== '') {
-            marcacoesGlobais.push({ data: diaAbertoParaMarcacao, usuario: usuarioRotas, tipo: tipo });
-        }
-
-        diasContados.Itupeva = 0;
-        diasContados.Cabreuva = 0;
-        marcacoesGlobais.forEach(m => {
-            if (m.tipo === 'rota_itupeva') diasContados.Itupeva++;
-            if (m.tipo === 'rota_cabreuva') diasContados.Cabreuva++;
+    const recalcularNaHora = () => {
+        ['Cabreuva', 'Morato'].forEach(r => {
+            const val = document.getElementById(`dias_${r}`).value;
+            rotasDias[r] = parseInt(val || 0);
         });
-
-        renderizarCalendarioRotas();
+        
         calcularEAtualizarTela();
-        fecharModalRotaDia();
-
-        // Salva no banco de dados em background (sem travar a tela)
-        await fetch('/api/calendario/marcar', { 
-            method: 'POST', headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({data: diaAbertoParaMarcacao, usuario: usuarioRotas, tipo: tipo}) 
-        });
+        
+        clearTimeout(timerSalvar);
+        timerSalvar = setTimeout(salvarDiasNoBanco, 1000);
     };
 
     const calcularEAtualizarTela = () => {
@@ -328,11 +215,11 @@
         const precoKm = parseFloat(rotasConfig.preco_km) || 1.39;
         const precoComb = parseFloat(rotasConfig.preco_comb) || 5.50;
 
-        ['Itupeva', 'Cabreuva', 'Morato'].forEach(r => {
-            const dias = diasContados[r] || 0;
+        ['Cabreuva', 'Morato'].forEach(r => {
+            const dias = rotasDias[r] || 0;
             
-            const defKmEmp = r === 'Itupeva' ? 48.0 : (r === 'Cabreuva' ? 58.7 : 100.0);
-            const defKmReal = r === 'Itupeva' ? 60.0 : (r === 'Cabreuva' ? 86.7 : 97.0);
+            const defKmEmp = r === 'Cabreuva' ? 58.7 : 100.0;
+            const defKmReal = r === 'Cabreuva' ? 86.7 : 97.0;
             
             const kmEmp = obterConfig(r, 'km_emp', defKmEmp);
             const kmReal = obterConfig(r, 'km_real', defKmReal);
@@ -344,7 +231,6 @@
             const custoRota = dias * custoDia;
             const lucroRota = ganhoRota - custoRota;
 
-            document.getElementById(`card_dias_${r}`).innerText = dias;
             document.getElementById(`ganho_${r}`).innerText = formatarMoeda(ganhoRota);
             document.getElementById(`custo_${r}`).innerText = formatarMoeda(custoRota);
             document.getElementById(`lucro_${r}`).innerText = formatarMoeda(lucroRota);
@@ -363,6 +249,20 @@
         elLucro.classList.remove('text-indigo-600', 'text-red-500');
         if (lucroRealTotal >= 0) { elLucro.classList.add('text-indigo-600'); } 
         else { elLucro.classList.add('text-red-500'); }
+    };
+
+    const salvarDiasNoBanco = async () => {
+        const objSave = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear(), dias: rotasDias };
+        const statusEl = document.getElementById('save-status');
+        
+        await fetch('/api/rotas/dias', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(objSave)
+        });
+        
+        if(statusEl) {
+            statusEl.classList.remove('opacity-0');
+            setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
+        }
     };
 
     const controlarCabecalho = (mostrar) => {
@@ -384,7 +284,7 @@
         rotasConfig.preco_km = parseFloat(document.getElementById('cfg_preco_km').value || 1.39);
         rotasConfig.preco_comb = parseFloat(document.getElementById('cfg_preco_comb').value || 5.50);
 
-        ['Itupeva', 'Cabreuva', 'Morato'].forEach(r => {
+        ['Cabreuva', 'Morato'].forEach(r => {
             if(!rotasConfig[r]) rotasConfig[r] = {};
             rotasConfig[r].km_emp = parseFloat(document.getElementById(`cfg_${r}_km_emp`).value || 0);
             rotasConfig[r].km_real = parseFloat(document.getElementById(`cfg_${r}_km_real`).value || 0);
@@ -413,13 +313,12 @@
         const precoKm = parseFloat(rotasConfig.preco_km) || 1.39;
 
         const listaRotas = [
-            { id: 'Itupeva', nome: 'Itupeva', defKm: 48.0 },
             { id: 'Cabreuva', nome: 'Cabreuva', defKm: 58.7 },
             { id: 'Morato', nome: 'Reembolso: Francisco Morato', defKm: 100.0 }
         ];
 
         listaRotas.forEach(r => {
-            const dias = diasContados[r.id] || 0;
+            const dias = rotasDias[r.id] || 0;
             if (dias > 0) {
                 temDado = true;
                 const kmEmp = rotasConfig[r.id] ? (rotasConfig[r.id].km_emp || r.defKm) : r.defKm;
