@@ -64,9 +64,6 @@ class DespesaRepository:
         if not conn: return False
         try:
             cur = conn.cursor()
-            data_obj = datetime.datetime.strptime(data, '%Y-%m-%d').date()
-            mes_trabalho = data_obj.month
-            ano_trabalho = data_obj.year
             
             cur.execute("SELECT id, tipo FROM dias_marcados WHERE data_marcada = %s AND usuario = %s", (data, usuario))
             marcacoes_existentes = cur.fetchall()
@@ -77,31 +74,35 @@ class DespesaRepository:
                 grupo_existente = m_tipo.split('_')[0] if m_tipo and '_' in m_tipo else m_tipo
                 
                 if not tipo or grupo_existente == grupo_novo:
+                    # CORREÇÃO: Removido o mes_forcado e ano_forcado
+                    # O sistema agora usa a data exata de recebimento para estornar do mês correto
                     if usuario == 'Thaynara' and m_tipo.startswith('morato_reembolsado'):
                         partes = m_tipo.split('|')
                         data_ref = partes[1] if len(partes) == 2 else data
-                        try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', data_ref, -139.00, mes_trabalho, ano_trabalho)
+                        try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', data_ref, -139.00)
                         except: pass
                             
                     if usuario == 'Igor' and m_tipo.startswith('shopee_trabalhado'):
                         partes = m_tipo.split('|')
                         data_ref = partes[1] if len(partes) == 2 else data
-                        try: DespesaRepository.salvar_renda('Igor', 'Shopee', data_ref, -245.00, mes_trabalho, ano_trabalho)
+                        try: DespesaRepository.salvar_renda('Igor', 'Shopee', data_ref, -245.00)
                         except: pass
                     
                     cur.execute("DELETE FROM dias_marcados WHERE id = %s", (m_id,))
             
             if tipo:
+                # CORREÇÃO: Removido o mes_forcado e ano_forcado
+                # O sistema agora usa a data exata de recebimento para creditar no mês correto
                 if usuario == 'Thaynara' and tipo.startswith('morato_reembolsado'):
                     partes_novo = tipo.split('|')
                     data_ref = partes_novo[1] if len(partes_novo) == 2 else data
-                    try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', data_ref, 139.00, mes_trabalho, ano_trabalho)
+                    try: DespesaRepository.salvar_renda('Thaynara', 'Ajuda de Custo', data_ref, 139.00)
                     except: pass
                         
                 if usuario == 'Igor' and tipo.startswith('shopee_trabalhado'):
                     partes_novo = tipo.split('|')
                     data_ref = partes_novo[1] if len(partes_novo) == 2 else data
-                    try: DespesaRepository.salvar_renda('Igor', 'Shopee', data_ref, 245.00, mes_trabalho, ano_trabalho)
+                    try: DespesaRepository.salvar_renda('Igor', 'Shopee', data_ref, 245.00)
                     except: pass
                         
                 cur.execute("INSERT INTO dias_marcados (data_marcada, usuario, tipo) VALUES (%s, %s, %s)", (data, usuario, tipo))
@@ -278,8 +279,6 @@ class DespesaRepository:
                 ano = ano_forcado or hoje.year
                 data_recebimento = hoje.strftime('%Y-%m-%d')
             
-            # CORREÇÃO DA SHOPEE: Removemos a Shopee daqui para não agrupar.
-            # Agora a Shopee terá uma entrada por data de recebimento (cada quinta-feira será uma linha individual)
             agrupar_mensal = fonte in ['Uber', 'Ajuda de Custo']
             
             if agrupar_mensal:
