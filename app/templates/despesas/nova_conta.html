@@ -55,7 +55,7 @@
             <div class="w-1/2">
                 <label class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest ml-1">Pago Com:</label>
                 <select id="selectFonte" name="fonte_pagamento" class="w-full mt-2 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 outline-none font-medium text-slate-800">
-                    </select>
+                </select>
             </div>
         </div>
 
@@ -78,7 +78,13 @@
         });
     }
 
-    document.addEventListener("DOMContentLoaded", atualizarFontesPagamento);
+    document.addEventListener("DOMContentLoaded", () => {
+        atualizarFontesPagamento();
+        // CORREÇÃO DE FUSO: Pega a data exata do celular do usuário e injeta no input automaticamente
+        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+        const hojeISO = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+        document.querySelector('input[name="data_vencimento"]').value = hojeISO;
+    });
 
     document.getElementById('formDespesa').addEventListener('submit', async (e) => {
         e.preventDefault();

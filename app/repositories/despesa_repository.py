@@ -5,6 +5,11 @@ from app.extensions import get_db_connection
 
 class DespesaRepository:
 
+    # CORREÇÃO GLOBAL: Força o Python a usar sempre UTC-3 (São Paulo) ao invés do horário do servidor
+    @staticmethod
+    def _hoje():
+        return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).date()
+
     @staticmethod
     def _somar_meses(data_original, meses_a_somar):
         if not data_original: return None
@@ -156,7 +161,8 @@ class DespesaRepository:
         if not conn: return []
         try:
             cur = conn.cursor()
-            cur.execute("SELECT descricao, valor, data_vencimento FROM despesas WHERE pago = FALSE AND data_vencimento BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days' AND tipo_despesa IN ('Fixa', 'Variável') ORDER BY data_vencimento ASC")
+            # Força o banco de dados (Neon) a usar o Fuso Horário de SP
+            cur.execute("SELECT descricao, valor, data_vencimento FROM despesas WHERE pago = FALSE AND data_vencimento BETWEEN (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date + INTERVAL '7 days' AND tipo_despesa IN ('Fixa', 'Variável') ORDER BY data_vencimento ASC")
             colunas = [desc[0] for desc in cur.description]
             return [dict(zip(colunas, [str(r[i]) if i==2 else r[i] for i in range(len(r))])) for r in cur.fetchall()]
         except Exception: return []
@@ -168,7 +174,7 @@ class DespesaRepository:
         if not conn: return []
         try:
             cur = conn.cursor()
-            cur.execute("SELECT descricao, valor, responsavel_pagamento FROM despesas WHERE pago = FALSE AND data_vencimento = CURRENT_DATE + INTERVAL '1 day' AND tipo_despesa IN ('Fixa', 'Variável')")
+            cur.execute("SELECT descricao, valor, responsavel_pagamento FROM despesas WHERE pago = FALSE AND data_vencimento = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date + INTERVAL '1 day' AND tipo_despesa IN ('Fixa', 'Variável')")
             colunas = [desc[0] for desc in cur.description]
             return [dict(zip(colunas, row)) for row in cur.fetchall()]
         except Exception: return []
@@ -217,7 +223,9 @@ class DespesaRepository:
                 comp_bin = comprovante_binario if i == 0 else None
                 comp_mime = mimetype if i == 0 else None
                 status_pago = str(dados.get('pago', 'false')).lower() == 'true' if i == 0 else False
-                data_pagamento = datetime.date.today() if status_pago else None
+                
+                # CORREÇÃO DE FUSO NO PYTHON
+                data_pagamento = DespesaRepository._hoje() if status_pago else None
                 
                 cur.execute("""INSERT INTO despesas (descricao, valor, data_vencimento, data_pretensao, responsavel_pagamento, categoria, pago, comprovante_dados, comprovante_mimetype, recorrente, parcela_atual, total_parcelas, observacao, icone_svg, fonte_pagamento, tipo_despesa, grupo_id, data_pagamento) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", (dados.get('descricao'), dados.get('valor'), nova_data_venc, nova_data_pret, dados.get('responsavel_pagamento'), dados.get('categoria', 'Geral'), status_pago, comp_bin, comp_mime, recorrente, p_atual, total_parcelas, dados.get('observacao', ''), dados.get('icone_svg', 'geral'), dados.get('fonte_pagamento'), tipo_despesa, grupo_id, data_pagamento))
             conn.commit()
@@ -270,7 +278,7 @@ class DespesaRepository:
                 mes = mes_forcado or data_obj.month
                 ano = ano_forcado or data_obj.year
             else:
-                hoje = datetime.date.today()
+                hoje = DespesaRepository._hoje()
                 mes = mes_forcado or hoje.month
                 ano = ano_forcado or hoje.year
                 data_recebimento = hoje.strftime('%Y-%m-%d')
@@ -347,6 +355,7 @@ class DespesaRepository:
             cur = conn.cursor()
             
             primeiro_dia_atual = datetime.date(ano, mes, 1)
+            # CORREÇÃO: "primeiro_dia_atual" ao invés do erro "prime_dia_atual" que derrubou a tela
             ultimo_dia_ant = primeiro_dia_atual - datetime.timedelta(days=1)
             
             cur.execute("""
@@ -414,8 +423,8 @@ class DespesaRepository:
         if not conn: return False
         try:
             cur = conn.cursor()
-            if comprovante_binario: cur.execute("UPDATE despesas SET pago = TRUE, data_pagamento = CURRENT_DATE, comprovante_dados = %s, comprovante_mimetype = %s WHERE id = %s", (comprovante_binario, mimetype, despesa_id))
-            else: cur.execute("UPDATE despesas SET pago = TRUE, data_pagamento = CURRENT_DATE WHERE id = %s", (despesa_id,))
+            if comprovante_binario: cur.execute("UPDATE despesas SET pago = TRUE, data_pagamento = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date, comprovante_dados = %s, comprovante_mimetype = %s WHERE id = %s", (comprovante_binario, mimetype, despesa_id))
+            else: cur.execute("UPDATE despesas SET pago = TRUE, data_pagamento = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date WHERE id = %s", (despesa_id,))
             conn.commit()
             return True
         except Exception: return False
@@ -481,17 +490,19 @@ class DespesaRepository:
             
             cur.execute("SELECT config FROM rotas_config ORDER BY id DESC LIMIT 1")
             row_config = cur.fetchone()
+            # RESTAURADO CONFIGURAÇÃO PADRÃO DE ITUPEVA
             config = row_config[0] if row_config else {
                 "preco_km": 1.39,
                 "preco_comb": 5.50,
+                "Itupeva": {"km_emp": 48.0, "km_real": 60.0},
                 "Cabreuva": {"km_emp": 58.7, "km_real": 86.7},
                 "Morato": {"km_emp": 100.0, "km_real": 97.0}
             }
             
-            # Buscando as quantidades salvas com botões de +/-
             cur.execute("SELECT dias FROM rotas_mensal WHERE mes = %s AND ano = %s", (mes, ano))
             row_dias = cur.fetchone()
-            dias = row_dias[0] if row_dias else {"Cabreuva": 0, "Morato": 0}
+            # RESTAURADO BOTÃO ZERO DE ITUPEVA
+            dias = row_dias[0] if row_dias else {"Itupeva": 0, "Cabreuva": 0, "Morato": 0}
             
             return {"config": config, "dias": dias}
         except Exception as e:
