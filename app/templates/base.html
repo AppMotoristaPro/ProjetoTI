@@ -96,6 +96,13 @@
 
         .speed-dial-menu { opacity: 0; transform: translateY(20px) scale(0.9); pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .speed-dial-menu.active { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+
+        /* Animação para a Caça ao Tesouro */
+        @keyframes pulse-heart {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .heart-beat { animation: pulse-heart 1.5s infinite; }
     </style>
 </head>
 <body>
@@ -119,7 +126,7 @@
             <button onclick="toggleSpeedDial()" class="p-2 rounded-xl transition-all active:scale-90 text-slate-500 hover:text-theme focus:outline-none"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg></button>
         </div>
 
-        <button onclick="abrirModalInteligente()" class="flex flex-col items-center relative z-50 active:scale-95 transition-transform focus:outline-none"><div class="btn-active w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white -mt-5"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div></button>
+        <button onclick="abrirModalInteligente()" ondblclick="iniciarCacaTesouro()" class="flex flex-col items-center relative z-50 active:scale-95 transition-transform focus:outline-none"><div class="btn-active w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white -mt-5"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div></button>
 
         <a href="/rotas" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
@@ -162,6 +169,11 @@
                 <button type="submit" id="btnSalvarDiaDia" class="w-full py-4 mt-2 btn-active text-white rounded-2xl font-black tracking-widest active:scale-95 transition">LANÇAR GASTO</button>
             </form>
         </div>
+    </div>
+
+    <div id="cacaTesouroOverlay" class="hidden fixed inset-0 z-[100] bg-gradient-to-br from-pink-300 via-rose-300 to-pink-500 backdrop-blur-md overflow-y-auto flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-white/95 backdrop-blur-lg rounded-[40px] p-8 shadow-2xl relative border border-white/50" id="ctContent">
+            </div>
     </div>
 
     <script>
@@ -272,6 +284,238 @@
                 } else { alert("Erro ao salvar o gasto diário."); }
             } catch (error) { alert("Erro de rede."); } finally { btn.innerText = 'LANÇAR GASTO'; btn.disabled = false; }
         });
+
+        // =========================================================================
+        // MOTOR DO JOGO SECRETO: CAÇA AO TESOURO ❤️
+        // =========================================================================
+        
+        let ctFaseAtual = 0;
+        let ctTentativasFase8 = 3;
+        let ctFase8ArmarioAberto = false;
+
+        const ctFases = [
+            {
+                pergunta: "Quando o fogão não funciona aonde esquentamos a comida?",
+                resposta: "microondas",
+                msgTransicao: "E assim como a comida esquenta rapidinho ali, meu coração também derrete e acelera toda vez que você sorri pra mim. Vamos para a próxima pista..."
+            },
+            {
+                pergunta: "Os moinhos de Holambra são lindos, o que será que tem lá? (Vá até o porta-chaves!)",
+                resposta: "teamo",
+                msgTransicao: "E eu te amo muito mais do que qualquer papel pode expressar! Cada momento ao seu lado é como caminhar no lugar mais lindo do mundo."
+            },
+            {
+                pergunta: "Meu Deus quanta roupa suja, o que fazer? (Vá até a máquina!)",
+                resposta: "voceeaamelhorescolhadaminhavida",
+                msgTransicao: "Você não é só a melhor escolha, você é a minha única escolha. A vida é mais leve e faz muito mais sentido porque a gente divide até as tarefas chatas juntos."
+            },
+            {
+                pergunta: "Se somar o dia do seu aniversário com o dia do meu qual o resultado?",
+                resposta: "16",
+                msgTransicao: "Nossos dias se somam e a nossa história se multiplica. Sou grato por poder celebrar todas as datas importantes da minha vida com você."
+            },
+            {
+                pergunta: "Em que cidade está localizado o hotel que dormimos depois do nosso casamento?",
+                resposta: "osasco",
+                msgTransicao: "Aquele dia foi mágico, mas foi só o primeiro capítulo do nosso 'felizes para sempre'. Eu casaria com você todos os dias se fosse possível!"
+            },
+            {
+                pergunta: "Em meio a tantas bagunças em cima daquele balcão o que será que a gente pode encontrar lá?",
+                resposta: "aminhavidasemvocenaofariasentido",
+                msgTransicao: "Literalmente não faria sentido algum. Você é a maior doçura dos meus dias (espero que essa trufa aí também esteja bem doce!). Prepare-se, estamos quase no fim..."
+            },
+            {
+                pergunta: "A gente chega cansado do serviço do dia a dia corrido e a gente só quer encostar nossa cabeça aonde que eu faço isso?",
+                resposta: "travesseiro",
+                subPergunta: "Está correto! Mas para avançar, eu preciso do código secreto que está te esperando lá embaixo dele...",
+                subResposta: "deus",
+                msgTransicao: "E é exatamente a Ele que eu agradeço todas as noites antes de fechar os olhos. O maior presente que Deus me deu foi o privilégio de dividir o travesseiro e a vida com você."
+            },
+            {
+                pergunta: "Hoje eu lembrei de uma coisa que você me disse há um tempo, era algo que você estava com muita vontade de experimentar. Acredito que você não vai adivinhar, mas vou te dar 3 tentativas agora.",
+                resposta: "pudim",
+                msgFinal: "Parabéns, meu amor! 🎉 Você é a melhor detetive, a melhor esposa e a mulher da minha vida. O seu tão desejado pudim está no armário da cozinha esperando por você! Aproveite cada pedaço, porque você merece o mundo inteiro. Te amo absurdamente!"
+            }
+        ];
+
+        function ctNormalizar(texto) {
+            return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        }
+
+        function iniciarCacaTesouro() {
+            ctFaseAtual = 0;
+            ctTentativasFase8 = 3;
+            ctFase8ArmarioAberto = false;
+            document.getElementById('cacaTesouroOverlay').classList.remove('hidden');
+            renderCtBoasVindas();
+        }
+
+        function fecharCacaTesouro() {
+            document.getElementById('cacaTesouroOverlay').classList.add('hidden');
+        }
+
+        function renderCtBoasVindas() {
+            const container = document.getElementById('ctContent');
+            container.innerHTML = `
+                <button onclick="fecharCacaTesouro()" class="absolute top-4 right-4 text-pink-300 hover:text-pink-600 bg-pink-50 p-2 rounded-full transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                <div class="text-center pt-4">
+                    <div class="text-6xl mb-4 heart-beat">❤️</div>
+                    <h2 class="text-2xl font-black text-pink-600 mb-4">Oi, meu amor!</h2>
+                    <p class="text-sm font-bold text-slate-600 mb-8 leading-relaxed">Achei que você merecia uma surpresa doce hoje. Mas para ganhar, vai ter que jogar... Topa o desafio?</p>
+                    <button onclick="renderCtFase()" class="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-black tracking-widest active:scale-95 shadow-xl transition">INICIAR BRINCADEIRA</button>
+                </div>
+            `;
+        }
+
+        function renderCtTransicao() {
+            const container = document.getElementById('ctContent');
+            const faseAnterior = ctFases[ctFaseAtual - 1];
+            
+            container.innerHTML = `
+                <button onclick="fecharCacaTesouro()" class="absolute top-4 right-4 text-pink-300 hover:text-pink-600 bg-pink-50 p-2 rounded-full transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                <div class="text-center pt-2">
+                    <div class="text-4xl mb-4">✨</div>
+                    <p class="text-sm font-black text-rose-600 mb-8 leading-relaxed italic">"${faseAnterior.msgTransicao}"</p>
+                    <button onclick="renderCtFase()" class="w-full py-4 bg-pink-100 text-pink-600 border border-pink-200 rounded-2xl font-black tracking-widest active:scale-95 shadow-sm transition">CONTINUAR ❤️</button>
+                </div>
+            `;
+        }
+
+        function renderCtFase() {
+            const container = document.getElementById('ctContent');
+            const fase = ctFases[ctFaseAtual];
+            let extraHTML = '';
+
+            if (ctFaseAtual === 6 && ctFase7SubPergunta) {
+                // Caso especial fase 7 (Travesseiro) -> Código Deus
+                container.innerHTML = `
+                    <button onclick="fecharCacaTesouro()" class="absolute top-4 right-4 text-pink-300 hover:text-pink-600 bg-pink-50 p-2 rounded-full transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                    <div class="text-center pt-2">
+                        <span class="px-3 py-1 bg-pink-100 text-pink-600 font-black text-[10px] rounded-full uppercase tracking-widest mb-4 inline-block">Fase ${ctFaseAtual + 1} - Código Secreto</span>
+                        <p class="text-sm font-black text-slate-700 mb-6">${fase.subPergunta}</p>
+                        <input type="text" id="ctResposta" placeholder="Digite o código aqui..." class="w-full p-4 rounded-2xl bg-pink-50 border border-pink-100 text-slate-800 font-bold outline-none text-center mb-4">
+                        <p id="ctErro" class="text-xs font-bold text-red-500 mb-4 hidden">Código incorreto! Tente de novo.</p>
+                        <button onclick="validarCtFase()" class="w-full py-4 bg-pink-500 text-white rounded-2xl font-black tracking-widest active:scale-95 shadow-xl transition">VALIDAR CÓDIGO</button>
+                    </div>
+                `;
+                return;
+            }
+
+            if (ctFaseAtual === 7) {
+                // Caso especial fase 8 (Pudim)
+                if (ctFase8ArmarioAberto) {
+                    container.innerHTML = `
+                        <button onclick="fecharCacaTesouro()" class="absolute top-4 right-4 text-pink-300 hover:text-pink-600 bg-pink-50 p-2 rounded-full transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                        <div class="text-center pt-2">
+                            <div class="text-4xl mb-4">👀</div>
+                            <p class="text-sm font-black text-slate-700 mb-6">O que era que estava te esperando lá no armário da cozinha?</p>
+                            <input type="text" id="ctResposta" placeholder="Digite aqui..." class="w-full p-4 rounded-2xl bg-pink-50 border border-pink-100 text-slate-800 font-bold outline-none text-center mb-4">
+                            <p id="ctErro" class="text-xs font-bold text-red-500 mb-4 hidden">Ainda não... olha de novo!</p>
+                            <button onclick="validarCtFase()" class="w-full py-4 bg-pink-500 text-white rounded-2xl font-black tracking-widest active:scale-95 shadow-xl transition">CONFIRMAR</button>
+                        </div>
+                    `;
+                    return;
+                } else {
+                    extraHTML = `<p class="text-[10px] font-black text-rose-500 uppercase mb-4 tracking-widest">Tentativas restantes: ${ctTentativasFase8}</p>`;
+                }
+            }
+
+            // Render Padrão
+            container.innerHTML = `
+                <button onclick="fecharCacaTesouro()" class="absolute top-4 right-4 text-pink-300 hover:text-pink-600 bg-pink-50 p-2 rounded-full transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                <div class="text-center pt-2">
+                    <span class="px-3 py-1 bg-pink-100 text-pink-600 font-black text-[10px] rounded-full uppercase tracking-widest mb-4 inline-block">Fase ${ctFaseAtual + 1} de ${ctFases.length}</span>
+                    <p class="text-sm font-black text-slate-700 mb-6 leading-relaxed">${fase.pergunta}</p>
+                    ${extraHTML}
+                    <input type="text" id="ctResposta" placeholder="Sua resposta..." class="w-full p-4 rounded-2xl bg-pink-50 border border-pink-100 text-slate-800 font-bold outline-none text-center mb-4">
+                    <p id="ctErro" class="text-xs font-bold text-red-500 mb-4 hidden">Ops, resposta errada! Tente novamente.</p>
+                    <button onclick="validarCtFase()" class="w-full py-4 bg-pink-500 text-white rounded-2xl font-black tracking-widest active:scale-95 shadow-xl transition">CONFIRMAR</button>
+                </div>
+            `;
+        }
+
+        let ctFase7SubPergunta = false;
+
+        function validarCtFase() {
+            const input = document.getElementById('ctResposta');
+            const erroEl = document.getElementById('ctErro');
+            const respostaDigitada = ctNormalizar(input.value);
+            const fase = ctFases[ctFaseAtual];
+
+            let respostaCorreta = fase.resposta;
+            
+            if (ctFaseAtual === 6 && ctFase7SubPergunta) {
+                respostaCorreta = fase.subResposta; // Validando código do travesseiro
+            }
+
+            if (respostaDigitada === respostaCorreta) {
+                erroEl.classList.add('hidden');
+                
+                // Se acertou travesseiro pela 1x, ativa subpergunta e renderiza de novo.
+                if (ctFaseAtual === 6 && !ctFase7SubPergunta) {
+                    ctFase7SubPergunta = true;
+                    renderCtFase();
+                    return;
+                }
+
+                // Se acertou a última (Pudim)
+                if (ctFaseAtual === 7) {
+                    renderCtVitoria();
+                    return;
+                }
+
+                // Avança Fase Normal
+                ctFaseAtual++;
+                ctFase7SubPergunta = false;
+                renderCtTransicao();
+            } else {
+                // Tratamento de erro
+                if (ctFaseAtual === 7 && !ctFase8ArmarioAberto) {
+                    ctTentativasFase8--;
+                    if (ctTentativasFase8 <= 0) {
+                        const container = document.getElementById('ctContent');
+                        container.innerHTML = `
+                            <button onclick="fecharCacaTesouro()" class="absolute top-4 right-4 text-pink-300 hover:text-pink-600 bg-pink-50 p-2 rounded-full transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                            <div class="text-center pt-2">
+                                <div class="text-4xl mb-4">😅</div>
+                                <h3 class="text-lg font-black text-slate-800 mb-2">Tudo bem não ter acertado!</h3>
+                                <p class="text-sm font-bold text-slate-600 mb-8 leading-relaxed">Então eu vou falar para você onde encontrar: Levante e vá até o armário da cozinha.</p>
+                                <button onclick="abrirArmarioPudim()" class="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black tracking-widest active:scale-95 shadow-xl transition">ENCONTREI!</button>
+                            </div>
+                        `;
+                        return;
+                    } else {
+                        renderCtFase(); // Re-renderiza para atualizar numero de tentativas
+                        const novoErro = document.getElementById('ctErro');
+                        novoErro.innerText = `Hummm não é isso!`;
+                        novoErro.classList.remove('hidden');
+                    }
+                } else {
+                    erroEl.classList.remove('hidden');
+                    input.value = '';
+                }
+            }
+        }
+
+        function abrirArmarioPudim() {
+            ctFase8ArmarioAberto = true;
+            renderCtFase();
+        }
+
+        function renderCtVitoria() {
+            const container = document.getElementById('ctContent');
+            const faseFinal = ctFases[ctFases.length - 1];
+            
+            container.innerHTML = `
+                <div class="text-center py-6">
+                    <div class="text-6xl mb-6 heart-beat">🍮❤️</div>
+                    <h2 class="text-2xl font-black text-rose-600 mb-4">Fim do Jogo!</h2>
+                    <p class="text-sm font-black text-slate-700 mb-8 leading-relaxed italic">"${faseFinal.msgFinal}"</p>
+                    <button onclick="fecharCacaTesouro()" class="w-full py-4 bg-pink-100 text-pink-600 border border-pink-200 rounded-2xl font-black tracking-widest active:scale-95 shadow-sm transition">RESGATAR MEU PRÊMIO 💖</button>
+                </div>
+            `;
+        }
+
     </script>
 </body>
 </html>
