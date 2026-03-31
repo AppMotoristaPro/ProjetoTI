@@ -183,7 +183,7 @@
     </div>
 
     <div id="cacaTesouroOverlay" class="hidden fixed inset-0 z-[100] bg-gradient-to-br from-pink-300 via-rose-300 to-pink-500 backdrop-blur-md overflow-y-auto flex items-center justify-center p-4">
-        <audio id="ctMusic" loop src="/static/audio/musica.mp3"></audio>
+        <audio id="ctMusic" loop preload="auto" src="/static/audio/musica.mp3"></audio>
         
         <div class="w-full max-w-sm bg-white/95 backdrop-blur-lg rounded-[40px] p-8 shadow-2xl relative border border-white/50" id="ctContent">
             </div>
@@ -304,8 +304,28 @@
         const btnCentral = document.getElementById('btnCentralPlus');
         let pressTimer;
         let longPressed = false;
+        let audioUnlocked = false; // Flag para o truque do PWA
+
+        function desbloquearAudioPWA() {
+            if (!audioUnlocked) {
+                const audio = document.getElementById('ctMusic');
+                if (audio) {
+                    // Truque: Toca no mudo apenas para o PWA registrar a interação do usuário
+                    audio.volume = 0; 
+                    let playPromise = audio.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            audio.pause();
+                            audio.currentTime = 0;
+                            audioUnlocked = true;
+                        }).catch(e => console.log("Bloqueio padrão do PWA ativo:", e));
+                    }
+                }
+            }
+        }
 
         function startPress(e) {
+            desbloquearAudioPWA(); // Engana o PWA no exato milissegundo do toque
             longPressed = false;
             pressTimer = setTimeout(() => {
                 longPressed = true;
@@ -319,7 +339,7 @@
 
         function handlePlusClick(e) {
             if (!longPressed) {
-                abrirModalInteligente(); // Se foi só um clique rápido, abre a tela de despesas
+                abrirModalInteligente(); // Se foi só um clique rápido, abre a tela de despesas normal
             }
         }
 
@@ -365,7 +385,7 @@
             {
                 pergunta: "Em que cidade está localizado o hotel que dormimos depois do nosso casamento?",
                 resposta: "osasco",
-                msgTransicao: "Aquele dia foi incrivel, mas foi só o primeiro capítulo do nosso 'felizes para sempre'. Eu casaria com você todos os dias se fosse possível!" // CORRIGIDO PARA INCRÍVEL
+                msgTransicao: "Aquele dia foi incrível, mas foi só o primeiro capítulo do nosso 'felizes para sempre'. Eu casaria com você todos os dias se fosse possível!" 
             },
             {
                 pergunta: "Em meio a tantas bagunças em cima daquele balcão o que será que a gente pode encontrar lá?",
@@ -410,8 +430,8 @@
         function iniciarJogoEMusica() {
             const audio = document.getElementById('ctMusic');
             if (audio) {
-                audio.volume = 0.5; // Deixei num volume confortável (50%)
-                audio.play().catch(e => console.log("O navegador bloqueou o áudio automático:", e));
+                audio.volume = 0.5; // Restaura o volume normal
+                audio.play().catch(e => console.log("O PWA bloqueou a reprodução, precisa desbloquear no botão:", e));
             }
             renderCtFase();
         }
@@ -419,7 +439,6 @@
         function fecharCacaTesouro() {
             document.getElementById('cacaTesouroOverlay').classList.add('hidden');
             
-            // Pausa a música e volta pro começo quando fecha o jogo
             const audio = document.getElementById('ctMusic');
             if (audio) {
                 audio.pause();
