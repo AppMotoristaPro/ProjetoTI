@@ -126,7 +126,7 @@
             <button onclick="toggleSpeedDial()" class="p-2 rounded-xl transition-all active:scale-90 text-slate-500 hover:text-theme focus:outline-none"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg></button>
         </div>
 
-        <button onclick="abrirModalInteligente()" ondblclick="iniciarCacaTesouro()" class="flex flex-col items-center relative z-50 active:scale-95 transition-transform focus:outline-none"><div class="btn-active w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white -mt-5"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div></button>
+        <button id="btnCentralPlus" class="flex flex-col items-center relative z-50 active:scale-95 transition-transform focus:outline-none"><div class="btn-active w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white -mt-5"><svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div></button>
 
         <a href="/rotas" class="flex flex-col items-center group"><div class="p-2 rounded-xl transition-all group-active:scale-90 text-slate-500 hover:text-theme">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
@@ -284,6 +284,41 @@
                 } else { alert("Erro ao salvar o gasto diário."); }
             } catch (error) { alert("Erro de rede."); } finally { btn.innerText = 'LANÇAR GASTO'; btn.disabled = false; }
         });
+
+        // =========================================================================
+        // GATILHO SECRETO DO BOTÃO + (PRESSIONAR POR 2 SEGUNDOS)
+        // =========================================================================
+        const btnCentral = document.getElementById('btnCentralPlus');
+        let pressTimer;
+        let longPressed = false;
+
+        function startPress(e) {
+            longPressed = false;
+            pressTimer = setTimeout(() => {
+                longPressed = true;
+                iniciarCacaTesouro();
+            }, 2000); // 2000ms = 2 segundos segurando
+        }
+
+        function cancelPress(e) {
+            clearTimeout(pressTimer);
+        }
+
+        function handlePlusClick(e) {
+            if (!longPressed) {
+                abrirModalInteligente(); // Se foi só um clique rápido, abre a tela de despesas
+            }
+        }
+
+        if (btnCentral) {
+            btnCentral.addEventListener('touchstart', startPress, {passive: true});
+            btnCentral.addEventListener('touchend', cancelPress);
+            btnCentral.addEventListener('touchcancel', cancelPress);
+            btnCentral.addEventListener('mousedown', startPress);
+            btnCentral.addEventListener('mouseup', cancelPress);
+            btnCentral.addEventListener('mouseleave', cancelPress);
+            btnCentral.addEventListener('click', handlePlusClick);
+        }
 
         // =========================================================================
         // MOTOR DO JOGO SECRETO: CAÇA AO TESOURO ❤️
