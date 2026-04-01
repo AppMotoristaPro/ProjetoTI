@@ -67,8 +67,12 @@
     </div>
 
     <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50">
-        <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest mb-4 text-center">Gastos por Categoria</h3>
-        <div class="relative h-64 w-full"><canvas id="chartCategorias"></canvas></div>
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest">Orçamento por Categoria</h3>
+            <span id="meta-save-status" class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity duration-300">Salvo!</span>
+        </div>
+        <div id="lista_metas_categorias" class="space-y-3">
+            </div>
     </div>
 </div>
 
@@ -151,14 +155,13 @@
         </div>
     </div>
 </div>
-
 <script>
     let currentData = new Date(); 
     let despesasGlobais = []; 
     let resumoGlobal = null; 
     let diasMarcadosGlobais = [];
     let rendasGlobais = []; 
-    let chartDespesasObj = null; let chartRendaIgorObj = null; let chartRendaThayObj = null; let chartTiposObj = null; let chartCatObj = null;
+    let chartDespesasObj = null; let chartRendaIgorObj = null; let chartRendaThayObj = null; let chartTiposObj = null;
     let diaTrabalhadoAtual = null;
     
     Chart.register(ChartDataLabels);
@@ -223,6 +226,82 @@
         calcularProjecao();
     }
 
+    // --- NOVO: FUNÇÃO PARA SALVAR A META NO BANCO DE DADOS ---
+    window.definirMetaCategoria = async (categoria) => {
+        let metas = resumoGlobal.metas_categorias || {};
+        let metaAtual = metas[categoria] || '';
+        
+        let novaMeta = prompt(`Defina a meta de gastos para "${categoria}":\n(Apenas números, ex: 250.00)`, metaAtual);
+        
+        if (novaMeta !== null) {
+            novaMeta = parseFloat(novaMeta.replace(',', '.'));
+            if (isNaN(novaMeta) || novaMeta < 0) novaMeta = 0;
+
+            metas[categoria] = novaMeta;
+            resumoGlobal.metas_categorias = metas;
+
+            // Atualiza a tela na hora
+            const catMap = {}; 
+            despesasGlobais.forEach(d => { catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); });
+            renderizarMetasCategorias(Object.entries(catMap).sort((a, b) => b[1] - a[1]));
+
+            // Salva no Backend silenciosamente
+            const objSave = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear(), metas: metas };
+            const statusEl = document.getElementById('meta-save-status');
+            
+            await fetch('/api/dashboard/metas', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(objSave)
+            });
+            
+            if(statusEl) {
+                statusEl.classList.remove('opacity-0');
+                setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
+            }
+        }
+    };
+
+    // --- NOVO: FUNÇÃO PARA RENDERIZAR O PAINEL DE METAS ---
+    const renderizarMetasCategorias = (catsOrd) => {
+        const cont = document.getElementById('lista_metas_categorias');
+        cont.innerHTML = '';
+        let metas = resumoGlobal.metas_categorias || {};
+
+        if (catsOrd.length === 0) {
+            cont.innerHTML = '<p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center py-4">Nenhum gasto registrado ainda.</p>';
+            return;
+        }
+
+        catsOrd.forEach(([cat, gasto]) => {
+            let meta = metas[cat] || 0;
+            let percent = meta > 0 ? (gasto / meta) * 100 : 0;
+            
+            let corBarra = 'bg-emerald-500';
+            if (percent >= 80 && percent < 100) corBarra = 'bg-yellow-400';
+            else if (percent >= 100) corBarra = 'bg-red-500';
+
+            let widthBar = percent > 100 ? 100 : percent;
+            if (meta === 0) widthBar = 0; // Se não tem meta, barra vazia
+
+            cont.innerHTML += `
+                <div class="mb-4 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
+                    <div class="flex justify-between items-end mb-2">
+                        <div>
+                            <span class="text-sm font-bold text-slate-700 block">${cat}</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gasto: <span class="text-slate-600">${formatarMoeda(gasto)}</span></span>
+                        </div>
+                        <div class="text-right cursor-pointer active:scale-90 transition bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm" onclick="definirMetaCategoria('${cat}')">
+                            <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest block mb-0.5">Meta ✏️</span>
+                            <span class="text-xs font-bold ${meta > 0 && gasto > meta ? 'text-red-500' : 'text-slate-800'}">${meta > 0 ? formatarMoeda(meta) : 'Definir'}</span>
+                        </div>
+                    </div>
+                    <div class="w-full h-2.5 bg-slate-200/60 rounded-full overflow-hidden shadow-inner">
+                        <div class="h-full ${corBarra} rounded-full transition-all duration-1000 ease-out" style="width: ${widthBar}%"></div>
+                    </div>
+                </div>
+            `;
+        });
+    };
+
     const renderizarGraficos = (resumo, despesas) => {
         Chart.defaults.color = '#64748b'; Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.font.weight = 'bold';
         const dlOpt = { color: '#fff', font: { weight: 'bold', size: 10 }, formatter: (v) => v > 0 ? 'R$ ' + Math.round(v) : '', textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 5 };
@@ -276,19 +355,16 @@
         if (chartTiposObj) chartTiposObj.destroy();
         chartTiposObj = new Chart(document.getElementById('chartTiposDespesa'), {
             type: 'pie',
-            data: { labels: ['Fixas', 'Variáveis', 'Dia-a-Dia'], datasets: [{ data: [tFixa, tVar, tDia], backgroundColor: ['#4f46e5', '#f97316', '#ec4899'], borderWidth: 0 }] },
+            data: { labels: ['Fixas', 'Parceladas', 'Dia-a-Dia'], datasets: [{ data: [tFixa, tVar, tDia], backgroundColor: ['#4f46e5', '#f97316', '#ec4899'], borderWidth: 0 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font:{size:10} } }, datalabels: dlOpt } }
         });
 
-        const catMap = {}; despesas.forEach(d => { catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); });
+        // Monta os dados para o novo painel de Metas
+        const catMap = {}; 
+        despesas.forEach(d => { catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); });
         const catsOrd = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
-
-        if (chartCatObj) chartCatObj.destroy();
-        chartCatObj = new Chart(document.getElementById('chartCategorias'), {
-            type: 'bar',
-            data: { labels: catsOrd.map(c => c[0]).length ? catsOrd.map(c => c[0]) : ['Nenhuma'], datasets: [{ data: catsOrd.map(c => c[1]).length ? catsOrd.map(c => c[1]) : [0], backgroundColor: '#8b5cf6', borderRadius: 6 }] },
-            options: { layout: { padding: { right: 40 } }, indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { display: false, grid: {display: false} }, y: { grid: {display: false}, border: {display: false}, ticks: { font: {size: 9} } } }, plugins: { legend: { display: false }, datalabels: { color: '#64748b', anchor: 'end', align: 'right', font: {size: 8}, formatter: (v) => v>0 ? 'R$ '+Math.round(v) : '' } } }
-        });
+        
+        renderizarMetasCategorias(catsOrd);
     };
 
     const renderizarCalendario = (despesas) => {
@@ -584,7 +660,8 @@
             });
 
             contasDoDia.forEach(c => {
-                cont.innerHTML += `<div class="p-4 bg-slate-50 border border-slate-100 rounded-[20px] flex justify-between items-center mb-2"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-xs">${c.tipo_despesa === 'Fixa' ? '🏠' : '💳'}</div><div><p class="text-sm font-bold text-slate-800 leading-tight">${c.descricao}</p><p class="text-[9px] font-semibold text-slate-500 mt-0.5">${c.responsavel_pagamento} • ${c.categoria}</p></div></div><div class="flex flex-col items-end gap-1"><p class="font-black text-slate-800">${formatarMoeda(c.valor)}</p><span class="px-2 py-0.5 rounded text-[8px] font-black uppercase ${c.pago ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">${c.pago ? 'PAGO' : 'PENDENTE'}</span></div></div>`;
+                const badgeParcela = c.total_parcelas > 1 ? `<span class="text-[8px] text-orange-600 font-bold ml-1">(${c.parcela_atual}/${c.total_parcelas})</span>` : '';
+                cont.innerHTML += `<div class="p-4 bg-slate-50 border border-slate-100 rounded-[20px] flex justify-between items-center mb-2"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-xs">${c.tipo_despesa === 'Fixa' ? '🏠' : '💳'}</div><div><p class="text-sm font-bold text-slate-800 leading-tight">${c.descricao}${badgeParcela}</p><p class="text-[9px] font-semibold text-slate-500 mt-0.5">${c.responsavel_pagamento} • ${c.categoria}</p></div></div><div class="flex flex-col items-end gap-1"><p class="font-black text-slate-800">${formatarMoeda(c.valor)}</p><span class="px-2 py-0.5 rounded text-[8px] font-black uppercase ${c.pago ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}">${c.pago ? 'PAGO' : 'PENDENTE'}</span></div></div>`;
             });
         }
         document.getElementById('modalCalendarioDia').classList.remove('hidden');

@@ -2,7 +2,7 @@
 {% block content %}
 <div class="mb-8 flex items-center gap-4">
     <a href="/" class="w-12 h-12 rounded-2xl ultra-glass flex items-center justify-center text-slate-500 hover:text-slate-800 transition active:scale-90"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg></a>
-    <h2 class="text-xl font-black text-slate-800 tracking-tight">Despesas Variáveis</h2>
+    <h2 class="text-xl font-black text-slate-800 tracking-tight">Contas Parceladas</h2>
 </div>
 
 <div class="flex justify-between items-center mb-6 ultra-glass p-2 rounded-full">
@@ -12,52 +12,60 @@
 </div>
 
 <p class="text-[10px] text-slate-400 uppercase tracking-widest text-center mb-2 animate-pulse">Deslize a conta para a direita para pagar ➡</p>
-<div class="space-y-4 mb-32" id="lista-variaveis"></div>
+<div class="space-y-4 mb-32" id="lista-parceladas"></div>
 
 <div id="modalNovaVar" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-md p-4 transition-opacity">
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-8">
         <button onclick="document.getElementById('modalNovaVar').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 bg-slate-100 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-        <h3 class="text-lg font-black text-slate-800 mb-6">Conta Variável</h3>
+        <h3 class="text-lg font-black text-slate-800 mb-6">Conta Parcelada</h3>
         <form id="formVar" class="space-y-4">
+            
             <input type="hidden" name="tipo_despesa" value="Variável">
+            
             <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Descrição</label><input type="text" name="descricao" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none focus:border-orange-400"></div>
+            
             <div>
                 <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Categoria</label>
-                <select name="categoria" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700">
-                    <option value="Aliança">Aliança</option>
-                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                    <option value="Elic">Elic</option>
-                    <option value="Imobiliária">Imobiliária</option>
-                    <option value="O Boticário">O Boticário</option>
-                    <option value="Renegociação Faculdade">Renegociação Faculdade</option>
-                    <option value="Outros">Outros</option>
+                <select id="select_categoria_var" name="categoria" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700 focus:border-orange-400" onchange="verificarCategoriaCustomizada('var')">
+                    <option value="Agua">Água</option>
+                    <option value="Aluguel">Aluguel</option>
+                    <option value="Carro">Carro</option>
+                    <option value="Faculdade">Faculdade</option>
+                    <option value="Luz">Luz</option>
+                    <option value="Mercado">Mercado</option>
+                    <option value="Noh">Noh</option>
+                    <option value="Vivo">Vivo</option>
+                    <option value="custom" class="text-orange-500 font-black">➕ Digitar outra...</option>
                 </select>
+                <input type="text" id="input_categoria_var" placeholder="Qual é a categoria?" class="w-full p-3 mt-2 rounded-xl bg-orange-50/50 border border-orange-100 text-orange-800 font-bold outline-none hidden focus:border-orange-400 placeholder:text-orange-300">
             </div>
+
             <div class="flex gap-2">
-                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor</label><input type="number" step="0.01" name="valor" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-black outline-none focus:border-orange-400"></div>
+                <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor da Parcela</label><input type="number" step="0.01" name="valor" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-black outline-none focus:border-orange-400"></div>
                 <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Vencimento</label><input type="date" name="data_vencimento" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm outline-none"></div>
             </div>
+            
             <div class="flex gap-2">
                 <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Previsão Pago</label><input type="date" name="data_pretensao" class="w-full p-3 rounded-xl bg-orange-50 border border-orange-100 text-sm outline-none"></div>
                 <div class="w-1/2"><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Quem Paga?</label><select name="responsavel_pagamento" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none"><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
             </div>
             
             <div class="p-3 rounded-2xl bg-orange-50 border border-orange-100">
-                <div class="flex items-center gap-2 mb-2"><input type="checkbox" id="recorrente" name="recorrente" value="true" onchange="toggleParcelas()" class="w-4 h-4 accent-orange-500"><label for="recorrente" class="text-xs font-bold text-orange-800">É Parcelado?</label></div>
-                <div id="box-parcelas" class="hidden flex flex-col gap-2 pt-2 border-t border-orange-200/50">
+                <input type="hidden" name="recorrente" value="true">
+                <div class="flex flex-col gap-2">
                     <div class="flex gap-2">
-                        <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Parcela Atual</label><input type="number" name="parcela_atual" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
-                        <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold">Total Meses</label><input type="number" name="total_parcelas" value="1" min="1" class="w-full p-2 rounded-lg bg-white border border-orange-100 text-center font-bold"></div>
+                        <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold ml-1">Parcela Atual</label><input type="number" name="parcela_atual" value="1" min="1" class="w-full p-2 rounded-xl bg-white border border-orange-100 text-center font-bold outline-none focus:border-orange-400"></div>
+                        <div class="w-1/2"><label class="text-[9px] uppercase text-orange-600 font-bold ml-1">Total de Meses</label><input type="number" name="total_parcelas" value="2" min="1" class="w-full p-2 rounded-xl bg-white border border-orange-100 text-center font-bold outline-none focus:border-orange-400"></div>
                     </div>
                     <div class="flex items-center gap-2 mt-1 pt-2 border-t border-orange-200/50">
-                        <input type="checkbox" id="repetir_previsao_var" name="repetir_previsao" value="true" class="w-4 h-4 accent-orange-500">
-                        <label for="repetir_previsao_var" class="text-[10px] font-bold text-orange-800">Repetir previsão para as próximas parcelas?</label>
+                        <input type="checkbox" id="repetir_previsao_var" name="repetir_previsao" value="true" class="w-4 h-4 accent-orange-500" checked>
+                        <label for="repetir_previsao_var" class="text-[10px] font-bold text-orange-800">Repetir previsão de pagamento?</label>
                     </div>
                 </div>
             </div>
             
             <div><label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Observações</label><textarea name="observacao" rows="2" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 outline-none text-sm"></textarea></div>
-            <button type="submit" id="btnSalvarVar" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition shadow-lg">Guardar Conta</button>
+            <button type="submit" id="btnSalvarVar" class="w-full py-4 btn-active text-white rounded-2xl font-bold active:scale-95 transition shadow-lg">Guardar Conta Parcelada</button>
         </form>
     </div>
 </div>
@@ -116,30 +124,30 @@
     let currentData = new Date(); let contaEmFocoId = null;
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
-    function toggleParcelas() { const box = document.getElementById('box-parcelas'); if(document.getElementById('recorrente').checked) box.classList.remove('hidden'); else box.classList.add('hidden'); }
     
-    // MÊS GLOBAL: Salva a escolha do usuário
+    // MÊS GLOBAL
     const mudarMes = (d) => { 
         currentData.setMonth(currentData.getMonth() + d); 
         const mesGlobal = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear() };
         localStorage.setItem('mesGlobalData', JSON.stringify(mesGlobal));
-        carregarVariaveis(); 
+        carregarParceladas(); 
     };
 
-    const carregarVariaveis = async () => {
+    const carregarParceladas = async () => {
         const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         document.getElementById('mesDisplay').innerText = `${meses[currentData.getMonth()]} / ${currentData.getFullYear()}`;
         const res = await fetch(`/api/despesas?mes=${currentData.getMonth()+1}&ano=${currentData.getFullYear()}`);
         const todas = await res.json();
-        const varsGlobais = todas.filter(x => x.tipo_despesa === 'Variável' && !x.pago);
-        const cont = document.getElementById('lista-variaveis'); cont.innerHTML = '';
-        if(varsGlobais.length === 0) { cont.innerHTML = `<div class="text-center py-8 ultra-glass rounded-3xl"><p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Tudo em dia!</p></div>`; return; }
+        
+        const parceladasGlobais = todas.filter(x => x.tipo_despesa === 'Variável' && !x.pago);
+        const cont = document.getElementById('lista-parceladas'); cont.innerHTML = '';
+        if(parceladasGlobais.length === 0) { cont.innerHTML = `<div class="text-center py-8 ultra-glass rounded-3xl"><p class="text-slate-500 text-xs font-bold uppercase tracking-wider">Tudo em dia!</p></div>`; return; }
 
-        varsGlobais.forEach(x => {
+        parceladasGlobais.forEach(x => {
             const descSafe = x.descricao.replace(/'/g, "\\'");
             const obsSafe = (x.observacao || "").replace(/'/g, "\\'").replace(/\n/g, " ");
             const fonteSafe = (x.fonte_pagamento || "Geral");
-            const badgeParcela = x.total_parcelas > 1 ? `<p class="text-[10px] text-orange-600 font-black tracking-widest uppercase mt-0.5">Parcela ${x.parcela_atual}/${x.total_parcelas}</p>` : '';
+            const badgeParcela = x.total_parcelas > 1 ? `<p class="text-[10px] text-orange-600 font-black tracking-widest uppercase mt-0.5">Parcela ${x.parcela_atual}/${x.total_parcelas}</p>` : '<p class="text-[10px] text-slate-400 font-black tracking-widest uppercase mt-0.5">Mês Único</p>';
             
             cont.innerHTML += `
                 <div id="conta-card-${x.id}" class="relative rounded-[28px] shadow-sm overflow-hidden swipe-container bg-transparent">
@@ -156,7 +164,7 @@
                         </div>
                         <div class="flex flex-col items-end justify-center h-full gap-1 w-[30%] pointer-events-none">
                             <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
-                            <span class="text-[7px] font-black text-theme uppercase bg-theme-light px-2 py-0.5 rounded-md mt-1 line-clamp-1">${x.categoria}</span>
+                            <span class="text-[7px] font-black text-theme uppercase bg-theme-light px-2 py-0.5 rounded-md mt-1 line-clamp-1 text-center max-w-full">${x.categoria}</span>
                         </div>
                     </div>
                 </div>`;
@@ -166,17 +174,38 @@
     const abrirModalNovaVar = () => document.getElementById('modalNovaVar').classList.remove('hidden');
 
     document.getElementById('formVar').addEventListener('submit', async (e) => {
-        e.preventDefault(); const btn = document.getElementById('btnSalvarVar'); btn.innerText = 'LANÇANDO... ⏳'; btn.disabled = true;
-        await fetch('/api/despesas/nova', { method: 'POST', body: new FormData(e.target) });
-        document.getElementById('modalNovaVar').classList.add('hidden'); btn.innerText = 'Guardar Conta'; btn.disabled = false;
-        e.target.reset(); carregarVariaveis();
+        e.preventDefault(); 
+        const btn = document.getElementById('btnSalvarVar'); 
+        btn.innerText = 'LANÇANDO... ⏳'; 
+        btn.disabled = true;
+        
+        const formData = new FormData(e.target);
+        
+        if (formData.get('categoria') === 'custom') {
+            const customCat = document.getElementById('input_categoria_var').value;
+            if(customCat && customCat.trim() !== '') {
+                formData.set('categoria', customCat.trim());
+            } else {
+                alert("Por favor, digite o nome da categoria.");
+                btn.innerText = 'Guardar Conta Parcelada'; btn.disabled = false;
+                return;
+            }
+        }
+
+        await fetch('/api/despesas/nova', { method: 'POST', body: formData });
+        
+        document.getElementById('modalNovaVar').classList.add('hidden'); 
+        btn.innerText = 'Guardar Conta Parcelada'; btn.disabled = false;
+        e.target.reset(); 
+        document.getElementById('input_categoria_var').classList.add('hidden');
+        carregarParceladas();
     });
 
     const fecharModais = () => { document.querySelectorAll('[id^="modal"]').forEach(m => { if(m.id !== 'modalNovaVar') m.classList.add('hidden'); }); };
 
     const abrirModalDetalhes = (id, desc, valor, dataV, dataP, resp, fonte, obs, p_atual, t_parc) => {
         document.getElementById('det_nome').innerText = desc;
-        document.getElementById('det_parcela').innerText = t_parc > 1 ? `Parcela ${p_atual} de ${t_parc}` : 'Conta Variável / Única';
+        document.getElementById('det_parcela').innerText = t_parc > 1 ? `Parcela ${p_atual} de ${t_parc}` : 'Conta Parcelada / Mês Único';
         document.getElementById('det_valor').innerText = formatarMoeda(valor);
         document.getElementById('det_vence').innerText = formatarData(dataV);
         document.getElementById('det_prev').innerText = dataP ? formatarData(dataP) : 'Não definida';
@@ -195,7 +224,7 @@
                 const excTodas = confirm("Esta é uma conta com parcelas. Deseja excluir TODAS as parcelas futuras desta conta?\n\n[OK] = Excluir TODAS as parcelas\n[Cancelar] = Excluir SÓ ESTA");
                 if (excTodas) params = '?todas=true';
             } else { if(!confirm("Confirmar exclusão desta conta?")) return; }
-            await fetch(`/api/despesas/${id}${params}`, { method: 'DELETE' }); fecharModais(); carregarVariaveis();
+            await fetch(`/api/despesas/${id}${params}`, { method: 'DELETE' }); fecharModais(); carregarParceladas();
         };
         document.getElementById('modalDetalhes').classList.remove('hidden');
     };
@@ -204,7 +233,7 @@
         e.preventDefault();
         const dados = { descricao: document.getElementById('edit_descricao').value, valor: parseFloat(document.getElementById('edit_valor').value), data_vencimento: document.getElementById('edit_data').value, data_pretensao: document.getElementById('edit_prev').value, responsavel_pagamento: document.getElementById('edit_responsavel').value };
         await fetch(`/api/despesas/${document.getElementById('edit_id').value}/editar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
-        fecharModais(); carregarVariaveis();
+        fecharModais(); carregarParceladas();
     });
 
     let isSwiping = false, startX = 0, currentX = 0, swipeTarget = null, swipeBg = null;
@@ -218,13 +247,12 @@
     const dispararPagamento = async (file) => { const cardNode = document.getElementById(`conta-card-${contaEmFocoId}`); if(cardNode) { cardNode.style.transition = "all 0.3s"; cardNode.style.opacity = "0"; setTimeout(() => cardNode.remove(), 300); } const formData = new FormData(); if(file) formData.append('comprovante', file); await fetch(`/api/despesas/${contaEmFocoId}/pagar`, { method: 'POST', body: formData }); };
 
     document.addEventListener("DOMContentLoaded", () => {
-        // MÊS GLOBAL: Lê a escolha do usuário
         const mesGlobalStr = localStorage.getItem('mesGlobalData');
         if (mesGlobalStr) {
             const mesGlobal = JSON.parse(mesGlobalStr);
             currentData = new Date(mesGlobal.ano, mesGlobal.mes - 1, 1);
         }
-        carregarVariaveis();
+        carregarParceladas();
     });
 </script>
 {% endblock %}

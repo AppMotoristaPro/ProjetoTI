@@ -99,10 +99,13 @@ def tela_rotas(): return render_template('dashboard/rotas.html')
 
 @despesas_bp.route('/entradas', methods=['GET'])
 def tela_entradas(): return render_template('dashboard/entradas.html')
+
 @despesas_bp.route('/fixas', methods=['GET'])
 def tela_fixas(): return render_template('despesas/fixas.html')
-@despesas_bp.route('/variaveis', methods=['GET'])
-def tela_variaveis(): return render_template('despesas/variaveis.html')
+
+# MUDANÇA DE NOME: De "/variaveis" para "/parceladas", mas ainda renderiza o arquivo "variaveis.html"
+@despesas_bp.route('/parceladas', methods=['GET'])
+def tela_parceladas(): return render_template('despesas/variaveis.html')
 
 @despesas_bp.route('/api/despesas/nova', methods=['POST'])
 def nova_despesa():
@@ -266,6 +269,13 @@ def iniciar_dashboard():
         ano_ant -= 1
     pacotao = DespesaRepository.obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant)
     return jsonify(pacotao), 200
+
+# NOVO ENDPOINT: Recebe e Salva as Metas do Gráfico
+@despesas_bp.route('/api/dashboard/metas', methods=['POST'])
+def salvar_dashboard_metas():
+    dados = request.json
+    sucesso = DespesaRepository.salvar_metas_categorias(dados.get('mes'), dados.get('ano'), dados.get('metas'))
+    return jsonify({"status": "sucesso" if sucesso else "erro"}), 200 if sucesso else 500
 
 @despesas_bp.route('/api/rotas/iniciar', methods=['GET'])
 def iniciar_rotas():

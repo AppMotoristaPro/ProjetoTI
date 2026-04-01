@@ -5,7 +5,7 @@ from app.extensions import get_db_connection
 
 class DespesaRepository:
 
-    # CORREÇÃO GLOBAL: Força o Python a usar sempre UTC-3 (São Paulo) ao invés do horário do servidor
+    # Força o Python a usar sempre UTC-3 (São Paulo)
     @staticmethod
     def _hoje():
         return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).date()
@@ -44,6 +44,16 @@ class DespesaRepository:
                 CREATE TABLE IF NOT EXISTS rotas_config (
                     id SERIAL PRIMARY KEY,
                     config JSONB DEFAULT '{}'
+                );
+            """)
+            # NOVO: Tabela para Metas de Orçamento por Categoria
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS metas_mensais (
+                    id SERIAL PRIMARY KEY,
+                    mes INT NOT NULL,
+                    ano INT NOT NULL,
+                    metas JSONB DEFAULT '{}',
+                    UNIQUE(mes, ano)
                 );
             """)
             conn.commit()
@@ -161,7 +171,6 @@ class DespesaRepository:
         if not conn: return []
         try:
             cur = conn.cursor()
-            # Força o banco de dados (Neon) a usar o Fuso Horário de SP
             cur.execute("SELECT descricao, valor, data_vencimento FROM despesas WHERE pago = FALSE AND data_vencimento BETWEEN (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date AND (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date + INTERVAL '7 days' AND tipo_despesa IN ('Fixa', 'Variável') ORDER BY data_vencimento ASC")
             colunas = [desc[0] for desc in cur.description]
             return [dict(zip(colunas, [str(r[i]) if i==2 else r[i] for i in range(len(r))])) for r in cur.fetchall()]
@@ -224,13 +233,12 @@ class DespesaRepository:
                 comp_mime = mimetype if i == 0 else None
                 status_pago = str(dados.get('pago', 'false')).lower() == 'true' if i == 0 else False
                 
-                # CORREÇÃO DE FUSO NO PYTHON
                 data_pagamento = DespesaRepository._hoje() if status_pago else None
                 
                 cur.execute("""INSERT INTO despesas (descricao, valor, data_vencimento, data_pretensao, responsavel_pagamento, categoria, pago, comprovante_dados, comprovante_mimetype, recorrente, parcela_atual, total_parcelas, observacao, icone_svg, fonte_pagamento, tipo_despesa, grupo_id, data_pagamento) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", (dados.get('descricao'), dados.get('valor'), nova_data_venc, nova_data_pret, dados.get('responsavel_pagamento'), dados.get('categoria', 'Geral'), status_pago, comp_bin, comp_mime, recorrente, p_atual, total_parcelas, dados.get('observacao', ''), dados.get('icone_svg', 'geral'), dados.get('fonte_pagamento'), tipo_despesa, grupo_id, data_pagamento))
             conn.commit()
             return True
-        except Exception: return False
+        except Exception as e: print(e); return False
         finally: conn.close()
 
     @staticmethod
@@ -347,15 +355,41 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
+    # NOVO: Função para salvar a meta da categoria no banco
+    @staticmethod
+    def salvar_metas_categorias(mes, ano, metas_json):
+        DespesaRepository._garantir_tabelas()
+        conn = get_db_connection()
+        if not conn: return False
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM metas_mensais WHERE mes = %s AND ano = %s", (mes, ano))
+            if cur.fetchone():
+                cur.execute("UPDATE metas_mensais SET metas = %s WHERE mes = %s AND ano = %s", (json.dumps(metas_json), mes, ano))
+            else:
+                cur.execute("INSERT INTO metas_mensais (mes, ano, metas) VALUES (%s, %s, %s)", (mes, ano, json.dumps(metas_json)))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Erro ao salvar metas: {e}")
+            return False
+        finally:
+            conn.close()
+
     @staticmethod
     def obter_resumo(mes, ano):
+        DespesaRepository._garantir_tabelas()
         conn = get_db_connection()
         if not conn: return {}
         try:
             cur = conn.cursor()
             
+            # Buscar as Metas da Categoria salvas
+            cur.execute("SELECT metas FROM metas_mensais WHERE mes = %s AND ano = %s", (mes, ano))
+            row_metas = cur.fetchone()
+            metas_categorias = row_metas[0] if row_metas else {}
+            
             primeiro_dia_atual = datetime.date(ano, mes, 1)
-            # CORREÇÃO: "primeiro_dia_atual" ao invés do erro "prime_dia_atual" que derrubou a tela
             ultimo_dia_ant = primeiro_dia_atual - datetime.timedelta(days=1)
             
             cur.execute("""
@@ -402,7 +436,8 @@ class DespesaRepository:
                 "total_despesas_mes": total_todas_despesas_mes,
                 "total_caixinhas_mes": 0.0,
                 "saldo_mes_anterior": saldo_mes_anterior, 
-                "saldo_final": saldo_final
+                "saldo_final": saldo_final,
+                "metas_categorias": metas_categorias # Retorna as metas para o Dashboard
             }
         finally: conn.close()
 
@@ -490,7 +525,6 @@ class DespesaRepository:
             
             cur.execute("SELECT config FROM rotas_config ORDER BY id DESC LIMIT 1")
             row_config = cur.fetchone()
-            # RESTAURADO CONFIGURAÇÃO PADRÃO DE ITUPEVA
             config = row_config[0] if row_config else {
                 "preco_km": 1.39,
                 "preco_comb": 5.50,
@@ -501,7 +535,6 @@ class DespesaRepository:
             
             cur.execute("SELECT dias FROM rotas_mensal WHERE mes = %s AND ano = %s", (mes, ano))
             row_dias = cur.fetchone()
-            # RESTAURADO BOTÃO ZERO DE ITUPEVA
             dias = row_dias[0] if row_dias else {"Itupeva": 0, "Cabreuva": 0, "Morato": 0}
             
             return {"config": config, "dias": dias}

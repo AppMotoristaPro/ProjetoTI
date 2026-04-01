@@ -28,23 +28,18 @@
             
             <div>
                 <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Categoria</label>
-                <select name="categoria" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700 focus:border-indigo-400">
+                <select id="select_categoria_fixa" name="categoria" required class="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700 focus:border-indigo-400" onchange="verificarCategoriaCustomizada('fixa')">
                     <option value="Agua">Água</option>
                     <option value="Aluguel">Aluguel</option>
-                    <option value="Barbeiro">Barbeiro</option>
-                    <option value="Beleza">Beleza</option>
                     <option value="Carro">Carro</option>
                     <option value="Faculdade">Faculdade</option>
-                    <option value="Investimento">Investimento</option>
-                    <option value="Lavacar">Lava Car</option>
-                    <option value="Lazer">Lazer</option>
                     <option value="Luz">Luz</option>
                     <option value="Mercado">Mercado</option>
                     <option value="Noh">Noh</option>
                     <option value="Vivo">Vivo</option>
-                    <option value="Wifi">Wi-Fi</option>
-                    <option value="Outros">Outros</option>
+                    <option value="custom" class="text-indigo-500 font-black">➕ Digitar outra...</option>
                 </select>
+                <input type="text" id="input_categoria_fixa" placeholder="Qual é a categoria?" class="w-full p-3 mt-2 rounded-xl bg-indigo-50/50 border border-indigo-100 text-indigo-800 font-bold outline-none hidden focus:border-indigo-400 placeholder:text-indigo-300">
             </div>
 
             <div class="flex gap-2">
@@ -140,7 +135,6 @@
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
 
-    // MÊS GLOBAL: Salva a escolha do usuário
     const mudarMes = (d) => { 
         currentData.setMonth(currentData.getMonth() + d); 
         const mesGlobal = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear() };
@@ -184,7 +178,7 @@
                         </div>
                         <div class="flex flex-col items-end gap-1 w-[30%] pointer-events-none">
                             <p class="font-black text-slate-800 text-sm">${formatarMoeda(x.valor)}</p>
-                            <span class="text-[8px] font-black text-theme uppercase bg-theme-light px-2 py-0.5 rounded-md">${x.categoria}</span>
+                            <span class="text-[8px] font-black text-theme uppercase bg-theme-light px-2 py-0.5 rounded-md line-clamp-1 text-center max-w-full">${x.categoria}</span>
                         </div>
                     </div>
                 </div>`;
@@ -195,11 +189,31 @@
 
     document.getElementById('formFixa').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const btn = document.getElementById('btnSalvarFixa'); btn.innerText = 'A GERAR 60 MESES... ⏳'; btn.disabled = true;
-        await fetch('/api/despesas/nova', { method: 'POST', body: new FormData(e.target) });
+        const btn = document.getElementById('btnSalvarFixa'); 
+        btn.innerText = 'A GERAR 60 MESES... ⏳'; 
+        btn.disabled = true;
+        
+        const formData = new FormData(e.target);
+        
+        // Tratamento da Categoria Customizada
+        if (formData.get('categoria') === 'custom') {
+            const customCat = document.getElementById('input_categoria_fixa').value;
+            if(customCat && customCat.trim() !== '') {
+                formData.set('categoria', customCat.trim());
+            } else {
+                alert("Por favor, digite o nome da categoria.");
+                btn.innerText = 'Guardar Conta Fixa'; btn.disabled = false;
+                return;
+            }
+        }
+
+        await fetch('/api/despesas/nova', { method: 'POST', body: formData });
+        
         document.getElementById('modalNovaFixa').classList.add('hidden');
         btn.innerText = 'Guardar Conta Fixa'; btn.disabled = false;
-        e.target.reset(); carregarFixas();
+        e.target.reset();
+        document.getElementById('input_categoria_fixa').classList.add('hidden');
+        carregarFixas();
     });
 
     const fecharModais = () => { 
@@ -286,7 +300,6 @@
     };
 
     document.addEventListener("DOMContentLoaded", () => {
-        // MÊS GLOBAL: Lê a escolha do usuário
         const mesGlobalStr = localStorage.getItem('mesGlobalData');
         if (mesGlobalStr) {
             const mesGlobal = JSON.parse(mesGlobalStr);

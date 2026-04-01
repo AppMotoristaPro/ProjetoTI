@@ -132,7 +132,7 @@
             <div id="speedDialMenu" class="speed-dial-menu absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col gap-3 pb-2 w-[200px] z-50">
                 <a href="/entradas" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">💰</span> Entradas</a>
                 <a href="/fixas" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-theme-light flex items-center justify-center">🏠</span> Despesas Fixas</a>
-                <a href="/variaveis" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">💳</span> Despesas Variáveis</a>
+                <a href="/parceladas" class="flex items-center gap-3 p-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/60 text-slate-700 font-bold active:scale-95 transition"><span class="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">💳</span> Contas Parceladas</a>
             </div>
             <button onclick="toggleSpeedDial()" class="p-2 rounded-xl transition-all active:scale-90 text-slate-500 hover:text-theme focus:outline-none"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg></button>
         </div>
@@ -163,9 +163,10 @@
                     <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Valor</label><input type="number" step="0.01" name="valor" placeholder="0.00" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-black outline-none" required></div>
                     <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Quem Pagou?</label><select name="responsavel_pagamento" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required><option value="Igor">Igor</option><option value="Thaynara">Thaynara</option></select></div>
                 </div>
+                
                 <div>
                     <label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block mb-1">Categoria</label>
-                    <select name="categoria" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required>
+                    <select id="select_categoria_diadia" name="categoria" class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-800 font-bold outline-none" required onchange="verificarCategoriaCustomizada('diadia')">
                         <option value="Besteira">Besteira</option>
                         <option value="Carro">Carro</option>
                         <option value="Combustível">Combustível</option>
@@ -174,22 +175,32 @@
                         <option value="Mercado Livre">Mercado Livre</option>
                         <option value="Restaurante">Restaurante</option>
                         <option value="Shopee">Shopee</option>
-                        <option value="Outros">Outros</option>
+                        <option value="custom" class="text-indigo-500 font-black">➕ Digitar outra...</option>
                     </select>
+                    <input type="text" id="input_categoria_diadia" placeholder="Qual é a categoria?" class="w-full p-4 mt-2 rounded-2xl bg-indigo-50/50 border border-indigo-100 text-indigo-800 font-bold outline-none hidden focus:border-indigo-400 placeholder:text-indigo-300">
                 </div>
+
                 <button type="submit" id="btnSalvarDiaDia" class="w-full py-4 mt-2 btn-active text-white rounded-2xl font-black tracking-widest active:scale-95 transition">LANÇAR GASTO</button>
             </form>
         </div>
     </div>
 
-    <div id="cacaTesouroOverlay" class="hidden fixed inset-0 z-[100] bg-gradient-to-br from-pink-300 via-rose-300 to-pink-500 backdrop-blur-md overflow-y-auto flex items-center justify-center p-4">
-        <audio id="ctMusic" loop preload="auto" src="/static/audio/musica.mp3"></audio>
-        
-        <div class="w-full max-w-sm bg-white/95 backdrop-blur-lg rounded-[40px] p-8 shadow-2xl relative border border-white/50" id="ctContent">
-            </div>
-    </div>
-
     <script>
+        // --- NOVA FUNÇÃO: CATEGORIA CUSTOMIZADA ---
+        function verificarCategoriaCustomizada(contexto) {
+            const select = document.getElementById(`select_categoria_${contexto}`);
+            const input = document.getElementById(`input_categoria_${contexto}`);
+            
+            if (select.value === 'custom') {
+                input.classList.remove('hidden');
+                input.required = true;
+                input.focus();
+            } else {
+                input.classList.add('hidden');
+                input.required = false;
+            }
+        }
+
         // --- Ocultar cabeçalho se não for a Home ---
         document.addEventListener("DOMContentLoaded", () => {
             if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
@@ -285,11 +296,33 @@
         function fecharModalDiaDia() { document.getElementById('modalDiaDia').classList.add('hidden'); }
 
         document.getElementById('formDiaDia').addEventListener('submit', async (e) => {
-            e.preventDefault(); const btn = document.getElementById('btnSalvarDiaDia'); btn.innerText = 'SALVANDO... ⏳'; btn.disabled = true;
+            e.preventDefault(); 
+            const btn = document.getElementById('btnSalvarDiaDia'); 
+            btn.innerText = 'SALVANDO... ⏳'; 
+            btn.disabled = true;
+            
+            const formData = new FormData(e.target);
+            
+            // Lógica para interceptar a categoria customizada
+            if (formData.get('categoria') === 'custom') {
+                const customCat = document.getElementById('input_categoria_diadia').value;
+                if(customCat && customCat.trim() !== '') {
+                    formData.set('categoria', customCat.trim());
+                } else {
+                    alert("Por favor, digite o nome da categoria.");
+                    btn.innerText = 'LANÇAR GASTO'; btn.disabled = false;
+                    return;
+                }
+            }
+
             try {
-                const res = await fetch('/api/despesas/nova', { method: 'POST', body: new FormData(e.target) });
+                const res = await fetch('/api/despesas/nova', { method: 'POST', body: formData });
                 if (res.ok) {
-                    fecharModalDiaDia(); e.target.reset();
+                    fecharModalDiaDia(); 
+                    e.target.reset();
+                    // Esconde o input custom novamente
+                    document.getElementById('input_categoria_diadia').classList.add('hidden');
+                    
                     if (typeof carregarDashboard === "function") { carregarDashboard(); } 
                     else if (typeof carregarH === "function") { carregarH(); }
                     else if (typeof carregarRotas === "function") { carregarRotas(); } 
@@ -304,13 +337,12 @@
         const btnCentral = document.getElementById('btnCentralPlus');
         let pressTimer;
         let longPressed = false;
-        let audioUnlocked = false; // Flag para o truque do PWA
+        let audioUnlocked = false; 
 
         function desbloquearAudioPWA() {
             if (!audioUnlocked) {
                 const audio = document.getElementById('ctMusic');
                 if (audio) {
-                    // Truque: Toca no mudo apenas para o PWA registrar a interação do usuário
                     audio.volume = 0; 
                     let playPromise = audio.play();
                     if (playPromise !== undefined) {
@@ -325,12 +357,12 @@
         }
 
         function startPress(e) {
-            desbloquearAudioPWA(); // Engana o PWA no exato milissegundo do toque
+            desbloquearAudioPWA();
             longPressed = false;
             pressTimer = setTimeout(() => {
                 longPressed = true;
                 iniciarCacaTesouro();
-            }, 2000); // 2000ms = 2 segundos segurando
+            }, 2000);
         }
 
         function cancelPress(e) {
@@ -339,7 +371,7 @@
 
         function handlePlusClick(e) {
             if (!longPressed) {
-                abrirModalInteligente(); // Se foi só um clique rápido, abre a tela de despesas normal
+                abrirModalInteligente();
             }
         }
 
@@ -430,7 +462,7 @@
         function iniciarJogoEMusica() {
             const audio = document.getElementById('ctMusic');
             if (audio) {
-                audio.volume = 0.5; // Restaura o volume normal
+                audio.volume = 0.5; 
                 audio.play().catch(e => console.log("O PWA bloqueou a reprodução, precisa desbloquear no botão:", e));
             }
             renderCtFase();
@@ -479,7 +511,6 @@
             let extraHTML = '';
 
             if (ctFaseAtual === 6 && ctFase7SubPergunta) {
-                // Caso especial fase 7 (Travesseiro) -> Código Deus
                 container.innerHTML = `
                     <button onclick="fecharCacaTesouro()" class="absolute top-4 right-4 text-pink-300 hover:text-pink-600 bg-pink-50 p-2 rounded-full transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
                     <div class="text-center pt-2">
@@ -494,7 +525,6 @@
             }
 
             if (ctFaseAtual === 7) {
-                // Caso especial fase 8 (Pudim)
                 if (ctFase8ArmarioAberto) {
                     container.innerHTML = `
                         <button onclick="fecharCacaTesouro()" class="absolute top-4 right-4 text-pink-300 hover:text-pink-600 bg-pink-50 p-2 rounded-full transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
@@ -512,7 +542,6 @@
                 }
             }
 
-            // Render Padrão
             container.innerHTML = `
                 <button onclick="fecharCacaTesouro()" class="absolute top-4 right-4 text-pink-300 hover:text-pink-600 bg-pink-50 p-2 rounded-full transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
                 <div class="text-center pt-2">
@@ -537,31 +566,27 @@
             let respostaCorreta = fase.resposta;
             
             if (ctFaseAtual === 6 && ctFase7SubPergunta) {
-                respostaCorreta = fase.subResposta; // Validando código do travesseiro
+                respostaCorreta = fase.subResposta; 
             }
 
             if (respostaDigitada === respostaCorreta) {
                 erroEl.classList.add('hidden');
                 
-                // Se acertou travesseiro pela 1x, ativa subpergunta e renderiza de novo.
                 if (ctFaseAtual === 6 && !ctFase7SubPergunta) {
                     ctFase7SubPergunta = true;
                     renderCtFase();
                     return;
                 }
 
-                // Se acertou a última (Fase 10 - Bodas)
                 if (ctFaseAtual === 9) {
                     renderCtVitoria();
                     return;
                 }
 
-                // Avança Fase Normal
                 ctFaseAtual++;
                 ctFase7SubPergunta = false;
                 renderCtTransicao();
             } else {
-                // Tratamento de erro (Fase 8 - Pudim)
                 if (ctFaseAtual === 7 && !ctFase8ArmarioAberto) {
                     ctTentativasFase8--;
                     if (ctTentativasFase8 <= 0) {
@@ -577,7 +602,7 @@
                         `;
                         return;
                     } else {
-                        renderCtFase(); // Re-renderiza para atualizar numero de tentativas
+                        renderCtFase(); 
                         const novoErro = document.getElementById('ctErro');
                         novoErro.innerText = `Hummm não é isso!`;
                         novoErro.classList.remove('hidden');
