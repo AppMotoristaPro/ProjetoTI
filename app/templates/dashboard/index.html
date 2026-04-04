@@ -68,7 +68,7 @@
 
     <div class="ultra-glass p-5 rounded-[32px] shadow-sm border border-white/50">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest">Orçamento por Categoria</h3>
+            <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest">Gastos do Dia-a-dia</h3>
             <span id="meta-save-status" class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity duration-300">Salvo!</span>
         </div>
         <div id="lista_metas_categorias" class="space-y-3">
@@ -226,12 +226,11 @@
         calcularProjecao();
     }
 
-    // --- NOVO: FUNÇÃO PARA SALVAR A META NO BANCO DE DADOS ---
     window.definirMetaCategoria = async (categoria) => {
         let metas = resumoGlobal.metas_categorias || {};
         let metaAtual = metas[categoria] || '';
         
-        let novaMeta = prompt(`Defina a meta de gastos para "${categoria}":\n(Apenas números, ex: 250.00)`, metaAtual);
+        let novaMeta = prompt(`Defina a meta de gastos diários para "${categoria}":\n(Apenas números, ex: 250.00)`, metaAtual);
         
         if (novaMeta !== null) {
             novaMeta = parseFloat(novaMeta.replace(',', '.'));
@@ -240,12 +239,14 @@
             metas[categoria] = novaMeta;
             resumoGlobal.metas_categorias = metas;
 
-            // Atualiza a tela na hora
             const catMap = {}; 
-            despesasGlobais.forEach(d => { catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); });
+            despesasGlobais.forEach(d => { 
+                if (d.tipo_despesa === 'Diária') { // FILTRO APLICADO AQUI TAMBÉM
+                    catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); 
+                }
+            });
             renderizarMetasCategorias(Object.entries(catMap).sort((a, b) => b[1] - a[1]));
 
-            // Salva no Backend silenciosamente
             const objSave = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear(), metas: metas };
             const statusEl = document.getElementById('meta-save-status');
             
@@ -260,7 +261,6 @@
         }
     };
 
-    // --- NOVO: FUNÇÃO PARA RENDERIZAR O PAINEL DE METAS ---
     const renderizarMetasCategorias = (catsOrd) => {
         const cont = document.getElementById('lista_metas_categorias');
         cont.innerHTML = '';
@@ -280,7 +280,7 @@
             else if (percent >= 100) corBarra = 'bg-red-500';
 
             let widthBar = percent > 100 ? 100 : percent;
-            if (meta === 0) widthBar = 0; // Se não tem meta, barra vazia
+            if (meta === 0) widthBar = 0;
 
             cont.innerHTML += `
                 <div class="mb-4 bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
@@ -359,9 +359,13 @@
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font:{size:10} } }, datalabels: dlOpt } }
         });
 
-        // Monta os dados para o novo painel de Metas
         const catMap = {}; 
-        despesas.forEach(d => { catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); });
+        despesas.forEach(d => { 
+            // FILTRO APLICADO AQUI: SOMA APENAS O DIA-A-DIA NO PAINEL DE METAS
+            if (d.tipo_despesa === 'Diária') {
+                catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); 
+            }
+        });
         const catsOrd = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
         
         renderizarMetasCategorias(catsOrd);

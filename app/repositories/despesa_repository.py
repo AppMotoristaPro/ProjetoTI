@@ -46,7 +46,6 @@ class DespesaRepository:
                     config JSONB DEFAULT '{}'
                 );
             """)
-            # NOVO: Tabela para Metas de Orçamento por Categoria
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS metas_mensais (
                     id SERIAL PRIMARY KEY,
@@ -355,7 +354,6 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # NOVO: Função para salvar a meta da categoria no banco
     @staticmethod
     def salvar_metas_categorias(mes, ano, metas_json):
         DespesaRepository._garantir_tabelas()
@@ -384,7 +382,6 @@ class DespesaRepository:
         try:
             cur = conn.cursor()
             
-            # Buscar as Metas da Categoria salvas
             cur.execute("SELECT metas FROM metas_mensais WHERE mes = %s AND ano = %s", (mes, ano))
             row_metas = cur.fetchone()
             metas_categorias = row_metas[0] if row_metas else {}
@@ -437,7 +434,7 @@ class DespesaRepository:
                 "total_caixinhas_mes": 0.0,
                 "saldo_mes_anterior": saldo_mes_anterior, 
                 "saldo_final": saldo_final,
-                "metas_categorias": metas_categorias # Retorna as metas para o Dashboard
+                "metas_categorias": metas_categorias 
             }
         finally: conn.close()
 
@@ -477,14 +474,35 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
+    # LOGICA DE EDICAO EM LOTE IMPLEMENTADA AQUI
     @staticmethod
     def atualizar(despesa_id, dados):
         conn = get_db_connection()
         if not conn: return False
         try:
             cur = conn.cursor()
-            if dados.get('data_pretensao') and dados.get('data_pretensao') != '': cur.execute("UPDATE despesas SET descricao=%s, valor=%s, data_vencimento=%s, data_pretensao=%s, responsavel_pagamento=%s, fonte_pagamento=%s WHERE id=%s", (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('data_pretensao'), dados.get('responsavel_pagamento'), dados.get('fonte_pagamento'), despesa_id))
-            else: cur.execute("UPDATE despesas SET descricao=%s, valor=%s, data_vencimento=%s, data_pretensao=NULL, responsavel_pagamento=%s, fonte_pagamento=%s WHERE id=%s", (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('responsavel_pagamento'), dados.get('fonte_pagamento'), despesa_id))
+            
+            cur.execute("SELECT grupo_id, fonte_pagamento FROM despesas WHERE id = %s", (despesa_id,))
+            row = cur.fetchone()
+            grupo_id = row[0] if row else None
+            fonte_atual = row[1] if row else None
+            
+            fonte_pagamento = dados.get('fonte_pagamento', fonte_atual)
+            categoria = dados.get('categoria')
+
+            if dados.get('data_pretensao') and dados.get('data_pretensao') != '': 
+                cur.execute("UPDATE despesas SET descricao=%s, valor=%s, data_vencimento=%s, data_pretensao=%s, responsavel_pagamento=%s, fonte_pagamento=%s WHERE id=%s", 
+                            (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('data_pretensao'), dados.get('responsavel_pagamento'), fonte_pagamento, despesa_id))
+            else: 
+                cur.execute("UPDATE despesas SET descricao=%s, valor=%s, data_vencimento=%s, data_pretensao=NULL, responsavel_pagamento=%s, fonte_pagamento=%s WHERE id=%s", 
+                            (dados.get('descricao'), dados.get('valor'), dados.get('data_vencimento'), dados.get('responsavel_pagamento'), fonte_pagamento, despesa_id))
+            
+            if categoria:
+                if grupo_id:
+                    cur.execute("UPDATE despesas SET categoria=%s WHERE grupo_id=%s", (categoria, grupo_id))
+                else:
+                    cur.execute("UPDATE despesas SET categoria=%s WHERE id=%s", (categoria, despesa_id))
+                    
             conn.commit()
             return True
         except Exception as e: print(e); return False

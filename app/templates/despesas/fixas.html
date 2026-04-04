@@ -101,7 +101,25 @@
         <h3 class="text-lg font-black text-slate-800 mb-4">Corrigir Conta</h3>
         <form id="formEditar" class="space-y-3">
             <input type="hidden" id="edit_id">
+            
             <div><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Descrição</label><input type="text" id="edit_descricao" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-medium" required></div>
+            
+            <div>
+                <label class="text-[10px] font-bold text-indigo-500 uppercase ml-1">Categoria (Muda todos os meses)</label>
+                <select id="edit_categoria" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 font-bold outline-none text-slate-700 focus:border-indigo-400" required onchange="verificarCategoriaCustomizadaEdit('fixa')">
+                    <option value="Agua">Água</option>
+                    <option value="Aluguel">Aluguel</option>
+                    <option value="Carro">Carro</option>
+                    <option value="Faculdade">Faculdade</option>
+                    <option value="Luz">Luz</option>
+                    <option value="Mercado">Mercado</option>
+                    <option value="Noh">Noh</option>
+                    <option value="Vivo">Vivo</option>
+                    <option value="custom" class="text-indigo-500 font-black">➕ Digitar outra...</option>
+                </select>
+                <input type="text" id="edit_input_categoria" placeholder="Qual é a categoria?" class="w-full p-3 mt-2 rounded-xl bg-indigo-50/50 border border-indigo-100 text-indigo-800 font-bold outline-none hidden focus:border-indigo-400">
+            </div>
+
             <div class="flex gap-2">
                 <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Valor</label><input type="number" step="0.01" id="edit_valor" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 font-bold" required></div>
                 <div class="w-1/2"><label class="text-[10px] uppercase font-bold text-slate-500 ml-1">Vencimento</label><input type="date" id="edit_data" class="w-full mt-1 p-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-800 text-sm" required></div>
@@ -135,6 +153,21 @@
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
 
+    // --- NOVA FUNÇÃO PARA EDIÇÃO DE CATEGORIA ---
+    function verificarCategoriaCustomizadaEdit(contexto) {
+        const select = document.getElementById('edit_categoria');
+        const input = document.getElementById('edit_input_categoria');
+        
+        if (select.value === 'custom') {
+            input.classList.remove('hidden');
+            input.required = true;
+            input.focus();
+        } else {
+            input.classList.add('hidden');
+            input.required = false;
+        }
+    }
+
     const mudarMes = (d) => { 
         currentData.setMonth(currentData.getMonth() + d); 
         const mesGlobal = { mes: currentData.getMonth() + 1, ano: currentData.getFullYear() };
@@ -163,12 +196,13 @@
             const descSafe = x.descricao.replace(/'/g, "\\'");
             const obsSafe = (x.observacao || "").replace(/'/g, "\\'").replace(/\n/g, " ");
             const fonteSafe = (x.fonte_pagamento || "Geral");
+            const catSafe = (x.categoria || "Geral").replace(/'/g, "\\'");
 
             cont.innerHTML += `
                 <div id="conta-card-${x.id}" class="relative rounded-[28px] shadow-sm overflow-hidden swipe-container bg-transparent">
                     <div class="swipe-bg absolute inset-0 bg-emerald-500 flex items-center pl-6 text-white font-black text-lg z-0" style="opacity: 0; transition: opacity 0.1s;">PAGO</div>
                     <div class="swipe-card relative z-10 ultra-glass p-5 rounded-[28px] flex justify-between items-center cursor-pointer border border-white/50" data-id="${x.id}"
-                         onclick="if(!isSwiping) abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas})">
+                         onclick="if(!isSwiping) abrirModalDetalhes(${x.id}, '${descSafe}', ${x.valor}, '${x.data_vencimento}', '${x.data_pretensao || ''}', '${x.responsavel_pagamento}', '${fonteSafe}', '${obsSafe}', ${x.parcela_atual}, ${x.total_parcelas}, '${catSafe}')">
                         <div class="flex items-center gap-3 w-[70%] pointer-events-none">
                             <div class="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center text-theme shadow-sm border border-white">🏠</div>
                             <div class="truncate">
@@ -195,7 +229,6 @@
         
         const formData = new FormData(e.target);
         
-        // Tratamento da Categoria Customizada
         if (formData.get('categoria') === 'custom') {
             const customCat = document.getElementById('input_categoria_fixa').value;
             if(customCat && customCat.trim() !== '') {
@@ -222,7 +255,7 @@
         }); 
     };
 
-    const abrirModalDetalhes = (id, desc, valor, dataV, dataP, resp, fonte, obs, p_atual, t_parc) => {
+    const abrirModalDetalhes = (id, desc, valor, dataV, dataP, resp, fonte, obs, p_atual, t_parc, cat) => {
         document.getElementById('det_nome').innerText = desc;
         document.getElementById('det_parcela').innerText = 'Conta Fixa';
         document.getElementById('det_valor').innerText = formatarMoeda(valor);
@@ -239,6 +272,22 @@
             document.getElementById('edit_data').value = dataV;
             document.getElementById('edit_prev').value = dataP || '';
             document.getElementById('edit_responsavel').value = resp;
+
+            const selCat = document.getElementById('edit_categoria');
+            const inCat = document.getElementById('edit_input_categoria');
+            
+            let optionExists = Array.from(selCat.options).some(opt => opt.value === cat);
+            if(optionExists) {
+                selCat.value = cat;
+                inCat.classList.add('hidden');
+                inCat.required = false;
+            } else {
+                selCat.value = 'custom';
+                inCat.value = cat;
+                inCat.classList.remove('hidden');
+                inCat.required = true;
+            }
+
             document.getElementById('modalEditar').classList.remove('hidden');
         };
 
@@ -256,7 +305,21 @@
 
     document.getElementById('formEditar').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const dados = { descricao: document.getElementById('edit_descricao').value, valor: parseFloat(document.getElementById('edit_valor').value), data_vencimento: document.getElementById('edit_data').value, data_pretensao: document.getElementById('edit_prev').value, responsavel_pagamento: document.getElementById('edit_responsavel').value };
+        
+        let catFinal = document.getElementById('edit_categoria').value;
+        if(catFinal === 'custom') {
+            catFinal = document.getElementById('edit_input_categoria').value.trim();
+        }
+        if(!catFinal) { alert('Informe a categoria!'); return; }
+
+        const dados = { 
+            descricao: document.getElementById('edit_descricao').value, 
+            valor: parseFloat(document.getElementById('edit_valor').value), 
+            data_vencimento: document.getElementById('edit_data').value, 
+            data_pretensao: document.getElementById('edit_prev').value, 
+            responsavel_pagamento: document.getElementById('edit_responsavel').value,
+            categoria: catFinal
+        };
         await fetch(`/api/despesas/${document.getElementById('edit_id').value}/editar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
         fecharModais(); carregarFixas();
     });

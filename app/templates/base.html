@@ -185,6 +185,13 @@
         </div>
     </div>
 
+    <div id="cacaTesouroOverlay" class="hidden fixed inset-0 z-[100] bg-gradient-to-br from-pink-300 via-rose-300 to-pink-500 backdrop-blur-md overflow-y-auto flex items-center justify-center p-4">
+        <audio id="ctMusic" loop preload="auto" src="/static/audio/musica.mp3"></audio>
+        
+        <div class="w-full max-w-sm bg-white/95 backdrop-blur-lg rounded-[40px] p-8 shadow-2xl relative border border-white/50" id="ctContent">
+            </div>
+    </div>
+
     <script>
         // --- NOVA FUNÇÃO: CATEGORIA CUSTOMIZADA ---
         function verificarCategoriaCustomizada(contexto) {
@@ -280,8 +287,8 @@
                 abrirModalNovaEntrada();
             } else if (url === '/fixas' && typeof abrirModalNovaFixa === 'function') {
                 abrirModalNovaFixa();
-            } else if (url === '/variaveis' && typeof abrirModalNovaVar === 'function') {
-                abrirModalNovaVar();
+            } else if ((url === '/variaveis' || url === '/parceladas') && typeof abrirModalNovaVar === 'function') {
+                abrirModalNovaVar(); // CORREÇÃO: Abre a tela de Parceladas
             } else {
                 abrirModalDiaDia();
             }
