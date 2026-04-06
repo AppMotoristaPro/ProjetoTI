@@ -290,7 +290,6 @@ class DespesaRepository:
                 ano = ano_forcado or hoje.year
                 data_recebimento = hoje.strftime('%Y-%m-%d')
             
-            # REMOVIDO "Ajuda de Custo" DESTE AGRUPAMENTO, AGORA ELA É INDIVIDUAL POR DIA COMO A SHOPEE
             agrupar_mensal = fonte in ['Uber']
             
             if agrupar_mensal:
@@ -523,6 +522,25 @@ class DespesaRepository:
             return True
         except Exception: return False
         finally: conn.close()
+
+    # --- NOVO: FUNÇÃO PARA ATUALIZAÇÃO EM LOTE DA OTIMIZAÇÃO ---
+    @staticmethod
+    def atualizar_lote_pretensao(atualizacoes):
+        conn = get_db_connection()
+        if not conn: return False
+        try:
+            cur = conn.cursor()
+            for obj in atualizacoes:
+                _id = obj.get('id')
+                _dp = obj.get('data_pretensao')
+                cur.execute("UPDATE despesas SET data_pretensao = %s WHERE id = %s", (_dp, _id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Erro na otimização: {e}")
+            return False
+        finally:
+            conn.close()
 
     @staticmethod
     def obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant):

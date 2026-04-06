@@ -103,7 +103,6 @@ def tela_entradas(): return render_template('dashboard/entradas.html')
 @despesas_bp.route('/fixas', methods=['GET'])
 def tela_fixas(): return render_template('despesas/fixas.html')
 
-# MUDANÇA DE NOME: De "/variaveis" para "/parceladas", mas ainda renderiza o arquivo "variaveis.html"
 @despesas_bp.route('/parceladas', methods=['GET'])
 def tela_parceladas(): return render_template('despesas/variaveis.html')
 
@@ -244,6 +243,21 @@ def editar_despesa(despesa_id):
         return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
+# --- NOVA ROTA: OTIMIZAÇÃO DO MÊS ---
+@despesas_bp.route('/api/despesas/otimizar', methods=['POST'])
+def otimizar_despesas():
+    dados = request.json
+    atualizacoes = dados.get('atualizacoes', [])
+    if not atualizacoes: return jsonify({"status": "erro"}), 400
+    
+    sucesso = DespesaRepository.atualizar_lote_pretensao(atualizacoes)
+    if sucesso:
+        autor = obter_usuario_atual()
+        outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
+        NotificacaoService.enviar_notificacao(outro_usuario, "✨ Mês Otimizado!", f"{autor} utilizou a inteligência artificial para organizar os pagamentos do mês.")
+        return jsonify({"status": "sucesso"}), 200
+    return jsonify({"status": "erro"}), 500
+
 @despesas_bp.route('/api/calendario/marcacoes', methods=['GET'])
 def listar_marcacoes():
     mes = request.args.get('mes'); ano = request.args.get('ano')
@@ -270,7 +284,6 @@ def iniciar_dashboard():
     pacotao = DespesaRepository.obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant)
     return jsonify(pacotao), 200
 
-# NOVO ENDPOINT: Recebe e Salva as Metas do Gráfico
 @despesas_bp.route('/api/dashboard/metas', methods=['POST'])
 def salvar_dashboard_metas():
     dados = request.json
