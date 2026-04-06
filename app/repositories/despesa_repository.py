@@ -290,7 +290,8 @@ class DespesaRepository:
                 ano = ano_forcado or hoje.year
                 data_recebimento = hoje.strftime('%Y-%m-%d')
             
-            agrupar_mensal = fonte in ['Uber', 'Ajuda de Custo']
+            # REMOVIDO "Ajuda de Custo" DESTE AGRUPAMENTO, AGORA ELA É INDIVIDUAL POR DIA COMO A SHOPEE
+            agrupar_mensal = fonte in ['Uber']
             
             if agrupar_mensal:
                 cur.execute("SELECT id FROM rendas WHERE usuario=%s AND fonte=%s AND mes=%s AND ano=%s ORDER BY id ASC", (usuario, fonte, mes, ano))
@@ -474,7 +475,6 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # LOGICA DE EDICAO EM LOTE IMPLEMENTADA AQUI
     @staticmethod
     def atualizar(despesa_id, dados):
         conn = get_db_connection()

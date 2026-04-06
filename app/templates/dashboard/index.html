@@ -155,6 +155,7 @@
         </div>
     </div>
 </div>
+
 <script>
     let currentData = new Date(); 
     let despesasGlobais = []; 
@@ -166,11 +167,12 @@
     
     Chart.register(ChartDataLabels);
 
+    // MODIFICADO: Agora esconde tanto o header (título) quanto a nav (barra inferior)
     const controlarCabecalho = (mostrar) => {
-        const cabecalho = document.querySelector('header') || document.querySelector('nav') || document.querySelector('.fixed.top-0');
-        if (cabecalho) {
-            cabecalho.style.display = mostrar ? '' : 'none';
-        }
+        const cabecalho = document.querySelector('header');
+        const navbar = document.querySelector('nav');
+        if (cabecalho) cabecalho.style.display = mostrar ? '' : 'none';
+        if (navbar) navbar.style.display = mostrar ? '' : 'none';
     };
 
     window.fecharModal = (id) => {
@@ -241,7 +243,7 @@
 
             const catMap = {}; 
             despesasGlobais.forEach(d => { 
-                if (d.tipo_despesa === 'Diária') { // FILTRO APLICADO AQUI TAMBÉM
+                if (d.tipo_despesa === 'Diária') {
                     catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); 
                 }
             });
@@ -361,7 +363,6 @@
 
         const catMap = {}; 
         despesas.forEach(d => { 
-            // FILTRO APLICADO AQUI: SOMA APENAS O DIA-A-DIA NO PAINEL DE METAS
             if (d.tipo_despesa === 'Diária') {
                 catMap[d.categoria] = (catMap[d.categoria] || 0) + parseFloat(d.valor); 
             }
@@ -609,31 +610,24 @@
                 </div>`;
         }
 
-        let entradasAteOntem = 0; let despesasAteOntem = 0;
+        // --- MODIFICADO: CALCULO DO SALDO DO DIA SEM "CAIXA DA MANHÃ" ---
         let entradasHoje = 0; let despesasHoje = 0;
 
         rendasGlobais.forEach(r => {
             if (!r.data_recebimento || r.fonte === 'Uber') return;
-            if (r.data_recebimento < dataStr) entradasAteOntem += parseFloat(r.valor);
-            else if (r.data_recebimento === dataStr) entradasHoje += parseFloat(r.valor);
+            if (r.data_recebimento === dataStr) entradasHoje += parseFloat(r.valor);
         });
 
         despesasGlobais.forEach(d => {
             const dataBase = getDataBase(d);
             if (!dataBase) return;
-            if (dataBase < dataStr) despesasAteOntem += parseFloat(d.valor);
-            else if (dataBase === dataStr) despesasHoje += parseFloat(d.valor);
+            if (dataBase === dataStr) despesasHoje += parseFloat(d.valor);
         });
 
-        const caixaManha = entradasAteOntem - despesasAteOntem;
-        const sobraFimDoDia = caixaManha + entradasHoje - despesasHoje;
+        const saldoDoDia = entradasHoje - despesasHoje;
 
         const painelFluxo = document.getElementById('fluxo_caixa_dia');
         painelFluxo.innerHTML = `
-            <div class="flex justify-between mb-2 pb-2 border-b border-slate-100">
-                <span class="text-[10px] uppercase font-bold text-slate-400" title="Acumulado das rendas do dia 1 até ontem">Caixa da Manhã</span> 
-                <span class="text-xs font-black text-slate-700">${formatarMoeda(caixaManha)}</span>
-            </div>
             <div class="flex justify-between mb-1">
                 <span class="text-[10px] uppercase font-bold text-emerald-500">Entradas Hoje</span> 
                 <span class="text-xs font-black text-emerald-600">+ ${formatarMoeda(entradasHoje)}</span>
@@ -643,8 +637,8 @@
                 <span class="text-xs font-black text-red-500">- ${formatarMoeda(despesasHoje)}</span>
             </div>
             <div class="flex justify-between border-t border-slate-200 pt-2 mt-1">
-                <span class="text-[10px] uppercase font-black text-slate-500">Saldo Fim do Dia</span> 
-                <span class="text-sm font-black ${sobraFimDoDia >= 0 ? 'text-indigo-600' : 'text-red-500'}">${formatarMoeda(sobraFimDoDia)}</span>
+                <span class="text-[10px] uppercase font-black text-slate-500">Saldo do Dia</span> 
+                <span class="text-sm font-black ${saldoDoDia >= 0 ? 'text-indigo-600' : 'text-red-500'}">${formatarMoeda(saldoDoDia)}</span>
             </div>
         `;
         painelFluxo.classList.remove('hidden');
