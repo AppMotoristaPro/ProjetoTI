@@ -145,19 +145,7 @@
     <div class="w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl relative">
         <div class="w-12 h-12 bg-indigo-100 text-indigo-500 rounded-2xl flex items-center justify-center text-2xl mb-4 mx-auto">🪄</div>
         <h3 class="text-xl font-black text-slate-800 mb-2 text-center">Otimizar o Mês?</h3>
-        <p class="text-xs font-bold text-slate-500 mb-6 leading-relaxed text-center">O sistema irá calcular todas as suas entradas da Shopee e dos vales, e vai distribuir a <span class="text-indigo-500">Data Prevista</span> das contas automaticamente para não ter atraso.</p>
-        
-        <div class="space-y-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-            <p class="text-[9px] uppercase font-black text-slate-400 tracking-widest border-b border-slate-200 pb-1 mb-2">Entradas Extraordinárias</p>
-            <div>
-                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1 block mb-1">Qual valor esperado para o Salário (Dia 5)?</label>
-                <input type="number" id="opt_salario" placeholder="0.00" class="w-full p-3 rounded-xl bg-white border border-slate-200 text-slate-800 font-black outline-none focus:border-indigo-400">
-            </div>
-            <div>
-                <label class="text-[10px] font-bold text-slate-500 uppercase ml-1 block mb-1">Qual valor esperado para o Adiantamento (Dia 20)?</label>
-                <input type="number" id="opt_adiantamento" placeholder="0.00" class="w-full p-3 rounded-xl bg-white border border-slate-200 text-slate-800 font-black outline-none focus:border-indigo-400">
-            </div>
-        </div>
+        <p class="text-sm font-bold text-slate-500 mb-6 leading-relaxed text-center">O sistema irá ler todas as suas entradas programadas para o mês (incluindo as projeções da Shopee) e vai distribuir a <span class="text-indigo-500 font-black">Data Prevista</span> das contas automaticamente para não ter atraso.</p>
 
         <div class="flex gap-2">
             <button onclick="fecharModal('modalOtimizacao')" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold active:scale-95 transition">Não</button>
@@ -196,6 +184,7 @@
 
     const pad = n => String(n).padStart(2, '0');
 
+    // MODIFICADO: Agora esconde tanto o header (título) quanto a nav (barra inferior)
     const controlarCabecalho = (mostrar) => {
         const cabecalho = document.querySelector('header');
         const navbar = document.querySelector('nav');
@@ -256,7 +245,7 @@
         calcularProjecao();
     }
 
-    // --- CÉREBRO DA OTIMIZAÇÃO: A MÁGICA ACONTECE AQUI ---
+    // --- CÉREBRO DA OTIMIZAÇÃO AUTOMÁTICA ---
     window.abrirModalOtimizar = () => {
         controlarCabecalho(false);
         document.getElementById('modalOtimizacao').classList.remove('hidden');
@@ -267,9 +256,6 @@
         btn.innerText = 'CALCULANDO... ⏳';
         btn.disabled = true;
 
-        const valSalario = parseFloat(document.getElementById('opt_salario').value) || 0;
-        const valAdiantamento = parseFloat(document.getElementById('opt_adiantamento').value) || 0;
-
         const ano = currentData.getFullYear();
         const mes = currentData.getMonth();
         const diasNoMes = new Date(ano, mes + 1, 0).getDate();
@@ -279,7 +265,7 @@
         let entradasDia = new Array(diasNoMes + 1).fill(0);
         let saidasPagasDia = new Array(diasNoMes + 1).fill(0);
 
-        // Preenchendo as Rendas que já existem
+        // Preenchendo as Rendas Lançadas no Mês (Salário, Vales, Reembolsos, etc)
         rendasGlobais.forEach(r => {
             if (r.data_recebimento) {
                 const [y, m, d] = r.data_recebimento.split('-');
@@ -289,11 +275,7 @@
             }
         });
 
-        // Injetando o Salário e Adiantamento (As Extras)
-        if (diasNoMes >= 5) entradasDia[5] += valSalario;
-        if (diasNoMes >= 20) entradasDia[20] += valAdiantamento;
-
-        // Injetando o cálculo da Shopee (Matemática dos Vales)
+        // Injetando o cálculo da Shopee (Matemática Automática das Quintas-feiras)
         diasMarcadosGlobais.forEach(m => {
             if (m.tipo && (m.tipo === 'shopee_previsto' || m.tipo.startsWith('shopee_trabalhado'))) {
                 const [y, mn, d] = m.data.split('-');
@@ -308,7 +290,7 @@
             }
         });
 
-        // Descontando o que já foi pago
+        // Descontando o que já foi pago no mês para saber o saldo real
         despesasGlobais.forEach(d => {
             if (d.pago && d.data_pagamento) {
                 const [y, m, day] = d.data_pagamento.split('-');
@@ -325,7 +307,7 @@
             saldoVirtual[i] = saldoAcumulado;
         }
 
-        // Função do Radar: Checa se a grana dá pra pagar a conta e sobreviver até o fim do mês
+        // Função de Verificação (Radar de Dinheiro)
         const podePagarNoDia = (dia, valor) => {
             for (let i = dia; i <= diasNoMes; i++) {
                 if (saldoVirtual[i] - valor < 0) return false;
@@ -333,7 +315,7 @@
             return true;
         };
 
-        // Função de Débito: Subtrai o dinheiro do caixa virtual
+        // Função de Débito (Tirar o dinheiro do caixa virtual)
         const aplicarPagamento = (dia, valor) => {
             for (let i = dia; i <= diasNoMes; i++) {
                 saldoVirtual[i] -= valor;
@@ -349,38 +331,38 @@
         if (aluguelIndex !== -1) {
             let aluguel = contasPendentes.splice(aluguelIndex, 1)[0];
             let venc = parseInt(aluguel.data_vencimento.split('-')[2]);
-            // Se o vencimento é depois do dia 7, usa o vencimento, senão trava no dia 7
+            // O limite para o aluguel é o vencimento ou no máximo o dia 7
             let diaLimite = venc <= 7 ? 7 : venc; 
             
             let diaPago = null;
-            // Tenta pagar o mais rápido possível até o dia 7
+            // Tenta pagar com segurança do dia 1 até o dia limite
             for (let d = 1; d <= diaLimite; d++) {
                 if (podePagarNoDia(d, aluguel.valor)) {
                     diaPago = d; break;
                 }
             }
-            if (!diaPago) { diaPago = diaLimite; } // Se a simulação quebrar, crava no dia 7 no desespero
+            if (!diaPago) { diaPago = diaLimite; } // Força o pagamento no limite se o saldo estiver negativo no começo
             
             aplicarPagamento(diaPago, aluguel.valor);
             let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
             atualizacoes.push({ id: aluguel.id, data_pretensao: dataStr });
         }
 
-        // 3. PRIORIDADE SECUNDÁRIA: O RESTO DAS CONTAS (Ordenadas por vencimento)
+        // 3. PRIORIDADE SECUNDÁRIA: DEMAIS CONTAS (Ordenadas por vencimento original)
         contasPendentes.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
 
         contasPendentes.forEach(conta => {
             let venc = parseInt(conta.data_vencimento.split('-')[2]);
             let diaPago = null;
 
-            // Tenta pagar do vencimento em diante
+            // Começa a tentar pagar a partir do dia do vencimento em diante
             for (let d = venc; d <= diasNoMes; d++) {
                 if (podePagarNoDia(d, conta.valor)) {
                     diaPago = d; break;
                 }
             }
 
-            // Se não conseguiu porque falta dinheiro no mês, joga pro último dia pra não estourar a matemática
+            // Se não encontrou dia com dinheiro suficiente, joga a previsão para o último dia
             if (!diaPago) {
                 diaPago = diasNoMes; 
             }
@@ -400,10 +382,7 @@
 
             if (res.ok) {
                 fecharModal('modalOtimizacao');
-                // Limpa os campos extras
-                document.getElementById('opt_salario').value = '';
-                document.getElementById('opt_adiantamento').value = '';
-                carregarDashboard(); 
+                carregarDashboard(); // Recarrega a tela para desenhar o calendário otimizado
             } else {
                 alert("Ocorreu um erro ao otimizar o mês.");
             }
