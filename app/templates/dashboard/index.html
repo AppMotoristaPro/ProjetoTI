@@ -184,7 +184,6 @@
 
     const pad = n => String(n).padStart(2, '0');
 
-    // MODIFICADO: Agora esconde tanto o header (título) quanto a nav (barra inferior)
     const controlarCabecalho = (mostrar) => {
         const cabecalho = document.querySelector('header');
         const navbar = document.querySelector('nav');
@@ -264,13 +263,16 @@
         let saldoVirtual = new Array(diasNoMes + 1).fill(0);
         let entradasDia = new Array(diasNoMes + 1).fill(0);
         let saidasPagasDia = new Array(diasNoMes + 1).fill(0);
+        let diasDeEntrada = []; // Guarda EXCLUSIVAMENTE os dias em que entra dinheiro
 
         // Preenchendo as Rendas Lançadas no Mês (Salário, Vales, Reembolsos, etc)
         rendasGlobais.forEach(r => {
             if (r.data_recebimento) {
                 const [y, m, d] = r.data_recebimento.split('-');
                 if (parseInt(y) === ano && parseInt(m) === mes + 1) {
-                    entradasDia[parseInt(d)] += parseFloat(r.valor);
+                    let diaRec = parseInt(d);
+                    entradasDia[diaRec] += parseFloat(r.valor);
+                    if (!diasDeEntrada.includes(diaRec)) diasDeEntrada.push(diaRec);
                 }
             }
         });
@@ -285,10 +287,15 @@
                 const payDate = new Date(y, mn - 1, workedDate.getDate() + daysToNextThursday);
                 
                 if (payDate.getFullYear() === ano && payDate.getMonth() === mes) {
-                    entradasDia[payDate.getDate()] += 245.00;
+                    let diaRec = payDate.getDate();
+                    entradasDia[diaRec] += 245.00;
+                    if (!diasDeEntrada.includes(diaRec)) diasDeEntrada.push(diaRec);
                 }
             }
         });
+
+        // Ordena os dias de entrada para a matemática fluir
+        diasDeEntrada.sort((a, b) => a - b);
 
         // Descontando o que já foi pago no mês para saber o saldo real
         despesasGlobais.forEach(d => {
@@ -300,7 +307,7 @@
             }
         });
 
-        // Calculando o Saldo Acumulado Dia a Dia
+        // Calculando o Saldo Acumulado Dia a Dia (Rastreio Contínuo)
         let saldoAcumulado = resumoGlobal.saldo_mes_anterior || 0;
         for (let i = 1; i <= diasNoMes; i++) {
             saldoAcumulado += entradasDia[i] - saidasPagasDia[i];
@@ -315,7 +322,7 @@
             return true;
         };
 
-        // Função de Débito (Tirar o dinheiro do caixa virtual)
+        // Função de Débito (Retirar o dinheiro do caixa virtual)
         const aplicarPagamento = (dia, valor) => {
             for (let i = dia; i <= diasNoMes; i++) {
                 saldoVirtual[i] -= valor;
@@ -330,18 +337,26 @@
         let aluguelIndex = contasPendentes.findIndex(x => x.categoria.toLowerCase() === 'aluguel');
         if (aluguelIndex !== -1) {
             let aluguel = contasPendentes.splice(aluguelIndex, 1)[0];
-            let venc = parseInt(aluguel.data_vencimento.split('-')[2]);
-            // O limite para o aluguel é o vencimento ou no máximo o dia 7
-            let diaLimite = venc <= 7 ? 7 : venc; 
-            
             let diaPago = null;
-            // Tenta pagar com segurança do dia 1 até o dia limite
-            for (let d = 1; d <= diaLimite; d++) {
+
+            // Filtra os dias de entrada de dinheiro APENAS até ao dia 7
+            let entradasAte7 = diasDeEntrada.filter(d => d <= 7);
+            
+            // Tenta pagar com segurança, do dia mais cedo até ao dia 7
+            for (let d of entradasAte7) {
                 if (podePagarNoDia(d, aluguel.valor)) {
                     diaPago = d; break;
                 }
             }
-            if (!diaPago) { diaPago = diaLimite; } // Força o pagamento no limite se o saldo estiver negativo no começo
+            
+            // Se não encontrar saldo (mesmo somando até ao dia 7), força no último dia de entrada ou no próprio dia 7
+            if (!diaPago) {
+                if (entradasAte7.length > 0) {
+                    diaPago = entradasAte7[entradasAte7.length - 1]; 
+                } else {
+                    diaPago = 7; 
+                }
+            }
             
             aplicarPagamento(diaPago, aluguel.valor);
             let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
@@ -355,16 +370,33 @@
             let venc = parseInt(conta.data_vencimento.split('-')[2]);
             let diaPago = null;
 
-            // Começa a tentar pagar a partir do dia do vencimento em diante
-            for (let d = venc; d <= diasNoMes; d++) {
+            // Começa a tentar encaixar numa data de entrada ANTES ou NO DIA do vencimento
+            // Procura da entrada mais próxima ao vencimento para trás
+            let entradasAteVenc = diasDeEntrada.filter(d => d <= venc).reverse();
+            
+            for (let d of entradasAteVenc) {
                 if (podePagarNoDia(d, conta.valor)) {
                     diaPago = d; break;
                 }
             }
 
-            // Se não encontrou dia com dinheiro suficiente, joga a previsão para o último dia
+            // Se não tem dinheiro antes do vencimento, procura a melhor data APÓS o vencimento
             if (!diaPago) {
-                diaPago = diasNoMes; 
+                let entradasAposVenc = diasDeEntrada.filter(d => d > venc);
+                for (let d of entradasAposVenc) {
+                    if (podePagarNoDia(d, conta.valor)) {
+                        diaPago = d; break;
+                    }
+                }
+            }
+
+            // Se mesmo assim não conseguiu, associa à última entrada do mês (ou último dia do mês)
+            if (!diaPago) {
+                if (diasDeEntrada.length > 0) {
+                    diaPago = diasDeEntrada[diasDeEntrada.length - 1]; 
+                } else {
+                    diaPago = diasNoMes; 
+                }
             }
 
             aplicarPagamento(diaPago, conta.valor);
@@ -372,7 +404,7 @@
             atualizacoes.push({ id: conta.id, data_pretensao: dataStr });
         });
 
-        // 4. MANDA PRO SERVIDOR APLICAR O LOTE
+        // 4. ENVIA PARA O SERVIDOR APLICAR O LOTE
         try {
             const res = await fetch('/api/despesas/otimizar', {
                 method: 'POST',
@@ -382,13 +414,13 @@
 
             if (res.ok) {
                 fecharModal('modalOtimizacao');
-                carregarDashboard(); // Recarrega a tela para desenhar o calendário otimizado
+                carregarDashboard(); // Recarrega o ecrã para desenhar o calendário otimizado
             } else {
                 alert("Ocorreu um erro ao otimizar o mês.");
             }
         } catch (e) {
             console.error(e);
-            alert("Erro de conexão.");
+            alert("Erro de ligação.");
         } finally {
             btn.innerText = 'Sim, Otimizar';
             btn.disabled = false;
@@ -436,7 +468,7 @@
         let metas = resumoGlobal.metas_categorias || {};
 
         if (catsOrd.length === 0) {
-            cont.innerHTML = '<p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center py-4">Nenhum gasto registrado ainda.</p>';
+            cont.innerHTML = '<p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center py-4">Nenhum gasto registado ainda.</p>';
             return;
         }
 
