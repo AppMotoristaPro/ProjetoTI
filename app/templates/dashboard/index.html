@@ -245,7 +245,7 @@
         calcularProjecao();
     }
 
-    // --- CÉREBRO DA OTIMIZAÇÃO: MÉTODO DOS ENVELOPES ---
+    // --- CÉREBRO DA OTIMIZAÇÃO: MÉTODO DOS ENVELOPES (SEM REGRAS DE ALUGUEL) ---
     window.abrirModalOtimizar = () => {
         controlarCabecalho(false);
         document.getElementById('modalOtimizacao').classList.remove('hidden');
@@ -339,32 +339,15 @@
                 ultimoDiaUsado = diasDeEntrada[diasDeEntrada.length - 1];
             }
 
-            // Trava Absoluta do Aluguel: Se a matemática obrigou a passar do dia 7, força a data para o dia 7 ou a entrada mais próxima
-            if (limiteDiaTrava && (ultimoDiaUsado === null || ultimoDiaUsado > limiteDiaTrava)) {
-                let diasAteLimite = diasDeEntrada.filter(d => d <= limiteDiaTrava);
-                if(diasAteLimite.length > 0) {
-                    ultimoDiaUsado = diasAteLimite[diasAteLimite.length - 1];
-                } else {
-                    ultimoDiaUsado = limiteDiaTrava;
-                }
-            }
-            
             return ultimoDiaUsado;
         };
 
         let atualizacoes = [];
         let contasPendentes = despesasGlobais.filter(x => !x.pago && x.tipo_despesa !== 'Diária');
 
-        // 2. PRIORIDADE MÁXIMA: ALUGUEL
-        let aluguelIndex = contasPendentes.findIndex(x => x.categoria.toLowerCase() === 'aluguel');
-        if (aluguelIndex !== -1) {
-            let aluguel = contasPendentes.splice(aluguelIndex, 1)[0];
-            let diaPago = pagarComEnvelopes(aluguel.valor, 7); // Aciona a trava no dia 7
-            let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
-            atualizacoes.push({ id: aluguel.id, data_pretensao: dataStr });
-        }
-
-        // 3. DEMAIS CONTAS: Fila indiana por data de vencimento original
+        // REMOVIDA A PRIORIDADE DO ALUGUEL PARA TESTES
+        
+        // 3. TODAS AS CONTAS: Fila indiana por data de vencimento original
         contasPendentes.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
 
         contasPendentes.forEach(conta => {
