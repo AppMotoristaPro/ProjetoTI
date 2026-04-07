@@ -1,6 +1,7 @@
 import datetime
 import uuid
 import json
+import calendar
 from app.extensions import get_db_connection
 
 class DespesaRepository:
@@ -523,21 +524,124 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # --- NOVO: FUNÇÃO PARA ATUALIZAÇÃO EM LOTE DA OTIMIZAÇÃO ---
+    # --- NOVO CÉREBRO DA OTIMIZAÇÃO (MÉTODO DOS ENVELOPES EM PYTHON) ---
     @staticmethod
-    def atualizar_lote_pretensao(atualizacoes):
+    def otimizar_mes(mes, ano):
         conn = get_db_connection()
         if not conn: return False
         try:
+            resumo = DespesaRepository.obter_resumo(mes, ano)
+            despesas = DespesaRepository.listar_por_mes(mes, ano)
+            
+            mes_ant = mes - 1
+            ano_ant = ano
+            if mes_ant == 0:
+                mes_ant = 12
+                ano_ant -= 1
+                
+            marcacoes = DespesaRepository.listar_dias_marcados(mes_ant, ano_ant) + DespesaRepository.listar_dias_marcados(mes, ano)
+            rendas = DespesaRepository.listar_rendas_detalhadas(mes, ano)
+            
+            envelopes = {}
+            
+            # 1. Saldo Anterior (Vira envelope do Dia 1)
+            saldo_ant = float(resumo.get('saldo_mes_anterior', 0.0))
+            if saldo_ant > 0:
+                envelopes[1] = saldo_ant
+                
+            # 2. Rendas Lançadas
+            for r in rendas:
+                if r.get('data_recebimento'):
+                    d_obj = datetime.datetime.strptime(r['data_recebimento'], '%Y-%m-%d').date()
+                    if d_obj.year == ano and d_obj.month == mes:
+                        envelopes[d_obj.day] = envelopes.get(d_obj.day, 0.0) + float(r['valor'])
+                        
+            # 3. Shopee (Calculando as quintas-feiras)
+            for m in marcacoes:
+                tipo = m.get('tipo', '')
+                if tipo == 'shopee_previsto' or tipo.startswith('shopee_trabalhado'):
+                    d_obj = datetime.datetime.strptime(m['data'], '%Y-%m-%d').date()
+                    day_of_week = d_obj.isoweekday() # Segunda=1, Domingo=7
+                    days_to_next_thursday = 7 - day_of_week + 4
+                    pay_date = d_obj + datetime.timedelta(days=days_to_next_thursday)
+                    
+                    if pay_date.year == ano and pay_date.month == mes:
+                        envelopes[pay_date.day] = envelopes.get(pay_date.day, 0.0) + 245.0
+            
+            dias_de_entrada = sorted(list(envelopes.keys()))
+            if not dias_de_entrada:
+                dias_de_entrada = [1]
+                envelopes[1] = 0.0
+                
+            # Descontar as contas que JÁ ESTÃO PAGAS do valor dos envelopes
+            valor_ja_pago = sum(float(d['valor']) for d in despesas if d.get('pago') and d.get('tipo_despesa') != 'Diária')
+            for d in dias_de_entrada:
+                if valor_ja_pago <= 0: break
+                if envelopes[d] >= valor_ja_pago:
+                    envelopes[d] -= valor_ja_pago
+                    valor_ja_pago = 0
+                else:
+                    valor_ja_pago -= envelopes[d]
+                    envelopes[d] = 0.0
+
+            # A Lógica Central de Retirada
+            def pagar_com_envelopes(valor_conta, limite_dia_trava=None):
+                valor_restante = float(valor_conta)
+                ultimo_dia_usado = None
+                
+                for d in dias_de_entrada:
+                    if limite_dia_trava and d > limite_dia_trava:
+                        break
+                    
+                    if envelopes[d] > 0:
+                        descontar = min(envelopes[d], valor_restante)
+                        envelopes[d] -= descontar
+                        valor_restante -= descontar
+                        ultimo_dia_usado = d
+                        
+                        if round(valor_restante, 2) <= 0:
+                            break
+                            
+                # Se não conseguiu pagar tudo (acabou o dinheiro ou a trava impediu)
+                if round(valor_restante, 2) > 0:
+                    if limite_dia_trava:
+                        dias_permitidos = [d for d in dias_de_entrada if d <= limite_dia_trava]
+                        ultimo_dia_usado = dias_permitidos[-1] if dias_permitidos else limite_dia_trava
+                    else:
+                        ultimo_dia_usado = dias_de_entrada[-1] # Atira para o último dia de entrada do mês
+                        
+                return ultimo_dia_usado or 1
+                
+            contas_pendentes = [d for d in despesas if not d.get('pago') and d.get('tipo_despesa') != 'Diária']
+            atualizacoes = []
+            _, ultimo_dia_do_mes = calendar.monthrange(ano, mes)
+            
+            # PRIORIDADE: ALUGUEL
+            aluguel_idx = next((i for i, c in enumerate(contas_pendentes) if c.get('categoria', '').lower() == 'aluguel'), -1)
+            if aluguel_idx != -1:
+                aluguel = contas_pendentes.pop(aluguel_idx)
+                dia_pago = min(pagar_com_envelopes(aluguel['valor'], limite_dia_trava=7), ultimo_dia_do_mes)
+                data_str = f"{ano}-{mes:02d}-{dia_pago:02d}"
+                atualizacoes.append((data_str, aluguel['id']))
+
+            # DEMAIS CONTAS
+            # Ordenadas pela data_vencimento original
+            contas_pendentes.sort(key=lambda x: datetime.datetime.strptime(x['data_vencimento'], '%Y-%m-%d').date() if x.get('data_vencimento') else datetime.date.today())
+            
+            for conta in contas_pendentes:
+                dia_pago = min(pagar_com_envelopes(conta['valor']), ultimo_dia_do_mes)
+                data_str = f"{ano}-{mes:02d}-{dia_pago:02d}"
+                atualizacoes.append((data_str, conta['id']))
+                
+            # Guardar tudo de uma vez no banco de dados
             cur = conn.cursor()
-            for obj in atualizacoes:
-                _id = obj.get('id')
-                _dp = obj.get('data_pretensao')
-                cur.execute("UPDATE despesas SET data_pretensao = %s WHERE id = %s", (_dp, _id))
+            for dp, cid in atualizacoes:
+                cur.execute("UPDATE despesas SET data_pretensao = %s WHERE id = %s", (dp, cid))
             conn.commit()
             return True
+            
         except Exception as e:
-            print(f"Erro na otimização: {e}")
+            print(f"Erro no otimizar_mes em Python: {e}")
             return False
         finally:
             conn.close()

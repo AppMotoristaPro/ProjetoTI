@@ -72,7 +72,7 @@
             <span id="meta-save-status" class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity duration-300">Salvo!</span>
         </div>
         <div id="lista_metas_categorias" class="space-y-3">
-            </div>
+        </div>
     </div>
 </div>
 
@@ -245,7 +245,7 @@
         calcularProjecao();
     }
 
-    // --- CÉREBRO DA OTIMIZAÇÃO: MÉTODO DOS ENVELOPES ---
+    // --- NOVA ROTA DE OTIMIZAÇÃO (O FRONTEND AGORA APENAS CHAMA O PYTHON) ---
     window.abrirModalOtimizar = () => {
         controlarCabecalho(false);
         document.getElementById('modalOtimizacao').classList.remove('hidden');
@@ -257,139 +257,25 @@
         btn.disabled = true;
 
         const ano = currentData.getFullYear();
-        const mes = currentData.getMonth();
+        const mes = currentData.getMonth() + 1; // JS retorna meses de 0 a 11, o Python espera de 1 a 12
 
-        // 1. Criação dos Envelopes
-        let envelopes = {};
-        
-        // Saldo do mês anterior entra como envelope no dia 1
-        let saldoAnt = resumoGlobal.saldo_mes_anterior || 0;
-        if (saldoAnt > 0) {
-            envelopes[1] = saldoAnt;
-        }
-
-        // Rendas Lançadas
-        rendasGlobais.forEach(r => {
-            if (r.data_recebimento) {
-                const [y, m, d] = r.data_recebimento.split('-');
-                if (parseInt(y) === ano && parseInt(m) === mes + 1) {
-                    let diaRec = parseInt(d);
-                    envelopes[diaRec] = (envelopes[diaRec] || 0) + parseFloat(r.valor);
-                }
-            }
-        });
-
-        // Shopee (Matemática das Quintas-feiras)
-        diasMarcadosGlobais.forEach(m => {
-            if (m.tipo && (m.tipo === 'shopee_previsto' || m.tipo.startsWith('shopee_trabalhado'))) {
-                const [y, mn, d] = m.data.split('-');
-                const workedDate = new Date(y, mn - 1, d);
-                const dayOfWeek = workedDate.getDay() || 7; 
-                const daysToNextThursday = 7 - dayOfWeek + 4;
-                const payDate = new Date(y, mn - 1, workedDate.getDate() + daysToNextThursday);
-                
-                if (payDate.getFullYear() === ano && payDate.getMonth() === mes) {
-                    let diaRec = payDate.getDate();
-                    envelopes[diaRec] = (envelopes[diaRec] || 0) + 245.00;
-                }
-            }
-        });
-
-        // Lista de dias que têm envelopes (ordenada cronologicamente)
-        let diasDeEntrada = Object.keys(envelopes).map(Number).sort((a, b) => a - b);
-        
-        // Se não houver entradas no mês (precaução de segurança)
-        if (diasDeEntrada.length === 0) {
-            diasDeEntrada = [1];
-            envelopes[1] = 0;
-        }
-
-        // Descontando contas já pagas dos envelopes (para trabalhar com o saldo real que sobrou)
-        let valorJaPago = despesasGlobais.filter(d => d.pago && d.tipo_despesa !== 'Diária').reduce((acc, d) => acc + parseFloat(d.valor), 0);
-        for (let d of diasDeEntrada) {
-            if (valorJaPago <= 0) break;
-            if (envelopes[d] >= valorJaPago) {
-                envelopes[d] -= valorJaPago;
-                valorJaPago = 0;
-            } else {
-                valorJaPago -= envelopes[d];
-                envelopes[d] = 0;
-            }
-        }
-
-        // Função do Envelope: Retira o dinheiro necessário dos envelopes, respeitando o saldo de cada um
-        const pagarComEnvelopes = (valorConta, limiteDiaTrava = null) => {
-            let valorRestante = valorConta;
-            let ultimoDiaUsado = null;
-
-            for (let d of diasDeEntrada) {
-                // Se existe uma trava (Aluguel), não pode usar dinheiro além do dia 7 (ou do limite estabelecido)
-                if (limiteDiaTrava && d > limiteDiaTrava) {
-                    break;
-                }
-
-                if (envelopes[d] > 0) {
-                    let descontar = Math.min(envelopes[d], valorRestante);
-                    envelopes[d] -= descontar;
-                    valorRestante -= descontar;
-                    ultimoDiaUsado = d;
-
-                    if (valorRestante <= 0) break;
-                }
-            }
-
-            // Se o dinheiro acabar no meio ou a trava impedir, define o dia previsto
-            if (valorRestante > 0) {
-                if (limiteDiaTrava) {
-                    let diasPermitidos = diasDeEntrada.filter(d => d <= limiteDiaTrava);
-                    ultimoDiaUsado = diasPermitidos.length > 0 ? diasPermitidos[diasPermitidos.length - 1] : limiteDiaTrava;
-                } else {
-                    ultimoDiaUsado = diasDeEntrada[diasDeEntrada.length - 1]; // Joga pro último dia do mês que tem renda
-                }
-            }
-
-            return ultimoDiaUsado || 1; // Fallback final
-        };
-
-        let atualizacoes = [];
-        let contasPendentes = despesasGlobais.filter(x => !x.pago && x.tipo_despesa !== 'Diária');
-
-        // 2. PRIORIDADE MÁXIMA: ALUGUEL
-        let aluguelIndex = contasPendentes.findIndex(x => x.categoria.toLowerCase() === 'aluguel');
-        if (aluguelIndex !== -1) {
-            let aluguel = contasPendentes.splice(aluguelIndex, 1)[0];
-            let diaPago = pagarComEnvelopes(aluguel.valor, 7); // Aciona a trava no dia 7
-            let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
-            atualizacoes.push({ id: aluguel.id, data_pretensao: dataStr });
-        }
-
-        // 3. DEMAIS CONTAS: Fila indiana por data de vencimento original
-        contasPendentes.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
-
-        contasPendentes.forEach(conta => {
-            // Elas entram no "pagarComEnvelopes" e vão consumindo os envelopes remanescentes
-            let diaPago = pagarComEnvelopes(conta.valor, null);
-            let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
-            atualizacoes.push({ id: conta.id, data_pretensao: dataStr });
-        });
-
-        // 4. ENVIA PARA O SERVIDOR APLICAR O LOTE
         try {
+            // Dispara o comando para o Back-end Python executar toda a matemática de forma segura.
             const res = await fetch('/api/despesas/otimizar', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ atualizacoes })
+                body: JSON.stringify({ mes: mes, ano: ano })
             });
 
             if (res.ok) {
                 fecharModal('modalOtimizacao');
-                carregarDashboard(); // Recarrega o ecrã para desenhar o calendário otimizado e balanceado
+                carregarDashboard(); // Atualiza a tela com as novas datas vindas da BD
             } else {
-                alert("Ocorreu um erro ao otimizar o mês.");
+                alert("Ocorreu um erro ao otimizar o mês. Verifique o servidor.");
             }
         } catch (e) {
             console.error(e);
-            alert("Erro de ligação.");
+            alert("Erro de ligação. O servidor pode estar indisponível.");
         } finally {
             btn.innerText = 'Sim, Otimizar';
             btn.disabled = false;

@@ -243,14 +243,16 @@ def editar_despesa(despesa_id):
         return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# --- NOVA ROTA: OTIMIZAÇÃO DO MÊS ---
+# --- CÉREBRO DA OTIMIZAÇÃO NO BACKEND ---
 @despesas_bp.route('/api/despesas/otimizar', methods=['POST'])
 def otimizar_despesas():
     dados = request.json
-    atualizacoes = dados.get('atualizacoes', [])
-    if not atualizacoes: return jsonify({"status": "erro"}), 400
-    
-    sucesso = DespesaRepository.atualizar_lote_pretensao(atualizacoes)
+    mes = dados.get('mes')
+    ano = dados.get('ano')
+    if not mes or not ano:
+        return jsonify({"status": "erro"}), 400
+        
+    sucesso = DespesaRepository.otimizar_mes(int(mes), int(ano))
     if sucesso:
         autor = obter_usuario_atual()
         outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
