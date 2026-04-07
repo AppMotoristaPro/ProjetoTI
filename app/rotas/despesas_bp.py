@@ -243,14 +243,14 @@ def editar_despesa(despesa_id):
         return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# --- CÉREBRO DA OTIMIZAÇÃO NO BACKEND ---
+# --- ROTA DE OTIMIZAÇÃO (LIGADA AO MOTOR PYTHON E CORRIGIDA PARA LER MÊS/ANO) ---
 @despesas_bp.route('/api/despesas/otimizar', methods=['POST'])
 def otimizar_despesas():
-    dados = request.json
+    dados = request.get_json(silent=True) or {}
     mes = dados.get('mes')
     ano = dados.get('ano')
     if not mes or not ano:
-        return jsonify({"status": "erro"}), 400
+        return jsonify({"status": "erro", "msg": "Mês ou ano ausente."}), 400
         
     sucesso = DespesaRepository.otimizar_mes(int(mes), int(ano))
     if sucesso:

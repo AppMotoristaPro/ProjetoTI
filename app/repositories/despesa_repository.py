@@ -527,8 +527,6 @@ class DespesaRepository:
     # --- NOVO CÉREBRO DA OTIMIZAÇÃO (MÉTODO DOS ENVELOPES EM PYTHON) ---
     @staticmethod
     def otimizar_mes(mes, ano):
-        conn = get_db_connection()
-        if not conn: return False
         try:
             resumo = DespesaRepository.obter_resumo(mes, ano)
             despesas = DespesaRepository.listar_por_mes(mes, ano)
@@ -633,18 +631,25 @@ class DespesaRepository:
                 data_str = f"{ano}-{mes:02d}-{dia_pago:02d}"
                 atualizacoes.append((data_str, conta['id']))
                 
-            # Guardar tudo de uma vez no banco de dados
-            cur = conn.cursor()
-            for dp, cid in atualizacoes:
-                cur.execute("UPDATE despesas SET data_pretensao = %s WHERE id = %s", (dp, cid))
-            conn.commit()
-            return True
+            # Guardar tudo de uma vez no banco de dados (abrindo e fechando de forma isolada e segura)
+            conn = get_db_connection()
+            if not conn: return False
+            try:
+                cur = conn.cursor()
+                for dp, cid in atualizacoes:
+                    cur.execute("UPDATE despesas SET data_pretensao = %s WHERE id = %s", (dp, cid))
+                conn.commit()
+                return True
+            except Exception as err:
+                print(f"Erro no UPDATE: {err}")
+                conn.rollback()
+                return False
+            finally:
+                conn.close()
             
         except Exception as e:
             print(f"Erro no otimizar_mes em Python: {e}")
             return False
-        finally:
-            conn.close()
 
     @staticmethod
     def obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant):
