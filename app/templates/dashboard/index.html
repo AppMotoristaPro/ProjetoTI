@@ -72,7 +72,7 @@
             <span id="meta-save-status" class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity duration-300">Salvo!</span>
         </div>
         <div id="lista_metas_categorias" class="space-y-3">
-            </div>
+        </div>
     </div>
 </div>
 
@@ -245,7 +245,7 @@
         calcularProjecao();
     }
 
-    // --- CÉREBRO DA OTIMIZAÇÃO: MÉTODO DOS ENVELOPES (SEM REGRAS DE ALUGUEL) ---
+    // --- CÉREBRO DA OTIMIZAÇÃO: MÉTODO DOS ENVELOPES PURO ---
     window.abrirModalOtimizar = () => {
         controlarCabecalho(false);
         document.getElementById('modalOtimizacao').classList.remove('hidden');
@@ -258,7 +258,6 @@
 
         const ano = currentData.getFullYear();
         const mes = currentData.getMonth();
-        const diasNoMes = new Date(ano, mes + 1, 0).getDate();
 
         // 1. Criação dos Envelopes
         let envelopes = {};
@@ -296,17 +295,17 @@
             }
         });
 
-        // Lista de dias que têm envelopes (ordenada cronologicamente)
+        // Array com todos os dias em que tem algum dinheiro (os envelopes)
         let diasDeEntrada = Object.keys(envelopes).map(Number).sort((a, b) => a - b);
         
-        // Se não houver entradas no mês (precaução de segurança)
+        // Se não houver entradas no mês (precaução)
         if (diasDeEntrada.length === 0) {
             diasDeEntrada = [1];
             envelopes[1] = 0;
         }
 
-        // Descontando contas já pagas dos envelopes (para trabalhar com o saldo real que sobrou)
-        let valorJaPago = despesasGlobais.filter(d => d.pago).reduce((acc, d) => acc + parseFloat(d.valor), 0);
+        // Descontando contas já pagas dos envelopes para trabalhar com o saldo real que sobrou
+        let valorJaPago = despesasGlobais.filter(d => d.pago && d.tipo_despesa !== 'Diária').reduce((acc, d) => acc + parseFloat(d.valor), 0);
         for (let d of diasDeEntrada) {
             if (valorJaPago <= 0) break;
             if (envelopes[d] >= valorJaPago) {
@@ -318,12 +317,17 @@
             }
         }
 
-        // Função do Envelope: Retira o dinheiro necessário dos envelopes, respeitando o saldo de cada um
+        // O MOTOR DOS ENVELOPES: Vai descontando o valor sequencialmente até pagar a conta
         const pagarComEnvelopes = (valorConta, limiteDiaTrava = null) => {
             let valorRestante = valorConta;
             let ultimoDiaUsado = null;
 
             for (let d of diasDeEntrada) {
+                // Se existe uma trava (Aluguel), não pode usar dinheiro além do dia 7
+                if (limiteDiaTrava && d > limiteDiaTrava) {
+                    break; 
+                }
+
                 if (envelopes[d] > 0) {
                     let descontar = Math.min(envelopes[d], valorRestante);
                     envelopes[d] -= descontar;
@@ -334,25 +338,36 @@
                 }
             }
 
-            // Se o mês for apertado e faltar dinheiro no geral, associa à última entrada do mês (a melhor data possível)
+            // Se o dinheiro acabar no meio ou a trava impedir, define o dia previsto
             if (valorRestante > 0) {
-                ultimoDiaUsado = diasDeEntrada[diasDeEntrada.length - 1];
+                if (limiteDiaTrava) {
+                    let diasPermitidos = diasDeEntrada.filter(d => d <= limiteDiaTrava);
+                    ultimoDiaUsado = diasPermitidos.length > 0 ? diasPermitidos[diasPermitidos.length - 1] : limiteDiaTrava;
+                } else {
+                    ultimoDiaUsado = diasDeEntrada[diasDeEntrada.length - 1]; // Joga pro último dia do mês que tem renda
+                }
             }
 
-            return ultimoDiaUsado;
+            return ultimoDiaUsado || 1;
         };
 
         let atualizacoes = [];
         let contasPendentes = despesasGlobais.filter(x => !x.pago && x.tipo_despesa !== 'Diária');
 
-        // REMOVIDA A PRIORIDADE DO ALUGUEL PARA TESTES
-        
-        // 3. TODAS AS CONTAS: Fila indiana por data de vencimento original
+        // 2. PRIORIDADE ABSOLUTA: ALUGUEL (Trava no dia 7)
+        let aluguelIndex = contasPendentes.findIndex(x => x.categoria.toLowerCase() === 'aluguel');
+        if (aluguelIndex !== -1) {
+            let aluguel = contasPendentes.splice(aluguelIndex, 1)[0];
+            let diaPago = pagarComEnvelopes(aluguel.valor, 7);
+            let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
+            atualizacoes.push({ id: aluguel.id, data_pretensao: dataStr });
+        }
+
+        // 3. RESTO DAS CONTAS (A Fila Indiana)
         contasPendentes.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
 
         contasPendentes.forEach(conta => {
-            // Elas entram no "pagarComEnvelopes" e vão consumindo os envelopes remanescentes
-            let diaPago = pagarComEnvelopes(conta.valor, null);
+            let diaPago = pagarComEnvelopes(conta.valor, null); // Sem limite de dia, usa qualquer envelope
             let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
             atualizacoes.push({ id: conta.id, data_pretensao: dataStr });
         });
@@ -367,7 +382,7 @@
 
             if (res.ok) {
                 fecharModal('modalOtimizacao');
-                carregarDashboard(); // Recarrega o ecrã para desenhar o calendário otimizado e balanceado
+                carregarDashboard();
             } else {
                 alert("Ocorreu um erro ao otimizar o mês.");
             }
@@ -473,7 +488,7 @@
         document.getElementById('valor-pago').innerText = formatarMoeda(tPagas);
 
         if (chartDespesasObj) { chartDespesasObj.destroy(); chartDespesasObj = null; }
-        const ctxDesp = document.getElementById('chartDespesas');
+        const ctxDesp = document.getElementById('chartDespesasEmpty').classList.contains('hidden') ? document.getElementById('chartDespesas') : document.getElementById('chartDespesas');
         if(tPagas === 0 && tPendentes === 0) {
             ctxDesp.style.display = 'none'; document.getElementById('chartDespesasEmpty').classList.remove('hidden');
         } else {
