@@ -245,7 +245,7 @@
         calcularProjecao();
     }
 
-    // --- CÉREBRO DA OTIMIZAÇÃO AUTOMÁTICA ---
+    // --- CÉREBRO DA OTIMIZAÇÃO AUTOMÁTICA REFINADO ---
     window.abrirModalOtimizar = () => {
         controlarCabecalho(false);
         document.getElementById('modalOtimizacao').classList.remove('hidden');
@@ -260,11 +260,13 @@
         const mes = currentData.getMonth();
         const diasNoMes = new Date(ano, mes + 1, 0).getDate();
 
+        // 1. Criando o Caixa Virtual (Linha do Tempo)
         let saldoVirtual = new Array(diasNoMes + 1).fill(0);
         let entradasDia = new Array(diasNoMes + 1).fill(0);
         let saidasPagasDia = new Array(diasNoMes + 1).fill(0);
         let diasDeEntrada = []; 
 
+        // Preenchendo as Rendas Lançadas no Mês
         rendasGlobais.forEach(r => {
             if (r.data_recebimento) {
                 const [y, m, d] = r.data_recebimento.split('-');
@@ -276,6 +278,7 @@
             }
         });
 
+        // Injetando o cálculo da Shopee
         diasMarcadosGlobais.forEach(m => {
             if (m.tipo && (m.tipo === 'shopee_previsto' || m.tipo.startsWith('shopee_trabalhado'))) {
                 const [y, mn, d] = m.data.split('-');
@@ -294,6 +297,7 @@
 
         diasDeEntrada.sort((a, b) => a - b);
 
+        // Descontando o que já foi pago no mês
         despesasGlobais.forEach(d => {
             if (d.pago && d.data_pagamento) {
                 const [y, m, day] = d.data_pagamento.split('-');
@@ -303,12 +307,14 @@
             }
         });
 
+        // Rastreio Contínuo de Saldo
         let saldoAcumulado = resumoGlobal.saldo_mes_anterior || 0;
         for (let i = 1; i <= diasNoMes; i++) {
             saldoAcumulado += entradasDia[i] - saidasPagasDia[i];
             saldoVirtual[i] = saldoAcumulado;
         }
 
+        // Função de Verificação (Radar de Dinheiro)
         const podePagarNoDia = (dia, valor) => {
             for (let i = dia; i <= diasNoMes; i++) {
                 if (saldoVirtual[i] - valor < 0) return false;
@@ -316,6 +322,7 @@
             return true;
         };
 
+        // Função de Débito (Retirar o dinheiro do caixa virtual)
         const aplicarPagamento = (dia, valor) => {
             for (let i = dia; i <= diasNoMes; i++) {
                 saldoVirtual[i] -= valor;
@@ -325,12 +332,13 @@
         let atualizacoes = [];
         let contasPendentes = despesasGlobais.filter(x => !x.pago && x.tipo_despesa !== 'Diária');
 
+        // 2. PRIORIDADE MÁXIMA: ALUGUEL (O Rei do Mês)
         let aluguelIndex = contasPendentes.findIndex(x => x.categoria.toLowerCase() === 'aluguel');
         if (aluguelIndex !== -1) {
             let aluguel = contasPendentes.splice(aluguelIndex, 1)[0];
             let diaPago = null;
 
-            let entradasAte7 = diasDeEntrada.filter(d => d <= 7);
+            let entradasAte7 = diasDeEntrada.filter(d => d <= 7).sort((a,b) => b - a); // Decrescente, tenta o mais perto de 7 possível
             
             for (let d of entradasAte7) {
                 if (podePagarNoDia(d, aluguel.valor)) {
@@ -338,11 +346,17 @@
                 }
             }
             
+            // FALLBACK DO ALUGUEL: Se não dá pra pagar sem negativar o saldo geral, crava no dia que tem MAIS dinheiro disponível antes do dia 7
             if (!diaPago) {
                 if (entradasAte7.length > 0) {
-                    diaPago = entradasAte7[entradasAte7.length - 1]; 
+                    let bestDay = entradasAte7[0];
+                    let maxBal = saldoVirtual[bestDay];
+                    for(let d of entradasAte7) {
+                        if(saldoVirtual[d] > maxBal) { maxBal = saldoVirtual[d]; bestDay = d; }
+                    }
+                    diaPago = bestDay;
                 } else {
-                    diaPago = 7; 
+                    diaPago = 7; // Se não tem dinheiro nenhum, joga no dia limite cego
                 }
             }
             
@@ -351,22 +365,24 @@
             atualizacoes.push({ id: aluguel.id, data_pretensao: dataStr });
         }
 
+        // 3. PRIORIDADE SECUNDÁRIA: DEMAIS CONTAS (Ordenadas por vencimento original)
         contasPendentes.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
 
         contasPendentes.forEach(conta => {
             let venc = parseInt(conta.data_vencimento.split('-')[2]);
             let diaPago = null;
 
-            let entradasAteVenc = diasDeEntrada.filter(d => d <= venc).reverse();
-            
+            // Tentativa 1: Dia com entrada de dinheiro ANTES ou IGUAL ao vencimento
+            let entradasAteVenc = diasDeEntrada.filter(d => d <= venc).sort((a,b) => b - a); // Decrescente (Mais próximo do venc)
             for (let d of entradasAteVenc) {
                 if (podePagarNoDia(d, conta.valor)) {
                     diaPago = d; break;
                 }
             }
 
+            // Tentativa 2: Dia com entrada de dinheiro APÓS o vencimento
             if (!diaPago) {
-                let entradasAposVenc = diasDeEntrada.filter(d => d > venc);
+                let entradasAposVenc = diasDeEntrada.filter(d => d > venc).sort((a,b) => a - b); // Crescente (Mais próximo do venc)
                 for (let d of entradasAposVenc) {
                     if (podePagarNoDia(d, conta.valor)) {
                         diaPago = d; break;
@@ -374,11 +390,18 @@
                 }
             }
 
+            // FALLBACK BALANCEADO (A GRANDE MÁGICA AQUI)
+            // Se o dinheiro do mês for insuficiente e vai negativar de qualquer jeito, escolhe o dia de entrada com o MAIOR saldo disponível para distribuir o peso e não sobrecarregar.
             if (!diaPago) {
                 if (diasDeEntrada.length > 0) {
-                    diaPago = diasDeEntrada[diasDeEntrada.length - 1]; 
+                    let bestDay = diasDeEntrada[0];
+                    let maxBal = saldoVirtual[bestDay];
+                    for(let d of diasDeEntrada) {
+                        if(saldoVirtual[d] > maxBal) { maxBal = saldoVirtual[d]; bestDay = d; }
+                    }
+                    diaPago = bestDay; 
                 } else {
-                    diaPago = diasNoMes; 
+                    diaPago = venc; 
                 }
             }
 
@@ -387,6 +410,7 @@
             atualizacoes.push({ id: conta.id, data_pretensao: dataStr });
         });
 
+        // 4. ENVIA PARA O SERVIDOR APLICAR O LOTE
         try {
             const res = await fetch('/api/despesas/otimizar', {
                 method: 'POST',
@@ -396,7 +420,7 @@
 
             if (res.ok) {
                 fecharModal('modalOtimizacao');
-                carregarDashboard(); 
+                carregarDashboard(); // Recarrega o ecrã para desenhar o calendário otimizado
             } else {
                 alert("Ocorreu um erro ao otimizar o mês.");
             }
