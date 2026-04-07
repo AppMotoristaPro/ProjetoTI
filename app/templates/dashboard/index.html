@@ -72,7 +72,7 @@
             <span id="meta-save-status" class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity duration-300">Salvo!</span>
         </div>
         <div id="lista_metas_categorias" class="space-y-3">
-        </div>
+            </div>
     </div>
 </div>
 
@@ -245,7 +245,7 @@
         calcularProjecao();
     }
 
-    // --- CÉREBRO DA OTIMIZAÇÃO: MÉTODO DOS ENVELOPES PURO ---
+    // --- OTIMIZAÇÃO: LÓGICA EXATA DOS BALDES ---
     window.abrirModalOtimizar = () => {
         controlarCabecalho(false);
         document.getElementById('modalOtimizacao').classList.remove('hidden');
@@ -259,27 +259,21 @@
         const ano = currentData.getFullYear();
         const mes = currentData.getMonth();
 
-        // 1. Criação dos Envelopes
-        let envelopes = {};
+        // 1. Organizar os Baldes de Entradas
+        let baldesObj = {};
         
-        // Saldo do mês anterior entra como envelope no dia 1
-        let saldoAnt = resumoGlobal.saldo_mes_anterior || 0;
-        if (saldoAnt > 0) {
-            envelopes[1] = saldoAnt;
-        }
-
         // Rendas Lançadas
         rendasGlobais.forEach(r => {
             if (r.data_recebimento) {
                 const [y, m, d] = r.data_recebimento.split('-');
                 if (parseInt(y) === ano && parseInt(m) === mes + 1) {
                     let diaRec = parseInt(d);
-                    envelopes[diaRec] = (envelopes[diaRec] || 0) + parseFloat(r.valor);
+                    baldesObj[diaRec] = (baldesObj[diaRec] || 0) + parseFloat(r.valor);
                 }
             }
         });
 
-        // Shopee (Matemática das Quintas-feiras)
+        // Shopee (Matemática Automática das Quintas)
         diasMarcadosGlobais.forEach(m => {
             if (m.tipo && (m.tipo === 'shopee_previsto' || m.tipo.startsWith('shopee_trabalhado'))) {
                 const [y, mn, d] = m.data.split('-');
@@ -290,84 +284,94 @@
                 
                 if (payDate.getFullYear() === ano && payDate.getMonth() === mes) {
                     let diaRec = payDate.getDate();
-                    envelopes[diaRec] = (envelopes[diaRec] || 0) + 245.00;
+                    baldesObj[diaRec] = (baldesObj[diaRec] || 0) + 245.00;
                 }
             }
         });
 
-        // Array com todos os dias em que tem algum dinheiro (os envelopes)
-        let diasDeEntrada = Object.keys(envelopes).map(Number).sort((a, b) => a - b);
-        
-        // Se não houver entradas no mês (precaução)
-        if (diasDeEntrada.length === 0) {
-            diasDeEntrada = [1];
-            envelopes[1] = 0;
+        // Saldo do mês passado entra como um balde no dia 1
+        let saldoAnt = resumoGlobal.saldo_mes_anterior || 0;
+        if (saldoAnt > 0) {
+            baldesObj[1] = (baldesObj[1] || 0) + saldoAnt;
         }
 
-        // Descontando contas já pagas dos envelopes para trabalhar com o saldo real que sobrou
+        // Transforma num Array ordenado por dia crescente
+        let baldes = Object.keys(baldesObj)
+            .map(Number)
+            .sort((a, b) => a - b)
+            .map(dia => ({ dia: dia, valor: baldesObj[dia] }));
+        
+        if (baldes.length === 0) {
+            baldes.push({ dia: 1, valor: 0 });
+        }
+
+        // Subtrai das contas JÁ PAGAS para trabalhar só com a grana que realmente sobrou
         let valorJaPago = despesasGlobais.filter(d => d.pago && d.tipo_despesa !== 'Diária').reduce((acc, d) => acc + parseFloat(d.valor), 0);
-        for (let d of diasDeEntrada) {
+        for (let b of baldes) {
             if (valorJaPago <= 0) break;
-            if (envelopes[d] >= valorJaPago) {
-                envelopes[d] -= valorJaPago;
+            if (b.valor >= valorJaPago) {
+                b.valor -= valorJaPago;
                 valorJaPago = 0;
             } else {
-                valorJaPago -= envelopes[d];
-                envelopes[d] = 0;
+                valorJaPago -= b.valor;
+                b.valor = 0;
             }
         }
 
-        // O MOTOR DOS ENVELOPES: Vai descontando o valor sequencialmente até pagar a conta
-        const pagarComEnvelopes = (valorConta, limiteDiaTrava = null) => {
+        // Função principal: Vai tirando do balde. O último balde que ela precisar usar vira a data dela.
+        const pagarConta = (valorConta, limiteDia = null) => {
             let valorRestante = valorConta;
             let ultimoDiaUsado = null;
-
-            for (let d of diasDeEntrada) {
-                // Se existe uma trava (Aluguel), não pode usar dinheiro além do dia 7
-                if (limiteDiaTrava && d > limiteDiaTrava) {
-                    break; 
+            
+            for (let b of baldes) {
+                // Se tem trava (Aluguel dia 7), não pode usar baldes depois da trava
+                if (limiteDia !== null && b.dia > limiteDia) {
+                    break;
                 }
-
-                if (envelopes[d] > 0) {
-                    let descontar = Math.min(envelopes[d], valorRestante);
-                    envelopes[d] -= descontar;
-                    valorRestante -= descontar;
-                    ultimoDiaUsado = d;
-
-                    if (valorRestante <= 0) break;
+                
+                if (b.valor > 0) {
+                    let deduzir = Math.min(b.valor, valorRestante);
+                    b.valor -= deduzir;
+                    valorRestante -= deduzir;
+                    ultimoDiaUsado = b.dia;
+                }
+                
+                if (valorRestante <= 0) {
+                    break;
                 }
             }
-
-            // Se o dinheiro acabar no meio ou a trava impedir, define o dia previsto
-            if (valorRestante > 0) {
-                if (limiteDiaTrava) {
-                    let diasPermitidos = diasDeEntrada.filter(d => d <= limiteDiaTrava);
-                    ultimoDiaUsado = diasPermitidos.length > 0 ? diasPermitidos[diasPermitidos.length - 1] : limiteDiaTrava;
+            
+            // Se o loop terminou e ainda falta dinheiro:
+            // 1. Se tinha limiteDia, forçamos o limiteDia (ou o último balde que existia antes dele).
+            // 2. Se não tinha limiteDia, o mês estourou. Fica no último balde que tinha no mês.
+            if (ultimoDiaUsado === null || valorRestante > 0) {
+                if (limiteDia !== null) {
+                    ultimoDiaUsado = limiteDia;
                 } else {
-                    ultimoDiaUsado = diasDeEntrada[diasDeEntrada.length - 1]; // Joga pro último dia do mês que tem renda
+                    ultimoDiaUsado = baldes[baldes.length - 1].dia;
                 }
             }
-
-            return ultimoDiaUsado || 1;
+            
+            return ultimoDiaUsado;
         };
 
         let atualizacoes = [];
         let contasPendentes = despesasGlobais.filter(x => !x.pago && x.tipo_despesa !== 'Diária');
 
-        // 2. PRIORIDADE ABSOLUTA: ALUGUEL (Trava no dia 7)
+        // 2. PRIORIDADE: ALUGUEL
         let aluguelIndex = contasPendentes.findIndex(x => x.categoria.toLowerCase() === 'aluguel');
         if (aluguelIndex !== -1) {
             let aluguel = contasPendentes.splice(aluguelIndex, 1)[0];
-            let diaPago = pagarComEnvelopes(aluguel.valor, 7);
+            let diaPago = pagarConta(aluguel.valor, 7); // Trava o aluguel para consumir apenas baldes até dia 7
             let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
             atualizacoes.push({ id: aluguel.id, data_pretensao: dataStr });
         }
 
-        // 3. RESTO DAS CONTAS (A Fila Indiana)
+        // 3. DEMAIS CONTAS
         contasPendentes.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
 
         contasPendentes.forEach(conta => {
-            let diaPago = pagarComEnvelopes(conta.valor, null); // Sem limite de dia, usa qualquer envelope
+            let diaPago = pagarConta(conta.valor, null); // Sem travas, consome baldes que restam
             let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
             atualizacoes.push({ id: conta.id, data_pretensao: dataStr });
         });
@@ -488,7 +492,7 @@
         document.getElementById('valor-pago').innerText = formatarMoeda(tPagas);
 
         if (chartDespesasObj) { chartDespesasObj.destroy(); chartDespesasObj = null; }
-        const ctxDesp = document.getElementById('chartDespesasEmpty').classList.contains('hidden') ? document.getElementById('chartDespesas') : document.getElementById('chartDespesas');
+        const ctxDesp = document.getElementById('chartDespesas');
         if(tPagas === 0 && tPendentes === 0) {
             ctxDesp.style.display = 'none'; document.getElementById('chartDespesasEmpty').classList.remove('hidden');
         } else {
