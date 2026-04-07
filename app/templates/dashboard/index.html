@@ -245,7 +245,7 @@
         calcularProjecao();
     }
 
-    // --- CÉREBRO DA OTIMIZAÇÃO AUTOMÁTICA REFINADO ---
+    // --- CÉREBRO DA OTIMIZAÇÃO: MÉTODO DOS ENVELOPES ---
     window.abrirModalOtimizar = () => {
         controlarCabecalho(false);
         document.getElementById('modalOtimizacao').classList.remove('hidden');
@@ -260,25 +260,27 @@
         const mes = currentData.getMonth();
         const diasNoMes = new Date(ano, mes + 1, 0).getDate();
 
-        // 1. Criando o Caixa Virtual (Linha do Tempo)
-        let saldoVirtual = new Array(diasNoMes + 1).fill(0);
-        let entradasDia = new Array(diasNoMes + 1).fill(0);
-        let saidasPagasDia = new Array(diasNoMes + 1).fill(0);
-        let diasDeEntrada = []; 
+        // 1. Criação dos Envelopes
+        let envelopes = {};
+        
+        // Saldo do mês anterior entra como envelope no dia 1
+        let saldoAnt = resumoGlobal.saldo_mes_anterior || 0;
+        if (saldoAnt > 0) {
+            envelopes[1] = saldoAnt;
+        }
 
-        // Preenchendo as Rendas Lançadas no Mês
+        // Rendas Lançadas
         rendasGlobais.forEach(r => {
             if (r.data_recebimento) {
                 const [y, m, d] = r.data_recebimento.split('-');
                 if (parseInt(y) === ano && parseInt(m) === mes + 1) {
                     let diaRec = parseInt(d);
-                    entradasDia[diaRec] += parseFloat(r.valor);
-                    if (!diasDeEntrada.includes(diaRec)) diasDeEntrada.push(diaRec);
+                    envelopes[diaRec] = (envelopes[diaRec] || 0) + parseFloat(r.valor);
                 }
             }
         });
 
-        // Injetando o cálculo da Shopee
+        // Shopee (Matemática das Quintas-feiras)
         diasMarcadosGlobais.forEach(m => {
             if (m.tipo && (m.tipo === 'shopee_previsto' || m.tipo.startsWith('shopee_trabalhado'))) {
                 const [y, mn, d] = m.data.split('-');
@@ -289,123 +291,85 @@
                 
                 if (payDate.getFullYear() === ano && payDate.getMonth() === mes) {
                     let diaRec = payDate.getDate();
-                    entradasDia[diaRec] += 245.00;
-                    if (!diasDeEntrada.includes(diaRec)) diasDeEntrada.push(diaRec);
+                    envelopes[diaRec] = (envelopes[diaRec] || 0) + 245.00;
                 }
             }
         });
 
-        diasDeEntrada.sort((a, b) => a - b);
-
-        // Descontando o que já foi pago no mês
-        despesasGlobais.forEach(d => {
-            if (d.pago && d.data_pagamento) {
-                const [y, m, day] = d.data_pagamento.split('-');
-                if (parseInt(y) === ano && parseInt(m) === mes + 1) {
-                    saidasPagasDia[parseInt(day)] += parseFloat(d.valor);
-                }
-            }
-        });
-
-        // Rastreio Contínuo de Saldo
-        let saldoAcumulado = resumoGlobal.saldo_mes_anterior || 0;
-        for (let i = 1; i <= diasNoMes; i++) {
-            saldoAcumulado += entradasDia[i] - saidasPagasDia[i];
-            saldoVirtual[i] = saldoAcumulado;
+        // Lista de dias que têm envelopes (ordenada cronologicamente)
+        let diasDeEntrada = Object.keys(envelopes).map(Number).sort((a, b) => a - b);
+        
+        // Se não houver entradas no mês (precaução de segurança)
+        if (diasDeEntrada.length === 0) {
+            diasDeEntrada = [1];
+            envelopes[1] = 0;
         }
 
-        // Função de Verificação (Radar de Dinheiro)
-        const podePagarNoDia = (dia, valor) => {
-            for (let i = dia; i <= diasNoMes; i++) {
-                if (saldoVirtual[i] - valor < 0) return false;
+        // Descontando contas já pagas dos envelopes (para trabalhar com o saldo real que sobrou)
+        let valorJaPago = despesasGlobais.filter(d => d.pago).reduce((acc, d) => acc + parseFloat(d.valor), 0);
+        for (let d of diasDeEntrada) {
+            if (valorJaPago <= 0) break;
+            if (envelopes[d] >= valorJaPago) {
+                envelopes[d] -= valorJaPago;
+                valorJaPago = 0;
+            } else {
+                valorJaPago -= envelopes[d];
+                envelopes[d] = 0;
             }
-            return true;
-        };
+        }
 
-        // Função de Débito (Retirar o dinheiro do caixa virtual)
-        const aplicarPagamento = (dia, valor) => {
-            for (let i = dia; i <= diasNoMes; i++) {
-                saldoVirtual[i] -= valor;
+        // Função do Envelope: Retira o dinheiro necessário dos envelopes, respeitando o saldo de cada um
+        const pagarComEnvelopes = (valorConta, limiteDiaTrava = null) => {
+            let valorRestante = valorConta;
+            let ultimoDiaUsado = null;
+
+            for (let d of diasDeEntrada) {
+                if (envelopes[d] > 0) {
+                    let descontar = Math.min(envelopes[d], valorRestante);
+                    envelopes[d] -= descontar;
+                    valorRestante -= descontar;
+                    ultimoDiaUsado = d;
+
+                    if (valorRestante <= 0) break;
+                }
             }
+
+            // Se o mês for apertado e faltar dinheiro no geral, associa à última entrada do mês (a melhor data possível)
+            if (valorRestante > 0) {
+                ultimoDiaUsado = diasDeEntrada[diasDeEntrada.length - 1];
+            }
+
+            // Trava Absoluta do Aluguel: Se a matemática obrigou a passar do dia 7, força a data para o dia 7 ou a entrada mais próxima
+            if (limiteDiaTrava && (ultimoDiaUsado === null || ultimoDiaUsado > limiteDiaTrava)) {
+                let diasAteLimite = diasDeEntrada.filter(d => d <= limiteDiaTrava);
+                if(diasAteLimite.length > 0) {
+                    ultimoDiaUsado = diasAteLimite[diasAteLimite.length - 1];
+                } else {
+                    ultimoDiaUsado = limiteDiaTrava;
+                }
+            }
+            
+            return ultimoDiaUsado;
         };
 
         let atualizacoes = [];
         let contasPendentes = despesasGlobais.filter(x => !x.pago && x.tipo_despesa !== 'Diária');
 
-        // 2. PRIORIDADE MÁXIMA: ALUGUEL (O Rei do Mês)
+        // 2. PRIORIDADE MÁXIMA: ALUGUEL
         let aluguelIndex = contasPendentes.findIndex(x => x.categoria.toLowerCase() === 'aluguel');
         if (aluguelIndex !== -1) {
             let aluguel = contasPendentes.splice(aluguelIndex, 1)[0];
-            let diaPago = null;
-
-            let entradasAte7 = diasDeEntrada.filter(d => d <= 7).sort((a,b) => b - a); // Decrescente, tenta o mais perto de 7 possível
-            
-            for (let d of entradasAte7) {
-                if (podePagarNoDia(d, aluguel.valor)) {
-                    diaPago = d; break;
-                }
-            }
-            
-            // FALLBACK DO ALUGUEL: Se não dá pra pagar sem negativar o saldo geral, crava no dia que tem MAIS dinheiro disponível antes do dia 7
-            if (!diaPago) {
-                if (entradasAte7.length > 0) {
-                    let bestDay = entradasAte7[0];
-                    let maxBal = saldoVirtual[bestDay];
-                    for(let d of entradasAte7) {
-                        if(saldoVirtual[d] > maxBal) { maxBal = saldoVirtual[d]; bestDay = d; }
-                    }
-                    diaPago = bestDay;
-                } else {
-                    diaPago = 7; // Se não tem dinheiro nenhum, joga no dia limite cego
-                }
-            }
-            
-            aplicarPagamento(diaPago, aluguel.valor);
+            let diaPago = pagarComEnvelopes(aluguel.valor, 7); // Aciona a trava no dia 7
             let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
             atualizacoes.push({ id: aluguel.id, data_pretensao: dataStr });
         }
 
-        // 3. PRIORIDADE SECUNDÁRIA: DEMAIS CONTAS (Ordenadas por vencimento original)
+        // 3. DEMAIS CONTAS: Fila indiana por data de vencimento original
         contasPendentes.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
 
         contasPendentes.forEach(conta => {
-            let venc = parseInt(conta.data_vencimento.split('-')[2]);
-            let diaPago = null;
-
-            // Tentativa 1: Dia com entrada de dinheiro ANTES ou IGUAL ao vencimento
-            let entradasAteVenc = diasDeEntrada.filter(d => d <= venc).sort((a,b) => b - a); // Decrescente (Mais próximo do venc)
-            for (let d of entradasAteVenc) {
-                if (podePagarNoDia(d, conta.valor)) {
-                    diaPago = d; break;
-                }
-            }
-
-            // Tentativa 2: Dia com entrada de dinheiro APÓS o vencimento
-            if (!diaPago) {
-                let entradasAposVenc = diasDeEntrada.filter(d => d > venc).sort((a,b) => a - b); // Crescente (Mais próximo do venc)
-                for (let d of entradasAposVenc) {
-                    if (podePagarNoDia(d, conta.valor)) {
-                        diaPago = d; break;
-                    }
-                }
-            }
-
-            // FALLBACK BALANCEADO (A GRANDE MÁGICA AQUI)
-            // Se o dinheiro do mês for insuficiente e vai negativar de qualquer jeito, escolhe o dia de entrada com o MAIOR saldo disponível para distribuir o peso e não sobrecarregar.
-            if (!diaPago) {
-                if (diasDeEntrada.length > 0) {
-                    let bestDay = diasDeEntrada[0];
-                    let maxBal = saldoVirtual[bestDay];
-                    for(let d of diasDeEntrada) {
-                        if(saldoVirtual[d] > maxBal) { maxBal = saldoVirtual[d]; bestDay = d; }
-                    }
-                    diaPago = bestDay; 
-                } else {
-                    diaPago = venc; 
-                }
-            }
-
-            aplicarPagamento(diaPago, conta.valor);
+            // Elas entram no "pagarComEnvelopes" e vão consumindo os envelopes remanescentes
+            let diaPago = pagarComEnvelopes(conta.valor, null);
             let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
             atualizacoes.push({ id: conta.id, data_pretensao: dataStr });
         });
@@ -420,7 +384,7 @@
 
             if (res.ok) {
                 fecharModal('modalOtimizacao');
-                carregarDashboard(); // Recarrega o ecrã para desenhar o calendário otimizado
+                carregarDashboard(); // Recarrega o ecrã para desenhar o calendário otimizado e balanceado
             } else {
                 alert("Ocorreu um erro ao otimizar o mês.");
             }
