@@ -245,7 +245,7 @@
         calcularProjecao();
     }
 
-    // --- OTIMIZAÇÃO: LÓGICA EXATA DOS BALDES ---
+    // --- CÉREBRO DA OTIMIZAÇÃO: MÉTODO DOS ENVELOPES ---
     window.abrirModalOtimizar = () => {
         controlarCabecalho(false);
         document.getElementById('modalOtimizacao').classList.remove('hidden');
@@ -259,21 +259,27 @@
         const ano = currentData.getFullYear();
         const mes = currentData.getMonth();
 
-        // 1. Organizar os Baldes de Entradas
-        let baldesObj = {};
+        // 1. Criação dos Envelopes
+        let envelopes = {};
         
+        // Saldo do mês anterior entra como envelope no dia 1
+        let saldoAnt = resumoGlobal.saldo_mes_anterior || 0;
+        if (saldoAnt > 0) {
+            envelopes[1] = saldoAnt;
+        }
+
         // Rendas Lançadas
         rendasGlobais.forEach(r => {
             if (r.data_recebimento) {
                 const [y, m, d] = r.data_recebimento.split('-');
                 if (parseInt(y) === ano && parseInt(m) === mes + 1) {
                     let diaRec = parseInt(d);
-                    baldesObj[diaRec] = (baldesObj[diaRec] || 0) + parseFloat(r.valor);
+                    envelopes[diaRec] = (envelopes[diaRec] || 0) + parseFloat(r.valor);
                 }
             }
         });
 
-        // Shopee (Matemática Automática das Quintas)
+        // Shopee (Matemática das Quintas-feiras)
         diasMarcadosGlobais.forEach(m => {
             if (m.tipo && (m.tipo === 'shopee_previsto' || m.tipo.startsWith('shopee_trabalhado'))) {
                 const [y, mn, d] = m.data.split('-');
@@ -284,94 +290,85 @@
                 
                 if (payDate.getFullYear() === ano && payDate.getMonth() === mes) {
                     let diaRec = payDate.getDate();
-                    baldesObj[diaRec] = (baldesObj[diaRec] || 0) + 245.00;
+                    envelopes[diaRec] = (envelopes[diaRec] || 0) + 245.00;
                 }
             }
         });
 
-        // Saldo do mês passado entra como um balde no dia 1
-        let saldoAnt = resumoGlobal.saldo_mes_anterior || 0;
-        if (saldoAnt > 0) {
-            baldesObj[1] = (baldesObj[1] || 0) + saldoAnt;
-        }
-
-        // Transforma num Array ordenado por dia crescente
-        let baldes = Object.keys(baldesObj)
-            .map(Number)
-            .sort((a, b) => a - b)
-            .map(dia => ({ dia: dia, valor: baldesObj[dia] }));
+        // Lista de dias que têm envelopes (ordenada cronologicamente)
+        let diasDeEntrada = Object.keys(envelopes).map(Number).sort((a, b) => a - b);
         
-        if (baldes.length === 0) {
-            baldes.push({ dia: 1, valor: 0 });
+        // Se não houver entradas no mês (precaução de segurança)
+        if (diasDeEntrada.length === 0) {
+            diasDeEntrada = [1];
+            envelopes[1] = 0;
         }
 
-        // Subtrai das contas JÁ PAGAS para trabalhar só com a grana que realmente sobrou
+        // Descontando contas já pagas dos envelopes (para trabalhar com o saldo real que sobrou)
         let valorJaPago = despesasGlobais.filter(d => d.pago && d.tipo_despesa !== 'Diária').reduce((acc, d) => acc + parseFloat(d.valor), 0);
-        for (let b of baldes) {
+        for (let d of diasDeEntrada) {
             if (valorJaPago <= 0) break;
-            if (b.valor >= valorJaPago) {
-                b.valor -= valorJaPago;
+            if (envelopes[d] >= valorJaPago) {
+                envelopes[d] -= valorJaPago;
                 valorJaPago = 0;
             } else {
-                valorJaPago -= b.valor;
-                b.valor = 0;
+                valorJaPago -= envelopes[d];
+                envelopes[d] = 0;
             }
         }
 
-        // Função principal: Vai tirando do balde. O último balde que ela precisar usar vira a data dela.
-        const pagarConta = (valorConta, limiteDia = null) => {
+        // Função do Envelope: Retira o dinheiro necessário dos envelopes, respeitando o saldo de cada um
+        const pagarComEnvelopes = (valorConta, limiteDiaTrava = null) => {
             let valorRestante = valorConta;
             let ultimoDiaUsado = null;
-            
-            for (let b of baldes) {
-                // Se tem trava (Aluguel dia 7), não pode usar baldes depois da trava
-                if (limiteDia !== null && b.dia > limiteDia) {
+
+            for (let d of diasDeEntrada) {
+                // Se existe uma trava (Aluguel), não pode usar dinheiro além do dia 7 (ou do limite estabelecido)
+                if (limiteDiaTrava && d > limiteDiaTrava) {
                     break;
                 }
-                
-                if (b.valor > 0) {
-                    let deduzir = Math.min(b.valor, valorRestante);
-                    b.valor -= deduzir;
-                    valorRestante -= deduzir;
-                    ultimoDiaUsado = b.dia;
-                }
-                
-                if (valorRestante <= 0) {
-                    break;
+
+                if (envelopes[d] > 0) {
+                    let descontar = Math.min(envelopes[d], valorRestante);
+                    envelopes[d] -= descontar;
+                    valorRestante -= descontar;
+                    ultimoDiaUsado = d;
+
+                    if (valorRestante <= 0) break;
                 }
             }
-            
-            // Se o loop terminou e ainda falta dinheiro:
-            // 1. Se tinha limiteDia, forçamos o limiteDia (ou o último balde que existia antes dele).
-            // 2. Se não tinha limiteDia, o mês estourou. Fica no último balde que tinha no mês.
-            if (ultimoDiaUsado === null || valorRestante > 0) {
-                if (limiteDia !== null) {
-                    ultimoDiaUsado = limiteDia;
+
+            // Se o dinheiro acabar no meio ou a trava impedir, define o dia previsto
+            if (valorRestante > 0) {
+                if (limiteDiaTrava) {
+                    let diasPermitidos = diasDeEntrada.filter(d => d <= limiteDiaTrava);
+                    ultimoDiaUsado = diasPermitidos.length > 0 ? diasPermitidos[diasPermitidos.length - 1] : limiteDiaTrava;
                 } else {
-                    ultimoDiaUsado = baldes[baldes.length - 1].dia;
+                    ultimoDiaUsado = diasDeEntrada[diasDeEntrada.length - 1]; // Joga pro último dia do mês que tem renda
                 }
             }
-            
-            return ultimoDiaUsado;
+
+            return ultimoDiaUsado || 1; // Fallback final
         };
 
         let atualizacoes = [];
         let contasPendentes = despesasGlobais.filter(x => !x.pago && x.tipo_despesa !== 'Diária');
 
-        // 2. PRIORIDADE: ALUGUEL
+        // 2. PRIORIDADE MÁXIMA: ALUGUEL
         let aluguelIndex = contasPendentes.findIndex(x => x.categoria.toLowerCase() === 'aluguel');
         if (aluguelIndex !== -1) {
             let aluguel = contasPendentes.splice(aluguelIndex, 1)[0];
-            let diaPago = pagarConta(aluguel.valor, 7); // Trava o aluguel para consumir apenas baldes até dia 7
+            let diaPago = pagarComEnvelopes(aluguel.valor, 7); // Aciona a trava no dia 7
             let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
             atualizacoes.push({ id: aluguel.id, data_pretensao: dataStr });
         }
 
-        // 3. DEMAIS CONTAS
+        // 3. DEMAIS CONTAS: Fila indiana por data de vencimento original
         contasPendentes.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
 
         contasPendentes.forEach(conta => {
-            let diaPago = pagarConta(conta.valor, null); // Sem travas, consome baldes que restam
+            // Elas entram no "pagarComEnvelopes" e vão consumindo os envelopes remanescentes
+            let diaPago = pagarComEnvelopes(conta.valor, null);
             let dataStr = `${ano}-${pad(mes+1)}-${pad(diaPago)}`;
             atualizacoes.push({ id: conta.id, data_pretensao: dataStr });
         });
@@ -386,7 +383,7 @@
 
             if (res.ok) {
                 fecharModal('modalOtimizacao');
-                carregarDashboard();
+                carregarDashboard(); // Recarrega o ecrã para desenhar o calendário otimizado e balanceado
             } else {
                 alert("Ocorreu um erro ao otimizar o mês.");
             }
