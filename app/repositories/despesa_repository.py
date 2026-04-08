@@ -523,11 +523,11 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # --- CÉREBRO DA OTIMIZAÇÃO (NOVA VERSÃO CORRIGIDA) ---
+    # --- CÉREBRO DA OTIMIZAÇÃO (NOVO ENCAIXE INTELIGENTE / TETRIS) ---
     @staticmethod
     def otimizar_mes(mes, ano, xray_mode=False):
         log = []
-        log.append(f"🔍 INICIANDO MODO RAIO-X: Mês {mes:02d}/{ano}")
+        log.append(f"🔍 INICIANDO MODO RAIO-X (TETRIS FINANCEIRO): Mês {mes:02d}/{ano}")
         log.append("-" * 40)
         
         try:
@@ -536,7 +536,6 @@ class DespesaRepository:
             
             envelopes = {}
             
-            # 1. Rendas Lançadas (Filtro Estrito para não poluir com outras rendas)
             fontes_validas = ['shopee', 'salário', 'salario', 'adiantamento quinzenal', 'adiantamento']
             log.append(f"📥 Lendo Rendas Cadastradas (Filtro: Shopee, Salário, Adiantamento)...")
             
@@ -549,120 +548,109 @@ class DespesaRepository:
                         
                         if is_valida:
                             envelopes[d_obj.day] = envelopes.get(d_obj.day, 0.0) + float(r['valor'])
-                            log.append(f"   -> Adicionado R$ {float(r['valor']):.2f} no Envelope do Dia {d_obj.day} ({fonte})")
+                            log.append(f"   -> Adicionado R$ {float(r['valor']):.2f} no Dia {d_obj.day} ({fonte})")
                         else:
-                            log.append(f"   -> Ignorado: R$ {float(r['valor']):.2f} ({fonte}) - Não faz parte das regras de otimização.")
+                            log.append(f"   -> Ignorado: R$ {float(r['valor']):.2f} ({fonte}) - Não está na regra exclusiva.")
             
             dias_de_entrada = sorted(list(envelopes.keys()))
             if not dias_de_entrada:
-                log.append("⚠️ Nenhum envelope válido encontrado (ou sem entradas). Criando Envelope Dia 1 com R$ 0.00.")
+                log.append("⚠️ Nenhum envelope válido encontrado. Criando Envelope de segurança no Dia 1.")
                 dias_de_entrada = [1]
                 envelopes[1] = 0.0
                 
             log.append("-" * 40)
-            log.append(f"📋 RESUMO DOS ENVELOPES: { {k: f'R$ {v:.2f}' for k, v in envelopes.items()} }")
-            log.append("-" * 40)
+            log.append(f"📋 RESUMO DOS ENVELOPES BRUTOS: { {k: f'R$ {v:.2f}' for k, v in envelopes.items()} }")
                 
-            # Descontar as contas que JÁ ESTÃO PAGAS
+            # Abater as contas que JÁ ESTÃO PAGAS no mês
             contas_pagas = [d for d in despesas if d.get('pago') and d.get('tipo_despesa') != 'Diária']
             valor_ja_pago = sum(float(d['valor']) for d in contas_pagas)
             
-            log.append(f"💸 Abatendo {len(contas_pagas)} contas JÁ PAGAS dos Envelopes (Total: R$ {valor_ja_pago:.2f})...")
+            log.append(f"💸 Abatendo contas JÁ PAGAS do saldo dos Envelopes (Total: R$ {valor_ja_pago:.2f})...")
             for d in dias_de_entrada:
                 if valor_ja_pago <= 0: break
                 if envelopes[d] >= valor_ja_pago:
-                    log.append(f"   -> Deduzindo R$ {valor_ja_pago:.2f} do Envelope Dia {d}...")
                     envelopes[d] -= valor_ja_pago
                     valor_ja_pago = 0
                 else:
-                    log.append(f"   -> Deduzindo R$ {envelopes[d]:.2f} (Zerou Envelope Dia {d})...")
                     valor_ja_pago -= envelopes[d]
                     envelopes[d] = 0.0
                     
             log.append(f"📋 ENVELOPES DISPONÍVEIS P/ USO: { {k: f'R$ {v:.2f}' for k, v in envelopes.items()} }")
             log.append("-" * 40)
+            
+            # Preparar as contas para o Tetris
+            contas_pendentes = [d for d in despesas if not d.get('pago') and d.get('tipo_despesa') != 'Diária']
+            for c in contas_pendentes:
+                c['valor_restante'] = float(c['valor'])
+                venc_str = c.get('data_vencimento')
+                c['dia_venc'] = int(venc_str.split('-')[2]) if venc_str else 99
+                
+            atualizacoes = []
 
-            # Lógica Central: Procura de trás para a frente a partir do Vencimento
-            def pagar_com_envelopes(valor_conta, nome_conta, venc_dia, limite_dia_trava=None):
-                valor_restante = float(valor_conta)
-                ultimo_dia_usado = None
-                venc = int(venc_dia) if venc_dia != '?' else 1
-                
-                log.append(f"\n🛒 TENTANDO PAGAR: {nome_conta} | Valor: R$ {valor_conta:.2f} | Vence: Dia {venc_dia}")
-                
-                # Definir limite máximo (A trava do aluguel ou a data de vencimento)
-                max_dia_permitido = limite_dia_trava if limite_dia_trava else venc
-                
-                # Procura de dinheiro ANTES do vencimento/limite, do mais próximo para o mais distante
-                dias_busca_retroativa = [d for d in dias_de_entrada if d <= max_dia_permitido]
-                dias_busca_retroativa.sort(reverse=True)
-                
-                log.append(f"   -> Buscando dinheiro nos dias: {dias_busca_retroativa} (De trás pra frente)")
-                
-                for d in dias_busca_retroativa:
+            # 1. PRIORIDADE ABSOLUTA: ALUGUEL (Até dia 7)
+            aluguel = next((c for c in contas_pendentes if c.get('categoria', '').lower() == 'aluguel'), None)
+            if aluguel:
+                log.append(f"\n🏠 TENTANDO PAGAR: [ALUGUEL] {aluguel['descricao']} | Valor: R$ {aluguel['valor']:.2f}")
+                dia_pago = 1
+                for d in dias_de_entrada:
+                    if d > 7:
+                        break
                     if envelopes[d] > 0:
-                        descontar = min(envelopes[d], valor_restante)
+                        descontar = min(envelopes[d], aluguel['valor_restante'])
                         envelopes[d] -= descontar
-                        valor_restante -= descontar
-                        ultimo_dia_usado = d
-                        log.append(f"   -> Usou R$ {descontar:.2f} do Envelope Dia {d}. (Restou R$ {envelopes[d]:.2f})")
-                        
-                        if round(valor_restante, 2) <= 0:
-                            log.append(f"   ✅ Conta paga antes do limite/vencimento!")
+                        aluguel['valor_restante'] -= descontar
+                        dia_pago = d
+                        log.append(f"   -> Retirou R$ {descontar:.2f} do Envelope Dia {d}. (Restou R$ {envelopes[d]:.2f})")
+
+                        if round(aluguel['valor_restante'], 2) <= 0:
                             break
                             
-                # Se não conseguiu pagar tudo e NÃO há trava, procura dias DEPOIS do vencimento
-                if round(valor_restante, 2) > 0 and not limite_dia_trava:
-                    dias_busca_futura = [d for d in dias_de_entrada if d > venc]
-                    dias_busca_futura.sort()
-                    if dias_busca_futura:
-                        log.append(f"   ⚠️ Faltou R$ {valor_restante:.2f}. Buscando no futuro: {dias_busca_futura}")
-                        for d in dias_busca_futura:
-                            if envelopes[d] > 0:
-                                descontar = min(envelopes[d], valor_restante)
-                                envelopes[d] -= descontar
-                                valor_restante -= descontar
-                                ultimo_dia_usado = d
-                                log.append(f"   -> Usou R$ {descontar:.2f} do Envelope Dia {d}. (Restou R$ {envelopes[d]:.2f})")
-                                
-                                if round(valor_restante, 2) <= 0:
-                                    log.append(f"   ✅ Conta paga com atraso planejado!")
-                                    break
-                
-                # Se o mês estourou e falta dinheiro em todos os envelopes
-                if round(valor_restante, 2) > 0:
-                    log.append(f"   ❌ MÊS ESTOUROU! Faltou dinheiro para pagar R$ {valor_restante:.2f}.")
-                    if limite_dia_trava:
-                        ultimo_dia_usado = limite_dia_trava
-                    else:
-                        ultimo_dia_usado = dias_de_entrada[-1] if dias_de_entrada else 1
-                    log.append(f"   ➡️ Forçando o agendamento cego para: Dia {ultimo_dia_usado}.")
-                
-                log.append(f"   📌 DATA ATRIBUÍDA: DIA {ultimo_dia_usado}")
-                return ultimo_dia_usado or 1
-                
-            contas_pendentes = [d for d in despesas if not d.get('pago') and d.get('tipo_despesa') != 'Diária']
-            atualizacoes = []
-            _, ultimo_dia_do_mes = calendar.monthrange(ano, mes)
-            
-            # PRIORIDADE: ALUGUEL (Trava de dia 7)
-            aluguel_idx = next((i for i, c in enumerate(contas_pendentes) if c.get('categoria', '').lower() == 'aluguel'), -1)
-            if aluguel_idx != -1:
-                aluguel = contas_pendentes.pop(aluguel_idx)
-                venc_dia = aluguel['data_vencimento'].split('-')[2] if aluguel.get('data_vencimento') else '?'
-                dia_pago = min(pagar_com_envelopes(aluguel['valor'], f"[ALUGUEL] {aluguel['descricao']}", venc_dia, limite_dia_trava=7), ultimo_dia_do_mes)
-                data_str = f"{ano}-{mes:02d}-{dia_pago:02d}"
-                atualizacoes.append((data_str, aluguel['id']))
+                if round(aluguel['valor_restante'], 2) > 0:
+                    log.append(f"   ⚠️ Faltou dinheiro até o dia 7! Forçando data para o dia 7.")
+                    dia_pago = 7
+                    
+                atualizacoes.append((f"{ano}-{mes:02d}-{dia_pago:02d}", aluguel['id']))
+                contas_pendentes.remove(aluguel)
+                log.append(f"   ✅ ALUGUEL AGENDADO PARA: DIA {dia_pago}")
 
-            # DEMAIS CONTAS
-            # Ordenadas pela data_vencimento original
-            contas_pendentes.sort(key=lambda x: datetime.datetime.strptime(x['data_vencimento'], '%Y-%m-%d').date() if x.get('data_vencimento') else datetime.date.today())
+            # 2. DEMAIS CONTAS: TETRIS INTELIGENTE
+            # Ordenar para dar preferência a quem vence primeiro
+            contas_pendentes.sort(key=lambda x: x['dia_venc'])
             
-            for conta in contas_pendentes:
-                venc_dia = conta['data_vencimento'].split('-')[2] if conta.get('data_vencimento') else '?'
-                dia_pago = min(pagar_com_envelopes(conta['valor'], conta['descricao'], venc_dia), ultimo_dia_do_mes)
-                data_str = f"{ano}-{mes:02d}-{dia_pago:02d}"
-                atualizacoes.append((data_str, conta['id']))
+            log.append("\n🧩 INICIANDO ENCAIXE INTELIGENTE (TETRIS)...")
+            
+            for d in dias_de_entrada:
+                if round(envelopes[d], 2) <= 0:
+                    continue
+                    
+                log.append(f"\n📦 Processando Envelope do Dia {d} (Saldo: R$ {envelopes[d]:.2f})")
+                
+                while round(envelopes[d], 2) > 0 and contas_pendentes:
+                    # Encaixe Perfeito: Procura contas que caibam INTEIRAS no que sobrou deste dia
+                    cabem_perfeitamente = [c for c in contas_pendentes if c['valor_restante'] <= envelopes[d]]
+                    
+                    if cabem_perfeitamente:
+                        c = cabem_perfeitamente[0] # Pega a de menor vencimento que cabe
+                        envelopes[d] -= c['valor_restante']
+                        log.append(f"   -> [ENCAIXE PERFEITO] '{c['descricao']}' de R$ {c['valor_restante']:.2f} (Vencia dia {c['dia_venc']}) coube no troco do Dia {d}!")
+                        c['valor_restante'] = 0
+                        atualizacoes.append((f"{ano}-{mes:02d}-{d:02d}", c['id']))
+                        contas_pendentes.remove(c)
+                    else:
+                        # Se não há mais contas que cabem inteiras, pega a próxima da fila e vai abatendo
+                        c = contas_pendentes[0]
+                        descontar = envelopes[d]
+                        c['valor_restante'] -= descontar
+                        envelopes[d] -= descontar
+                        log.append(f"   -> [PAGAMENTO PARCIAL] '{c['descricao']}' usou os R$ {descontar:.2f} do Dia {d}. (Ainda falta pagar R$ {c['valor_restante']:.2f})")
+
+            # 3. VERIFICAÇÃO FINAL DE ESTOURO
+            if contas_pendentes:
+                ultimo_dia = dias_de_entrada[-1] if dias_de_entrada else 28
+                log.append(f"\n❌ O MÊS ESTOUROU! Contas que ficaram sem saldo vão cair no último dia com renda ({ultimo_dia}):")
+                for c in contas_pendentes:
+                    log.append(f"   -> '{c['descricao']}' (Faltou R$ {c['valor_restante']:.2f}) -> Vai para o Dia {ultimo_dia}")
+                    atualizacoes.append((f"{ano}-{mes:02d}-{ultimo_dia:02d}", c['id']))
                 
             log.append("\n" + "=" * 40)
             
