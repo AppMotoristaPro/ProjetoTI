@@ -243,22 +243,28 @@ def editar_despesa(despesa_id):
         return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# --- ROTA DE OTIMIZAÇÃO (LIGADA AO MOTOR PYTHON E CORRIGIDA PARA LER MÊS/ANO) ---
+# --- ROTA DE OTIMIZAÇÃO COM SUPORTE AO RAIO-X ---
 @despesas_bp.route('/api/despesas/otimizar', methods=['POST'])
 def otimizar_despesas():
     dados = request.get_json(silent=True) or {}
     mes = dados.get('mes')
     ano = dados.get('ano')
+    xray = dados.get('xray', False)
+    
     if not mes or not ano:
         return jsonify({"status": "erro", "msg": "Mês ou ano ausente."}), 400
         
-    sucesso = DespesaRepository.otimizar_mes(int(mes), int(ano))
+    sucesso, log = DespesaRepository.otimizar_mes(int(mes), int(ano), xray_mode=xray)
+    
     if sucesso:
-        autor = obter_usuario_atual()
-        outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
-        NotificacaoService.enviar_notificacao(outro_usuario, "✨ Mês Otimizado!", f"{autor} utilizou a inteligência artificial para organizar os pagamentos do mês.")
-        return jsonify({"status": "sucesso"}), 200
-    return jsonify({"status": "erro"}), 500
+        if not xray:
+            autor = obter_usuario_atual()
+            outro_usuario = "Thaynara" if autor == "Igor" else "Igor"
+            NotificacaoService.enviar_notificacao(outro_usuario, "✨ Mês Otimizado!", f"{autor} utilizou a inteligência artificial para organizar os pagamentos do mês.")
+        
+        return jsonify({"status": "sucesso", "log": log}), 200
+        
+    return jsonify({"status": "erro", "log": log}), 500
 
 @despesas_bp.route('/api/calendario/marcacoes', methods=['GET'])
 def listar_marcacoes():

@@ -6,7 +6,6 @@ from app.extensions import get_db_connection
 
 class DespesaRepository:
 
-    # Força o Python a usar sempre UTC-3 (São Paulo)
     @staticmethod
     def _hoje():
         return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).date()
@@ -524,9 +523,13 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # --- NOVO CÉREBRO DA OTIMIZAÇÃO (MÉTODO DOS ENVELOPES EM PYTHON) ---
+    # --- CÉREBRO DA OTIMIZAÇÃO (COM MODO RAIO-X) ---
     @staticmethod
-    def otimizar_mes(mes, ano):
+    def otimizar_mes(mes, ano, xray_mode=False):
+        log = []
+        log.append(f"🔍 INICIANDO MODO RAIO-X: Mês {mes:02d}/{ano}")
+        log.append("-" * 40)
+        
         try:
             resumo = DespesaRepository.obter_resumo(mes, ano)
             despesas = DespesaRepository.listar_por_mes(mes, ano)
@@ -542,53 +545,76 @@ class DespesaRepository:
             
             envelopes = {}
             
-            # 1. Saldo Anterior (Vira envelope do Dia 1)
+            # 1. Saldo Anterior
             saldo_ant = float(resumo.get('saldo_mes_anterior', 0.0))
             if saldo_ant > 0:
                 envelopes[1] = saldo_ant
+                log.append(f"💰 Saldo do mês anterior: R$ {saldo_ant:.2f} (Criado Envelope no Dia 1)")
                 
             # 2. Rendas Lançadas
+            log.append(f"📥 Verificando {len(rendas)} rendas lançadas...")
             for r in rendas:
                 if r.get('data_recebimento'):
                     d_obj = datetime.datetime.strptime(r['data_recebimento'], '%Y-%m-%d').date()
                     if d_obj.year == ano and d_obj.month == mes:
                         envelopes[d_obj.day] = envelopes.get(d_obj.day, 0.0) + float(r['valor'])
+                        log.append(f"   -> Adicionado R$ {float(r['valor']):.2f} no Envelope do Dia {d_obj.day} ({r.get('fonte', 'Renda')})")
                         
-            # 3. Shopee (Calculando as quintas-feiras)
+            # 3. Shopee
+            log.append("🚚 Calculando dias da Shopee para pagamentos nas quintas-feiras...")
             for m in marcacoes:
                 tipo = m.get('tipo', '')
                 if tipo == 'shopee_previsto' or tipo.startswith('shopee_trabalhado'):
                     d_obj = datetime.datetime.strptime(m['data'], '%Y-%m-%d').date()
-                    day_of_week = d_obj.isoweekday() # Segunda=1, Domingo=7
+                    day_of_week = d_obj.isoweekday()
                     days_to_next_thursday = 7 - day_of_week + 4
                     pay_date = d_obj + datetime.timedelta(days=days_to_next_thursday)
                     
                     if pay_date.year == ano and pay_date.month == mes:
                         envelopes[pay_date.day] = envelopes.get(pay_date.day, 0.0) + 245.0
+                        log.append(f"   -> Adicionado R$ 245.00 no Envelope do Dia {pay_date.day} (Referente ao dia trabalhado {d_obj.strftime('%d/%m')})")
             
             dias_de_entrada = sorted(list(envelopes.keys()))
             if not dias_de_entrada:
+                log.append("⚠️ Nenhuma renda encontrada neste mês. Criando Envelope de Segurança no Dia 1 com R$ 0.00.")
                 dias_de_entrada = [1]
                 envelopes[1] = 0.0
                 
-            # Descontar as contas que JÁ ESTÃO PAGAS do valor dos envelopes
-            valor_ja_pago = sum(float(d['valor']) for d in despesas if d.get('pago') and d.get('tipo_despesa') != 'Diária')
+            log.append("-" * 40)
+            log.append(f"📋 RESUMO DOS ENVELOPES ORIGINAIS: { {k: f'R$ {v:.2f}' for k, v in envelopes.items()} }")
+            log.append("-" * 40)
+                
+            # Descontar as contas que JÁ ESTÃO PAGAS
+            contas_pagas = [d for d in despesas if d.get('pago') and d.get('tipo_despesa') != 'Diária']
+            valor_ja_pago = sum(float(d['valor']) for d in contas_pagas)
+            log.append(f"💸 Abatendo contas que você JÁ PAGOU este mês (Total: R$ {valor_ja_pago:.2f}) dos Envelopes...")
+            
             for d in dias_de_entrada:
                 if valor_ja_pago <= 0: break
                 if envelopes[d] >= valor_ja_pago:
+                    log.append(f"   -> Deduzindo R$ {valor_ja_pago:.2f} do Envelope Dia {d}...")
                     envelopes[d] -= valor_ja_pago
                     valor_ja_pago = 0
                 else:
+                    log.append(f"   -> O Envelope Dia {d} não cobriu tudo. Deduzindo R$ {envelopes[d]:.2f} (Zerou o Envelope)...")
                     valor_ja_pago -= envelopes[d]
                     envelopes[d] = 0.0
+                    
+            log.append(f"📋 ENVELOPES DISPONÍVEIS PARA USAR: { {k: f'R$ {v:.2f}' for k, v in envelopes.items()} }")
+            log.append("-" * 40)
 
-            # A Lógica Central de Retirada
-            def pagar_com_envelopes(valor_conta, limite_dia_trava=None):
+            # Lógica Central de Retirada
+            def pagar_com_envelopes(valor_conta, nome_conta, vencimento, limite_dia_trava=None):
                 valor_restante = float(valor_conta)
                 ultimo_dia_usado = None
+                log.append(f"\n🛒 TENTANDO PAGAR: {nome_conta} | Valor: R$ {valor_conta:.2f} | Vence Dia: {vencimento}")
+                
+                if limite_dia_trava:
+                    log.append(f"   🔒 ATENÇÃO: Esta conta tem uma trava. Só pode usar Envelopes até o dia {limite_dia_trava}.")
                 
                 for d in dias_de_entrada:
                     if limite_dia_trava and d > limite_dia_trava:
+                        log.append(f"   🛑 O Envelope do Dia {d} foi bloqueado devido à trava do dia {limite_dia_trava}.")
                         break
                     
                     if envelopes[d] > 0:
@@ -596,18 +622,24 @@ class DespesaRepository:
                         envelopes[d] -= descontar
                         valor_restante -= descontar
                         ultimo_dia_usado = d
+                        log.append(f"   -> Retirou R$ {descontar:.2f} do Envelope Dia {d}. (Sobrou R$ {envelopes[d]:.2f} neste envelope)")
                         
                         if round(valor_restante, 2) <= 0:
+                            log.append(f"   ✅ Conta Paga com sucesso!")
                             break
                             
-                # Se não conseguiu pagar tudo (acabou o dinheiro ou a trava impediu)
+                # Fallback se faltou dinheiro
                 if round(valor_restante, 2) > 0:
+                    log.append(f"   ❌ ACABOU O DINHEIRO! Ficou faltando pagar R$ {valor_restante:.2f} da conta.")
                     if limite_dia_trava:
                         dias_permitidos = [d for d in dias_de_entrada if d <= limite_dia_trava]
                         ultimo_dia_usado = dias_permitidos[-1] if dias_permitidos else limite_dia_trava
+                        log.append(f"   ➡️ Forçando o agendamento para a data limite: Dia {ultimo_dia_usado}.")
                     else:
-                        ultimo_dia_usado = dias_de_entrada[-1] # Atira para o último dia de entrada do mês
-                        
+                        ultimo_dia_usado = dias_de_entrada[-1]
+                        log.append(f"   ➡️ Empurrando a conta para o último envelope de dinheiro disponível: Dia {ultimo_dia_usado}.")
+                
+                log.append(f"   📌 DATA ATRIBUÍDA A ESTA CONTA: DIA {ultimo_dia_usado}")
                 return ultimo_dia_usado or 1
                 
             contas_pendentes = [d for d in despesas if not d.get('pago') and d.get('tipo_despesa') != 'Diária']
@@ -618,7 +650,8 @@ class DespesaRepository:
             aluguel_idx = next((i for i, c in enumerate(contas_pendentes) if c.get('categoria', '').lower() == 'aluguel'), -1)
             if aluguel_idx != -1:
                 aluguel = contas_pendentes.pop(aluguel_idx)
-                dia_pago = min(pagar_com_envelopes(aluguel['valor'], limite_dia_trava=7), ultimo_dia_do_mes)
+                venc_dia = aluguel['data_vencimento'].split('-')[2] if aluguel.get('data_vencimento') else '?'
+                dia_pago = min(pagar_com_envelopes(aluguel['valor'], f"[ALUGUEL] {aluguel['descricao']}", venc_dia, limite_dia_trava=7), ultimo_dia_do_mes)
                 data_str = f"{ano}-{mes:02d}-{dia_pago:02d}"
                 atualizacoes.append((data_str, aluguel['id']))
 
@@ -627,29 +660,37 @@ class DespesaRepository:
             contas_pendentes.sort(key=lambda x: datetime.datetime.strptime(x['data_vencimento'], '%Y-%m-%d').date() if x.get('data_vencimento') else datetime.date.today())
             
             for conta in contas_pendentes:
-                dia_pago = min(pagar_com_envelopes(conta['valor']), ultimo_dia_do_mes)
+                venc_dia = conta['data_vencimento'].split('-')[2] if conta.get('data_vencimento') else '?'
+                dia_pago = min(pagar_com_envelopes(conta['valor'], conta['descricao'], venc_dia), ultimo_dia_do_mes)
                 data_str = f"{ano}-{mes:02d}-{dia_pago:02d}"
                 atualizacoes.append((data_str, conta['id']))
                 
-            # Guardar tudo de uma vez no banco de dados (abrindo e fechando de forma isolada e segura)
-            conn = get_db_connection()
-            if not conn: return False
-            try:
-                cur = conn.cursor()
-                for dp, cid in atualizacoes:
-                    cur.execute("UPDATE despesas SET data_pretensao = %s WHERE id = %s", (dp, cid))
-                conn.commit()
-                return True
-            except Exception as err:
-                print(f"Erro no UPDATE: {err}")
-                conn.rollback()
-                return False
-            finally:
-                conn.close()
+            log.append("\n" + "=" * 40)
+            
+            if xray_mode:
+                log.append("🛑 MODO RAIO-X FINALIZADO. NENHUMA ALTERAÇÃO FOI GUARDADA NA BASE DE DADOS.")
+                return True, log
+            else:
+                log.append("💾 MODO REAL: A GRAVAR AS ALTERAÇÕES NA BASE DE DADOS...")
+                conn = get_db_connection()
+                if not conn: return False, log
+                try:
+                    cur = conn.cursor()
+                    for dp, cid in atualizacoes:
+                        cur.execute("UPDATE despesas SET data_pretensao = %s WHERE id = %s", (dp, cid))
+                    conn.commit()
+                    log.append("✅ Tudo guardado com sucesso!")
+                    return True, log
+                except Exception as err:
+                    conn.rollback()
+                    log.append(f"❌ Erro fatal ao gravar: {err}")
+                    return False, log
+                finally:
+                    conn.close()
             
         except Exception as e:
-            print(f"Erro no otimizar_mes em Python: {e}")
-            return False
+            log.append(f"❌ ERRO CRÍTICO NO CÓDIGO PYTHON: {e}")
+            return False, log
 
     @staticmethod
     def obter_pacotao_dashboard(mes, ano, mes_ant, ano_ant):

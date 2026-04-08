@@ -149,8 +149,19 @@
 
         <div class="flex gap-2">
             <button onclick="fecharModal('modalOtimizacao')" class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold active:scale-95 transition">Não</button>
-            <button onclick="iniciarOtimizacaoInteligente()" id="btn_run_otimizacao" class="flex-1 py-4 bg-indigo-500 text-white rounded-2xl font-black active:scale-95 transition shadow-lg">Sim, Otimizar</button>
+            <button onclick="iniciarOtimizacaoInteligente(false)" id="btn_run_otimizacao" class="flex-1 py-4 bg-indigo-500 text-white rounded-2xl font-black active:scale-95 transition shadow-lg">Sim, Otimizar</button>
         </div>
+        <div class="mt-4">
+            <button onclick="iniciarOtimizacaoInteligente(true)" class="w-full py-3 bg-slate-800 text-green-400 rounded-2xl font-black active:scale-95 transition shadow-lg border border-green-500/30">Modo Raio-X 🩻</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalRaioX" class="hidden fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/90 backdrop-blur-md p-4 transition-opacity">
+    <div class="w-full max-w-md bg-slate-800 rounded-[20px] p-4 shadow-2xl border border-slate-700 relative">
+        <button onclick="fecharModal('modalRaioX')" class="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-700 p-2 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        <h3 class="text-green-500 font-mono text-sm font-black mb-3">TERMINAL (RAIO-X PYTHON)</h3>
+        <div id="raiox_content" class="bg-black text-green-400 p-3 rounded-lg font-mono text-[10px] h-[65vh] overflow-y-auto whitespace-pre-wrap"></div>
     </div>
 </div>
 
@@ -245,37 +256,44 @@
         calcularProjecao();
     }
 
-    // --- NOVA ROTA DE OTIMIZAÇÃO (O FRONTEND AGORA APENAS CHAMA O PYTHON) ---
+    // --- NOVA CHAMADA PARA A OTIMIZAÇÃO NO PYTHON ---
     window.abrirModalOtimizar = () => {
         controlarCabecalho(false);
         document.getElementById('modalOtimizacao').classList.remove('hidden');
     };
 
-    window.iniciarOtimizacaoInteligente = async () => {
+    window.iniciarOtimizacaoInteligente = async (isRaioX) => {
         const btn = document.getElementById('btn_run_otimizacao');
         btn.innerText = 'A CALCULAR... ⏳';
         btn.disabled = true;
 
         const ano = currentData.getFullYear();
-        const mes = currentData.getMonth() + 1; // 1 a 12
+        const mes = currentData.getMonth() + 1;
 
         try {
-            // Dispara o comando para o Back-end Python executar toda a matemática de forma segura.
             const res = await fetch('/api/despesas/otimizar', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ mes: mes, ano: ano })
+                body: JSON.stringify({ mes: mes, ano: ano, xray: isRaioX })
             });
+
+            const data = await res.json();
 
             if (res.ok) {
                 fecharModal('modalOtimizacao');
-                carregarDashboard(); // Atualiza a tela com as novas datas vindas da BD
+                
+                if (isRaioX) {
+                    document.getElementById('modalRaioX').classList.remove('hidden');
+                    document.getElementById('raiox_content').innerHTML = data.log.join('<br>');
+                } else {
+                    carregarDashboard();
+                }
             } else {
-                alert("Ocorreu um erro ao otimizar o mês. Verifique o servidor.");
+                alert("Ocorreu um erro ao otimizar o mês. Ocorreu uma falha no servidor.");
             }
         } catch (e) {
             console.error(e);
-            alert("Erro de ligação. O servidor pode estar indisponível.");
+            alert("Erro de ligação com a API.");
         } finally {
             btn.innerText = 'Sim, Otimizar';
             btn.disabled = false;
