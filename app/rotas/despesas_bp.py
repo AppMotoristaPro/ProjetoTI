@@ -243,7 +243,6 @@ def editar_despesa(despesa_id):
         return jsonify({"status": "sucesso"}), 200
     return jsonify({"status": "erro"}), 500
 
-# --- ROTA DE OTIMIZAÇÃO COM SUPORTE AO RAIO-X ---
 @despesas_bp.route('/api/despesas/otimizar', methods=['POST'])
 def otimizar_despesas():
     dados = request.get_json(silent=True) or {}

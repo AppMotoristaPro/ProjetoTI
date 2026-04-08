@@ -71,8 +71,7 @@
             <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest">Gastos do Dia-a-dia</h3>
             <span id="meta-save-status" class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity duration-300">Salvo!</span>
         </div>
-        <div id="lista_metas_categorias" class="space-y-3">
-        </div>
+        <div id="lista_metas_categorias" class="space-y-3"></div>
     </div>
 </div>
 
@@ -215,7 +214,12 @@
 
     const formatarMoeda = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     const formatarData = (ds) => { if (!ds || !ds.includes('-')) return '--/--'; const [y, m, d] = ds.split('-'); return `${d}/${m}`; };
-    const getDataBase = (x) => x.data_pretensao ? x.data_pretensao : x.data_vencimento;
+    
+    // CORREÇÃO: O cálculo de "Data" agora assume a data real de pagamento se a conta já foi paga
+    const getDataBase = (x) => { 
+        if (x.pago && x.data_pagamento) return x.data_pagamento;
+        return x.data_pretensao ? x.data_pretensao : x.data_vencimento; 
+    };
 
     const atualizarDisplayMes = () => {
         const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -268,9 +272,10 @@
         btn.disabled = true;
 
         const ano = currentData.getFullYear();
-        const mes = currentData.getMonth() + 1;
+        const mes = currentData.getMonth() + 1; // 1 a 12
 
         try {
+            // Dispara o comando para o Back-end Python executar toda a matemática de forma segura.
             const res = await fetch('/api/despesas/otimizar', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},

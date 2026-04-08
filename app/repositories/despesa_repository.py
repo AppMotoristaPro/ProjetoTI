@@ -523,7 +523,7 @@ class DespesaRepository:
         except Exception: return False
         finally: conn.close()
 
-    # --- CÉREBRO DA OTIMIZAÇÃO (COM MODO RAIO-X) ---
+    # --- CÉREBRO DA OTIMIZAÇÃO (NOVA VERSÃO CORRIGIDA) ---
     @staticmethod
     def otimizar_mes(mes, ano, xray_mode=False):
         log = []
@@ -531,64 +531,43 @@ class DespesaRepository:
         log.append("-" * 40)
         
         try:
-            resumo = DespesaRepository.obter_resumo(mes, ano)
             despesas = DespesaRepository.listar_por_mes(mes, ano)
-            
-            mes_ant = mes - 1
-            ano_ant = ano
-            if mes_ant == 0:
-                mes_ant = 12
-                ano_ant -= 1
-                
-            marcacoes = DespesaRepository.listar_dias_marcados(mes_ant, ano_ant) + DespesaRepository.listar_dias_marcados(mes, ano)
             rendas = DespesaRepository.listar_rendas_detalhadas(mes, ano)
             
             envelopes = {}
             
-            # 1. Saldo Anterior
-            saldo_ant = float(resumo.get('saldo_mes_anterior', 0.0))
-            if saldo_ant > 0:
-                envelopes[1] = saldo_ant
-                log.append(f"💰 Saldo do mês anterior: R$ {saldo_ant:.2f} (Criado Envelope no Dia 1)")
-                
-            # 2. Rendas Lançadas
-            log.append(f"📥 Verificando {len(rendas)} rendas lançadas...")
+            # 1. Rendas Lançadas (Filtro Estrito para não poluir com outras rendas)
+            fontes_validas = ['shopee', 'salário', 'salario', 'adiantamento quinzenal', 'adiantamento']
+            log.append(f"📥 Lendo Rendas Cadastradas (Filtro: Shopee, Salário, Adiantamento)...")
+            
             for r in rendas:
                 if r.get('data_recebimento'):
                     d_obj = datetime.datetime.strptime(r['data_recebimento'], '%Y-%m-%d').date()
                     if d_obj.year == ano and d_obj.month == mes:
-                        envelopes[d_obj.day] = envelopes.get(d_obj.day, 0.0) + float(r['valor'])
-                        log.append(f"   -> Adicionado R$ {float(r['valor']):.2f} no Envelope do Dia {d_obj.day} ({r.get('fonte', 'Renda')})")
+                        fonte = r.get('fonte', '').strip()
+                        is_valida = any(f_valida in fonte.lower() for f_valida in fontes_validas)
                         
-            # 3. Shopee
-            log.append("🚚 Calculando dias da Shopee para pagamentos nas quintas-feiras...")
-            for m in marcacoes:
-                tipo = m.get('tipo', '')
-                if tipo == 'shopee_previsto' or tipo.startswith('shopee_trabalhado'):
-                    d_obj = datetime.datetime.strptime(m['data'], '%Y-%m-%d').date()
-                    day_of_week = d_obj.isoweekday()
-                    days_to_next_thursday = 7 - day_of_week + 4
-                    pay_date = d_obj + datetime.timedelta(days=days_to_next_thursday)
-                    
-                    if pay_date.year == ano and pay_date.month == mes:
-                        envelopes[pay_date.day] = envelopes.get(pay_date.day, 0.0) + 245.0
-                        log.append(f"   -> Adicionado R$ 245.00 no Envelope do Dia {pay_date.day} (Referente ao dia trabalhado {d_obj.strftime('%d/%m')})")
+                        if is_valida:
+                            envelopes[d_obj.day] = envelopes.get(d_obj.day, 0.0) + float(r['valor'])
+                            log.append(f"   -> Adicionado R$ {float(r['valor']):.2f} no Envelope do Dia {d_obj.day} ({fonte})")
+                        else:
+                            log.append(f"   -> Ignorado: R$ {float(r['valor']):.2f} ({fonte}) - Não faz parte das regras de otimização.")
             
             dias_de_entrada = sorted(list(envelopes.keys()))
             if not dias_de_entrada:
-                log.append("⚠️ Nenhuma renda encontrada neste mês. Criando Envelope de Segurança no Dia 1 com R$ 0.00.")
+                log.append("⚠️ Nenhum envelope válido encontrado (ou sem entradas). Criando Envelope Dia 1 com R$ 0.00.")
                 dias_de_entrada = [1]
                 envelopes[1] = 0.0
                 
             log.append("-" * 40)
-            log.append(f"📋 RESUMO DOS ENVELOPES ORIGINAIS: { {k: f'R$ {v:.2f}' for k, v in envelopes.items()} }")
+            log.append(f"📋 RESUMO DOS ENVELOPES: { {k: f'R$ {v:.2f}' for k, v in envelopes.items()} }")
             log.append("-" * 40)
                 
             # Descontar as contas que JÁ ESTÃO PAGAS
             contas_pagas = [d for d in despesas if d.get('pago') and d.get('tipo_despesa') != 'Diária']
             valor_ja_pago = sum(float(d['valor']) for d in contas_pagas)
-            log.append(f"💸 Abatendo contas que você JÁ PAGOU este mês (Total: R$ {valor_ja_pago:.2f}) dos Envelopes...")
             
+            log.append(f"💸 Abatendo {len(contas_pagas)} contas JÁ PAGAS dos Envelopes (Total: R$ {valor_ja_pago:.2f})...")
             for d in dias_de_entrada:
                 if valor_ja_pago <= 0: break
                 if envelopes[d] >= valor_ja_pago:
@@ -596,57 +575,77 @@ class DespesaRepository:
                     envelopes[d] -= valor_ja_pago
                     valor_ja_pago = 0
                 else:
-                    log.append(f"   -> O Envelope Dia {d} não cobriu tudo. Deduzindo R$ {envelopes[d]:.2f} (Zerou o Envelope)...")
+                    log.append(f"   -> Deduzindo R$ {envelopes[d]:.2f} (Zerou Envelope Dia {d})...")
                     valor_ja_pago -= envelopes[d]
                     envelopes[d] = 0.0
                     
-            log.append(f"📋 ENVELOPES DISPONÍVEIS PARA USAR: { {k: f'R$ {v:.2f}' for k, v in envelopes.items()} }")
+            log.append(f"📋 ENVELOPES DISPONÍVEIS P/ USO: { {k: f'R$ {v:.2f}' for k, v in envelopes.items()} }")
             log.append("-" * 40)
 
-            # Lógica Central de Retirada
-            def pagar_com_envelopes(valor_conta, nome_conta, vencimento, limite_dia_trava=None):
+            # Lógica Central: Procura de trás para a frente a partir do Vencimento
+            def pagar_com_envelopes(valor_conta, nome_conta, venc_dia, limite_dia_trava=None):
                 valor_restante = float(valor_conta)
                 ultimo_dia_usado = None
-                log.append(f"\n🛒 TENTANDO PAGAR: {nome_conta} | Valor: R$ {valor_conta:.2f} | Vence Dia: {vencimento}")
+                venc = int(venc_dia) if venc_dia != '?' else 1
                 
-                if limite_dia_trava:
-                    log.append(f"   🔒 ATENÇÃO: Esta conta tem uma trava. Só pode usar Envelopes até o dia {limite_dia_trava}.")
+                log.append(f"\n🛒 TENTANDO PAGAR: {nome_conta} | Valor: R$ {valor_conta:.2f} | Vence: Dia {venc_dia}")
                 
-                for d in dias_de_entrada:
-                    if limite_dia_trava and d > limite_dia_trava:
-                        log.append(f"   🛑 O Envelope do Dia {d} foi bloqueado devido à trava do dia {limite_dia_trava}.")
-                        break
-                    
+                # Definir limite máximo (A trava do aluguel ou a data de vencimento)
+                max_dia_permitido = limite_dia_trava if limite_dia_trava else venc
+                
+                # Procura de dinheiro ANTES do vencimento/limite, do mais próximo para o mais distante
+                dias_busca_retroativa = [d for d in dias_de_entrada if d <= max_dia_permitido]
+                dias_busca_retroativa.sort(reverse=True)
+                
+                log.append(f"   -> Buscando dinheiro nos dias: {dias_busca_retroativa} (De trás pra frente)")
+                
+                for d in dias_busca_retroativa:
                     if envelopes[d] > 0:
                         descontar = min(envelopes[d], valor_restante)
                         envelopes[d] -= descontar
                         valor_restante -= descontar
                         ultimo_dia_usado = d
-                        log.append(f"   -> Retirou R$ {descontar:.2f} do Envelope Dia {d}. (Sobrou R$ {envelopes[d]:.2f} neste envelope)")
+                        log.append(f"   -> Usou R$ {descontar:.2f} do Envelope Dia {d}. (Restou R$ {envelopes[d]:.2f})")
                         
                         if round(valor_restante, 2) <= 0:
-                            log.append(f"   ✅ Conta Paga com sucesso!")
+                            log.append(f"   ✅ Conta paga antes do limite/vencimento!")
                             break
                             
-                # Fallback se faltou dinheiro
-                if round(valor_restante, 2) > 0:
-                    log.append(f"   ❌ ACABOU O DINHEIRO! Ficou faltando pagar R$ {valor_restante:.2f} da conta.")
-                    if limite_dia_trava:
-                        dias_permitidos = [d for d in dias_de_entrada if d <= limite_dia_trava]
-                        ultimo_dia_usado = dias_permitidos[-1] if dias_permitidos else limite_dia_trava
-                        log.append(f"   ➡️ Forçando o agendamento para a data limite: Dia {ultimo_dia_usado}.")
-                    else:
-                        ultimo_dia_usado = dias_de_entrada[-1]
-                        log.append(f"   ➡️ Empurrando a conta para o último envelope de dinheiro disponível: Dia {ultimo_dia_usado}.")
+                # Se não conseguiu pagar tudo e NÃO há trava, procura dias DEPOIS do vencimento
+                if round(valor_restante, 2) > 0 and not limite_dia_trava:
+                    dias_busca_futura = [d for d in dias_de_entrada if d > venc]
+                    dias_busca_futura.sort()
+                    if dias_busca_futura:
+                        log.append(f"   ⚠️ Faltou R$ {valor_restante:.2f}. Buscando no futuro: {dias_busca_futura}")
+                        for d in dias_busca_futura:
+                            if envelopes[d] > 0:
+                                descontar = min(envelopes[d], valor_restante)
+                                envelopes[d] -= descontar
+                                valor_restante -= descontar
+                                ultimo_dia_usado = d
+                                log.append(f"   -> Usou R$ {descontar:.2f} do Envelope Dia {d}. (Restou R$ {envelopes[d]:.2f})")
+                                
+                                if round(valor_restante, 2) <= 0:
+                                    log.append(f"   ✅ Conta paga com atraso planejado!")
+                                    break
                 
-                log.append(f"   📌 DATA ATRIBUÍDA A ESTA CONTA: DIA {ultimo_dia_usado}")
+                # Se o mês estourou e falta dinheiro em todos os envelopes
+                if round(valor_restante, 2) > 0:
+                    log.append(f"   ❌ MÊS ESTOUROU! Faltou dinheiro para pagar R$ {valor_restante:.2f}.")
+                    if limite_dia_trava:
+                        ultimo_dia_usado = limite_dia_trava
+                    else:
+                        ultimo_dia_usado = dias_de_entrada[-1] if dias_de_entrada else 1
+                    log.append(f"   ➡️ Forçando o agendamento cego para: Dia {ultimo_dia_usado}.")
+                
+                log.append(f"   📌 DATA ATRIBUÍDA: DIA {ultimo_dia_usado}")
                 return ultimo_dia_usado or 1
                 
             contas_pendentes = [d for d in despesas if not d.get('pago') and d.get('tipo_despesa') != 'Diária']
             atualizacoes = []
             _, ultimo_dia_do_mes = calendar.monthrange(ano, mes)
             
-            # PRIORIDADE: ALUGUEL
+            # PRIORIDADE: ALUGUEL (Trava de dia 7)
             aluguel_idx = next((i for i, c in enumerate(contas_pendentes) if c.get('categoria', '').lower() == 'aluguel'), -1)
             if aluguel_idx != -1:
                 aluguel = contas_pendentes.pop(aluguel_idx)
