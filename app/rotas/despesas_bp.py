@@ -52,7 +52,21 @@ def manifest():
 def sw():
     js = """
     self.addEventListener('install', (e) => { self.skipWaiting(); });
-    self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+    
+    self.addEventListener('activate', (e) => { 
+        // Destrói caches antigos fantasmas que causam o erro Not Found no PWA
+        e.waitUntil(
+            caches.keys().then((keyList) => {
+                return Promise.all(keyList.map((key) => caches.delete(key)));
+            }).then(() => self.clients.claim())
+        ); 
+    });
+
+    self.addEventListener('fetch', (e) => {
+        // Intercepta a navegação e força a buscar a tela real no servidor Render
+        e.respondWith(fetch(e.request));
+    });
+
     self.addEventListener('push', function(e) {
         let data = {title: 'Despesas T&I', body: 'Nova movimentação registrada!'};
         if (e.data) { try { data = e.data.json(); } catch(err) { data.body = e.data.text(); } }
@@ -64,6 +78,7 @@ def sw():
         };
         e.waitUntil(self.registration.showNotification(data.title, options));
     });
+    
     self.addEventListener('notificationclick', function(e) {
         e.notification.close(); e.waitUntil(clients.openWindow('/'));
     });
@@ -73,7 +88,7 @@ def sw():
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
 
-@despesas_bp.route('/', methods=['GET'])
+@despesas_bp.route('/', methods=['GET'], strict_slashes=False)
 def home(): 
     hoje = hoje_br()
     mes_atual = hoje.month
@@ -91,19 +106,19 @@ def home():
     pacotao_json = json.dumps(pacotao, cls=DecimalEncoder)
     return render_template('dashboard/index.html', pacotao_inicial=pacotao_json)
 
-@despesas_bp.route('/historico', methods=['GET'])
+@despesas_bp.route('/historico', methods=['GET'], strict_slashes=False)
 def tela_historico(): return render_template('despesas/historico.html')
 
-@despesas_bp.route('/rotas', methods=['GET'])
+@despesas_bp.route('/rotas', methods=['GET'], strict_slashes=False)
 def tela_rotas(): return render_template('dashboard/rotas.html')
 
-@despesas_bp.route('/entradas', methods=['GET'])
+@despesas_bp.route('/entradas', methods=['GET'], strict_slashes=False)
 def tela_entradas(): return render_template('dashboard/entradas.html')
 
-@despesas_bp.route('/fixas', methods=['GET'])
+@despesas_bp.route('/fixas', methods=['GET'], strict_slashes=False)
 def tela_fixas(): return render_template('despesas/fixas.html')
 
-@despesas_bp.route('/parceladas', methods=['GET'])
+@despesas_bp.route('/parceladas', methods=['GET'], strict_slashes=False)
 def tela_parceladas(): return render_template('despesas/variaveis.html')
 
 @despesas_bp.route('/api/despesas/nova', methods=['POST'])
